@@ -4,6 +4,7 @@ import {
   reverseCommand,
   reverseMacAddress,
 } from "./protocol.ts";
+import type { TransportDevice } from "./protocol.ts";
 
 export interface GetListEntry {
   mac: string;
@@ -19,6 +20,14 @@ export interface GetListResponse {
   code: number;
   targetMac?: string;
   entries?: GetListEntry[];
+  raw: Buffer;
+}
+
+export interface ReadButtonMapResponse {
+  status: "success" | "error";
+  code: number;
+  targetMac?: string;
+  mapHex?: string;
   raw: Buffer;
 }
 
@@ -82,16 +91,53 @@ function parseGetListResponse(data: Buffer): GetListResponse {
   return { status: "error", code, targetMac, raw: data };
 }
 
+function parseReadButtonMapResponse(data: Buffer): ReadButtonMapResponse {
+  const code = leInt(data, 2) & 0xffff;
+  const targetMac =
+    data.length >= 8
+      ? Buffer.from(data.slice(2, 8))
+          .reverse()
+          .toString("hex")
+          .match(/.{1,2}/g)!
+          .join(":")
+          .toUpperCase()
+      : undefined;
+
+  if (code === 0x8000) {
+    const payload =
+      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
+    const reversed = Buffer.from(payload).reverse();
+    const mapHex = reversed.toString("hex").toUpperCase();
+    return { status: "success", code, targetMac, mapHex, raw: data };
+  }
+
+  return { status: "error", code, targetMac, raw: data };
+}
+
 export class BikeNetCommands {
   private readonly protocol: BikeNetProtocol;
+  private readonly device: TransportDevice;
 
-  constructor(protocol: BikeNetProtocol) {
+  constructor(protocol: BikeNetProtocol, device: TransportDevice) {
     this.protocol = protocol;
+    this.device = device;
   }
 
   async getList(): Promise<GetListResponse> {
-    const payload = encodeGetList(this.protocol.getMacAddress());
-    const response = await this.protocol.sendCommand(payload);
+    const payload = encodeGetList(this.device.address);
+    const response = await this.protocol.sendCommand(this.device, payload);
     return parseGetListResponse(response);
   }
+
+  async readButtonMap(): Promise<ReadButtonMapResponse> {
+    const payload = encodeReadButtonMap(this.device.address);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseReadButtonMapResponse(response);
+  }
+}
+
+function encodeReadButtonMap(mac: string) {
+  const cmd = reverseCommand("0x0015");
+  const revMac = reverseMacAddress(mac);
+  return hexToBuffer(cmd + revMac);
 }

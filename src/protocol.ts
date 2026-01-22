@@ -6,10 +6,26 @@ export type BleWriteFn = (
 export type BleSubscribeFn = (handler: (data: Buffer) => void) => Promise<void>;
 
 export interface ProtocolTransport {
+  listDevices: () => Promise<TransportDevice[]>;
+  connect: (device: TransportDevice) => Promise<TransportConnection>;
+}
+
+export interface TransportDevice {
+  id: string;
+  address: string;
+  name: string;
+  rssi: number;
+  peripheral: any;
+}
+
+export interface TransportConnection {
+  macAddress: string;
+  writeWithoutResponse: boolean;
   writeMsg: BleWriteFn;
   writePin: BleWriteFn;
   subscribeMsg: BleSubscribeFn;
   subscribePin: BleSubscribeFn;
+  disconnect: () => Promise<void>;
 }
 
 export function bufToHex(buf?: Buffer | null) {
@@ -47,71 +63,105 @@ function responseCode(data: Buffer) {
 
 export class BikeNetProtocol {
   private readonly transport: ProtocolTransport;
-  private readonly macAddress: string;
-  private readonly writeWithoutResponse: boolean;
   private readonly responseTimeoutMs: number;
-  private pending: {
-    resolve: (data: Buffer) => void;
-    reject: (err: Error) => void;
-    timer: NodeJS.Timeout;
-  } | null = null;
+  private readonly pinCode?: string;
+  private readonly sessions = new Map<
+    string,
+    {
+      connection: TransportConnection;
+      pending: {
+        resolve: (data: Buffer) => void;
+        reject: (err: Error) => void;
+        timer: NodeJS.Timeout;
+      } | null;
+    }
+  >();
 
   constructor(
     transport: ProtocolTransport,
     options: {
-      macAddress: string;
-      writeWithoutResponse: boolean;
+      pinCode?: string;
       responseTimeoutMs?: number;
     },
   ) {
     this.transport = transport;
-    this.macAddress = options.macAddress;
-    this.writeWithoutResponse = options.writeWithoutResponse;
     this.responseTimeoutMs = options.responseTimeoutMs ?? 5000;
+    this.pinCode = options.pinCode;
   }
 
-  getMacAddress() {
-    return this.macAddress;
+  async listDevices() {
+    return this.transport.listDevices();
   }
 
-  async connect(pinCode?: string, onPinAck?: () => void) {
-    await this.transport.subscribeMsg((data) => this.handleMsg(data));
-    await this.transport.subscribePin((data) => {
-      const hex = bufToHex(data).toLowerCase();
-      if (hex === "01" && onPinAck) onPinAck();
-    });
-    if (pinCode) {
-      const pinHex = processPin(pinCode);
-      await this.transport.writePin(
-        hexToBuffer(pinHex),
-        this.writeWithoutResponse,
-      );
-    }
-  }
-
-  async sendCommand(payload: Buffer) {
-    if (this.pending) {
+  async sendCommand(device: TransportDevice, payload: Buffer) {
+    const session = await this.getSession(device);
+    if (session.pending) {
       throw new Error("Command already in flight");
     }
     const response = new Promise<Buffer>((resolve, reject) => {
       const timer = setTimeout(() => {
-        this.pending = null;
+        session.pending = null;
         reject(new Error("Response timeout"));
       }, this.responseTimeoutMs);
-      this.pending = { resolve, reject, timer };
+      session.pending = { resolve, reject, timer };
     });
 
-    await this.transport.writeMsg(payload, this.writeWithoutResponse);
+    await session.connection.writeMsg(
+      payload,
+      session.connection.writeWithoutResponse,
+    );
     return response;
   }
 
-  private handleMsg(data: Buffer) {
-    if (!this.pending) return;
+  async disconnect(device: TransportDevice) {
+    const session = this.sessions.get(device.id);
+    if (!session) return;
+    await session.connection.disconnect();
+    this.sessions.delete(device.id);
+  }
+
+  private async getSession(device: TransportDevice) {
+    const existing = this.sessions.get(device.id);
+    if (existing) return existing;
+
+    const connection = await this.transport.connect(device);
+    const session = {
+      connection,
+      pending: null as null | {
+        resolve: (data: Buffer) => void;
+        reject: (err: Error) => void;
+        timer: NodeJS.Timeout;
+      },
+    };
+
+    await connection.subscribeMsg((data) => this.handleMsg(device.id, data));
+    await connection.subscribePin((data) => {
+      const hex = bufToHex(data).toLowerCase();
+      if (hex === "01") {
+        // PIN accepted
+      }
+    });
+
+    if (this.pinCode) {
+      const pinHex = processPin(this.pinCode);
+      await connection.writePin(
+        hexToBuffer(pinHex),
+        connection.writeWithoutResponse,
+      );
+    }
+
+    this.sessions.set(device.id, session);
+    return session;
+  }
+
+  private handleMsg(deviceId: string, data: Buffer) {
+    const session = this.sessions.get(deviceId);
+    if (!session || !session.pending) return;
     const code = responseCode(data);
     if (code >= 0x8000 || code === 0x0008) {
-      const pending = this.pending;
+      const pending = session.pending;
       clearTimeout(pending.timer);
-      this.pending = null;
+      session.pending = null;
       pending.resolve(data);
     }
   }
