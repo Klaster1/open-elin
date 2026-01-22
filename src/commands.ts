@@ -9,10 +9,10 @@ import type { TransportDevice } from "./protocol.ts";
 export interface GetListEntry {
   mac: string;
   name: string;
-  type: number;
-  flag: boolean;
-  num: number;
-  extra: number;
+  deviceId: number;
+  isConnected: boolean;
+  batteryVoltage: number;
+  rssi: number;
 }
 
 export interface GetListResponse {
@@ -83,11 +83,19 @@ function parseGetListPayload(payload: Buffer): GetListEntry[] | null {
       .toUpperCase();
     const nameBuf = Buffer.from(payload.slice(off + 6, off + 22));
     const name = nameBuf.toString("utf8").replace(/\x00+$/, "");
-    const typeByte = payload[off + 22] & 0xff;
-    const flag = (payload[off + 23] & 0xff) === 1;
-    const num = ((payload[off + 25] & 0xff) << 8) | (payload[off + 24] & 0xff);
-    const extra = payload[off + 26] & 0xff;
-    entries.push({ mac, name, type: typeByte, flag, num, extra });
+    const deviceId = payload[off + 22] & 0xff;
+    const isConnected = (payload[off + 23] & 0xff) === 1;
+    const batteryVoltage =
+      ((payload[off + 25] & 0xff) << 8) | (payload[off + 24] & 0xff);
+    const rssi = payload[off + 26] & 0xff;
+    entries.push({
+      mac,
+      name,
+      deviceId,
+      isConnected,
+      batteryVoltage,
+      rssi,
+    });
   }
   return entries;
 }

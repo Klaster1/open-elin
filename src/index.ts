@@ -31,10 +31,10 @@ async function main() {
         index,
         mac: entry.mac,
         name: entry.name,
-        type: entry.type,
-        flag: entry.flag,
-        num: entry.num,
-        extra: entry.extra,
+        deviceId: entry.deviceId,
+        isConnected: entry.isConnected,
+        batteryVoltage: entry.batteryVoltage,
+        rssi: entry.rssi,
       }));
       console.table(listRows);
     } else {
