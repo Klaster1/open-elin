@@ -80,6 +80,10 @@ export class BikeNetProtocol {
         reject: (err: Error) => void;
         timer: NodeJS.Timeout;
       }>;
+      peripheralSubscriptions: Array<{
+        code: number;
+        handler: (data: Buffer) => void;
+      }>;
     }
   >();
 
@@ -144,6 +148,21 @@ export class BikeNetProtocol {
     this.sessions.delete(device.id);
   }
 
+  async subscribeToPeripheralMessage(
+    device: TransportDevice,
+    code: number,
+    handler: (data: Buffer) => void,
+  ) {
+    const session = await this.getSession(device);
+    const subscription = { code, handler };
+    session.peripheralSubscriptions.push(subscription);
+    return () => {
+      session.peripheralSubscriptions = session.peripheralSubscriptions.filter(
+        (s) => s !== subscription,
+      );
+    };
+  }
+
   private async getSession(device: TransportDevice) {
     const existing = this.sessions.get(device.id);
     if (existing) return existing;
@@ -161,6 +180,10 @@ export class BikeNetProtocol {
         resolve: (data: Buffer) => void;
         reject: (err: Error) => void;
         timer: NodeJS.Timeout;
+      }>,
+      peripheralSubscriptions: [] as Array<{
+        code: number;
+        handler: (data: Buffer) => void;
       }>,
     };
 
@@ -189,6 +212,9 @@ export class BikeNetProtocol {
     if (!session) return;
     const code = responseCode(data);
     if (code < 0x8000) {
+      session.peripheralSubscriptions
+        .filter((s) => s.code === code)
+        .forEach((s) => s.handler(data));
       const matching = session.peripheralWaiters.filter((w) => w.code === code);
       if (matching.length) {
         session.peripheralWaiters = session.peripheralWaiters.filter(

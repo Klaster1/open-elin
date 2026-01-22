@@ -7,7 +7,6 @@ const PIN_CODE = "1111";
 async function main() {
   const transport = new NobleTransport({
     scanMs: 8000,
-    allowAllOnEmpty: true,
   });
   const protocol = new BikeNetProtocol(transport, {
     pinCode: PIN_CODE,
@@ -20,15 +19,23 @@ async function main() {
     return;
   }
 
-  if (!devices.length) {
-    console.log("No NXS devices found in scan.");
-    return;
-  }
-
   const device = devices[0];
 
   try {
     const commands = new BikeNetCommands(protocol, device);
+    const unsubscribeBattery = await commands.subscribeToBatteryVoltage(
+      (battery) => {
+        if (battery.status !== "success") return;
+        console.log("Battery notification:");
+        console.log({
+          targetMac: battery.targetMac,
+          isHub: battery.isHub,
+          batteryVoltage: battery.batteryVoltage,
+          rawHex: battery.rawHex,
+        });
+      },
+    );
+
     const listResponse = await commands.getList();
     if (listResponse.status === "success" && listResponse.entries?.length) {
       console.log("Device list:");
@@ -49,12 +56,7 @@ async function main() {
     const motorParams = await commands.getMotorParams();
     if (motorParams.status === "success") {
       console.log("Motor params:");
-      console.log({
-        targetMac: motorParams.targetMac,
-        values: motorParams.values ?? [],
-        humanReadable: motorParams.humanReadable ?? null,
-        rawHex: motorParams.rawHex,
-      });
+      console.log(motorParams.humanReadable);
     } else {
       console.log(motorParams);
     }
@@ -63,11 +65,6 @@ async function main() {
     if (rearCogInfo.status === "success") {
       const values = rearCogInfo.values ?? [];
       console.log("Rear cog info:");
-      console.log({
-        targetMac: rearCogInfo.targetMac,
-        count: values.length,
-        rawHex: rearCogInfo.rawHex,
-      });
       if (values.length) {
         console.table(values.map((value, index) => ({ index, value })));
       }
@@ -95,6 +92,7 @@ async function main() {
     } else {
       console.log(buttonTable);
     }
+    unsubscribeBattery?.();
   } finally {
     await protocol.disconnect(device).catch(() => undefined);
   }

@@ -75,6 +75,16 @@ export interface MotorParamsReadable {
   multishiftDelay: number;
 }
 
+export interface BatteryVoltageNotify {
+  status: "success" | "error";
+  code: number;
+  targetMac?: string;
+  batteryVoltage?: number;
+  isHub?: boolean;
+  rawHex?: string;
+  rawBytes?: number[];
+}
+
 export interface ButtonMapEntry {
   podAddressHex: string;
   elinkAddressHex: string;
@@ -95,6 +105,13 @@ function leInt(buf: Buffer, len: number) {
     v |= (buf[i] & 0xff) << (8 * i);
   }
   return v >>> 0;
+}
+
+function normalizeMac(mac?: string) {
+  if (!mac) return "";
+  const clean = mac.replace(/:/g, "").toUpperCase();
+  if (clean.length !== 12) return mac.toUpperCase();
+  return clean.match(/.{1,2}/g)!.join(":");
 }
 
 function encodeGetList(mac: string) {
@@ -322,6 +339,48 @@ function parseMotorParamsResponse(data: Buffer): MotorParamsResponse {
   return { status: "error", code, targetMac };
 }
 
+export function parseBatteryVoltageNotify(
+  data: Buffer,
+  hubMac?: string,
+): BatteryVoltageNotify {
+  const code = leInt(data, 2) & 0xffff;
+  const targetMac =
+    data.length >= 8
+      ? Buffer.from(data.slice(2, 8))
+          .reverse()
+          .toString("hex")
+          .match(/.{1,2}/g)!
+          .join(":")
+          .toUpperCase()
+      : undefined;
+
+  if (code === 0x4000) {
+    const payload =
+      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
+    const rawHex = payload.toString("hex").toUpperCase();
+    const rawBytes = Array.from(payload.values());
+    const normalizedHub = normalizeMac(hubMac);
+    const normalizedTarget = normalizeMac(targetMac);
+    const isHub =
+      normalizedHub.length > 0 && normalizedHub === normalizedTarget;
+    const batteryVoltage = isHub
+      ? parseInt(Buffer.from(payload).reverse().toString("hex"), 16)
+      : leInt(payload, Math.min(2, payload.length)) & 0xffff;
+
+    return {
+      status: "success",
+      code,
+      targetMac,
+      batteryVoltage: Number.isNaN(batteryVoltage) ? undefined : batteryVoltage,
+      isHub,
+      rawHex,
+      rawBytes,
+    };
+  }
+
+  return { status: "error", code, targetMac };
+}
+
 export class BikeNetCommands {
   private readonly protocol: BikeNetProtocol;
   private readonly device: TransportDevice;
@@ -382,6 +441,16 @@ export class BikeNetCommands {
     const payload = encodeGetMotorParams(this.device.address);
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseMotorParamsResponse(response);
+  }
+
+  async subscribeToBatteryVoltage(
+    handler: (notify: BatteryVoltageNotify) => void,
+  ) {
+    return this.protocol.subscribeToPeripheralMessage(
+      this.device,
+      0x4000,
+      (data) => handler(parseBatteryVoltageNotify(data, this.device.address)),
+    );
   }
 }
 
