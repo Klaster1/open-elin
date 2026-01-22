@@ -1,6 +1,7 @@
 import noble from "@abandonware/noble";
-import { BikeNetApp } from "./app.ts";
-import { bufToHex } from "./protocol.ts";
+import { BikeNetCommands } from "./commands.ts";
+import { BikeNetProtocol, bufToHex } from "./protocol.ts";
+import { NobleTransport } from "./transport-noble.ts";
 
 const BIKE_NET_SERVICE = "a5c1c000cc20ba910c1aef3f9e643d79";
 
@@ -95,104 +96,55 @@ function tryConnect(peripheral: any) {
               "writeWithoutResponse",
             );
 
-            // subscribe to notifications (MSG)
-            if (
-              msgChar.properties.includes("notify") ||
-              msgChar.properties.includes("indicate")
-            ) {
-              msgChar.on("data", (data: Buffer) => {
+            const transport = new NobleTransport({
+              msgChar,
+              pinChar,
+              onMsgNotify: (data) => {
                 console.log("RAW NOTIFY:", bufToHex(data));
                 pendingNotifications.push(data);
-              });
-              msgChar.subscribe((sErr: Error | null) => {
-                if (sErr) console.error(" subscribe err", sErr);
-                else console.log(" subscribed to MSG characteristic");
-              });
-            }
-
-            // subscribe to PIN notifications and unlock
-            const app = new BikeNetApp({
-              macAddress,
-              writeWithoutResponse,
-              writeMsg: (payload, withoutResponse) =>
-                new Promise<void>((resolve, reject) => {
-                  msgChar.write(
-                    payload,
-                    withoutResponse,
-                    (err: Error | null) => (err ? reject(err) : resolve()),
-                  );
-                }),
-              writePin: (payload, withoutResponse) =>
-                new Promise<void>((resolve, reject) => {
-                  if (!pinChar) {
-                    resolve();
-                    return;
-                  }
-                  pinChar.write(
-                    payload,
-                    withoutResponse,
-                    (err: Error | null) => (err ? reject(err) : resolve()),
-                  );
-                }),
-              onMsg: (handler) =>
-                new Promise<void>((resolve, reject) => {
-                  msgChar.on("data", (data: Buffer) => {
-                    console.log("RAW NOTIFY:", bufToHex(data));
-                    handler(data);
-                  });
-                  msgChar.subscribe((err: Error | null) =>
-                    err ? reject(err) : resolve(),
-                  );
-                }),
-              onPin: (handler) =>
-                new Promise<void>((resolve, reject) => {
-                  if (
-                    pinChar &&
-                    (pinChar.properties.includes("notify") ||
-                      pinChar.properties.includes("indicate"))
-                  ) {
-                    pinChar.on("data", (data: Buffer) => {
-                      console.log("RAW PIN NOTIFY:", bufToHex(data));
-                      handler(data);
-                    });
-                    pinChar.subscribe((err: Error | null) =>
-                      err ? reject(err) : resolve(),
-                    );
-                  } else {
-                    resolve();
-                  }
-                }),
+              },
+              onPinNotify: (data) => {
+                console.log("RAW PIN NOTIFY:", bufToHex(data));
+              },
             });
 
-            if (pinChar) {
-              console.log("Sending PIN...");
-              app
-                .initAndUnlock(PIN_CODE, () => {
+            const protocol = new BikeNetProtocol(transport, {
+              macAddress,
+              writeWithoutResponse,
+              responseTimeoutMs: 8000,
+            });
+
+            const commands = new BikeNetCommands(protocol);
+
+            (async () => {
+              try {
+                if (pinChar) {
+                  console.log("Sending PIN...");
+                }
+                await protocol.connect(PIN_CODE, () => {
                   console.log("PIN accepted");
-                })
-                .then(() => {
-                  console.log("PIN sent. Requesting GET_LIST...");
-                  return app.getList();
-                })
-                .catch((err) => console.error("PIN/getList error", err));
-            } else {
-              console.log("PIN characteristic not found; sending GET_LIST");
-              app.getList().catch((err) => console.error("getList error", err));
-            }
+                });
+                console.log("Requesting GET_LIST...");
+                const list = await commands.getList();
+                if (list.status === "success" && list.entries?.length) {
+                  console.log("\nGET_LIST parsed entries:");
+                  list.entries.forEach((e, idx) => {
+                    console.log(
+                      ` [${idx}] mac=${e.mac} name='${e.name}' type=${e.type} flag=${e.flag} num=${e.num} extra=${e.extra}`,
+                    );
+                  });
+                } else {
+                  console.log("GET_LIST response:", list.code);
+                }
+              } catch (err) {
+                console.error("GET_LIST error", err);
+              }
+            })();
 
             // Wait for notifications (event-driven). Disconnect after a timeout
             const WAIT_MS = 8000;
             console.log(`Waiting up to ${WAIT_MS}ms for notifications...`);
             setTimeout(() => {
-              const last = app.getLastGetList();
-              if (last?.entries?.length) {
-                console.log("\nGET_LIST parsed entries:");
-                last.entries.forEach((e, idx) => {
-                  console.log(
-                    ` [${idx}] mac=${e.mac} name='${e.name}' type=${e.type} flag=${e.flag} num=${e.num} extra=${e.extra}`,
-                  );
-                });
-              }
               console.log(
                 `\nWait timeout (${WAIT_MS}ms). Received ${pendingNotifications.length} notifications.`,
               );

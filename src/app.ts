@@ -1,4 +1,4 @@
-import { BikeNetProtocol, parseResponsePacket } from "./protocol.ts";
+import { BikeNetProtocol, parseResponsePacket } from "./protocol";
 
 export interface AppTransport {
   macAddress: string;

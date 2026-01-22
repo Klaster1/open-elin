@@ -12,23 +12,6 @@ export interface ProtocolTransport {
   subscribePin: BleSubscribeFn;
 }
 
-export interface GetListEntry {
-  mac: string;
-  name: string;
-  type: number;
-  flag: boolean;
-  num: number;
-  extra: number;
-}
-
-export interface GetListResponse {
-  status: "success" | "error";
-  code: number;
-  targetMac?: string;
-  entries?: GetListEntry[];
-  raw?: Buffer;
-}
-
 export function bufToHex(buf?: Buffer | null) {
   if (!buf) return "";
   return Buffer.from(buf).toString("hex");
@@ -58,80 +41,78 @@ export function processPin(pin: string) {
     .join("");
 }
 
-export function encodeGetList(mac: string) {
-  const cmd = reverseCommand("0x0000");
-  const revMac = reverseMacAddress(mac);
-  return hexToBuffer(cmd + revMac);
-}
-
-export function parseGetListPayload(payload: Buffer): GetListEntry[] | null {
-  if (!payload.length || payload.length % 27 !== 0) return null;
-  const count = payload.length / 27;
-  const entries: GetListEntry[] = [];
-  for (let i = 0; i < count; i++) {
-    const off = i * 27;
-    const macPart = Buffer.from(payload.slice(off, off + 6));
-    const mac = Buffer.from(macPart)
-      .reverse()
-      .toString("hex")
-      .match(/.{1,2}/g)!
-      .join(":")
-      .toUpperCase();
-    const nameBuf = Buffer.from(payload.slice(off + 6, off + 22));
-    const name = nameBuf.toString("utf8").replace(/\x00+$/, "");
-    const typeByte = payload[off + 22] & 0xff;
-    const flag = (payload[off + 23] & 0xff) === 1;
-    const num = ((payload[off + 25] & 0xff) << 8) | (payload[off + 24] & 0xff);
-    const extra = payload[off + 26] & 0xff;
-    entries.push({ mac, name, type: typeByte, flag, num, extra });
-  }
-  return entries;
-}
-
-export function parseResponsePacket(data: Buffer): GetListResponse {
-  const code = (data[0] & 0xff) | ((data[1] & 0xff) << 8);
-  const targetMac =
-    data.length >= 8
-      ? Buffer.from(data.slice(2, 8))
-          .reverse()
-          .toString("hex")
-          .match(/.{1,2}/g)!
-          .join(":")
-          .toUpperCase()
-      : undefined;
-
-  if (code === 0x8000) {
-    const payload =
-      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
-    const entries = parseGetListPayload(payload) || undefined;
-    return { status: "success", code, targetMac, entries, raw: data };
-  }
-
-  return { status: "error", code, targetMac, raw: data };
+function responseCode(data: Buffer) {
+  return (data[0] & 0xff) | ((data[1] & 0xff) << 8);
 }
 
 export class BikeNetProtocol {
   private readonly transport: ProtocolTransport;
+  private readonly macAddress: string;
+  private readonly writeWithoutResponse: boolean;
+  private readonly responseTimeoutMs: number;
+  private pending: {
+    resolve: (data: Buffer) => void;
+    reject: (err: Error) => void;
+    timer: NodeJS.Timeout;
+  } | null = null;
 
-  constructor(transport: ProtocolTransport) {
+  constructor(
+    transport: ProtocolTransport,
+    options: {
+      macAddress: string;
+      writeWithoutResponse: boolean;
+      responseTimeoutMs?: number;
+    },
+  ) {
     this.transport = transport;
+    this.macAddress = options.macAddress;
+    this.writeWithoutResponse = options.writeWithoutResponse;
+    this.responseTimeoutMs = options.responseTimeoutMs ?? 5000;
   }
 
-  async unlock(
-    pin: string,
-    writeWithoutResponse: boolean,
-    onPinAck?: () => void,
-  ) {
+  getMacAddress() {
+    return this.macAddress;
+  }
+
+  async connect(pinCode?: string, onPinAck?: () => void) {
+    await this.transport.subscribeMsg((data) => this.handleMsg(data));
     await this.transport.subscribePin((data) => {
       const hex = bufToHex(data).toLowerCase();
       if (hex === "01" && onPinAck) onPinAck();
     });
-    const pinHex = processPin(pin);
-    await this.transport.writePin(hexToBuffer(pinHex), writeWithoutResponse);
+    if (pinCode) {
+      const pinHex = processPin(pinCode);
+      await this.transport.writePin(
+        hexToBuffer(pinHex),
+        this.writeWithoutResponse,
+      );
+    }
   }
 
-  async sendGetList(mac: string, writeWithoutResponse: boolean) {
-    const payload = encodeGetList(mac);
-    await this.transport.writeMsg(payload, writeWithoutResponse);
+  async sendCommand(payload: Buffer) {
+    if (this.pending) {
+      throw new Error("Command already in flight");
+    }
+    const response = new Promise<Buffer>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending = null;
+        reject(new Error("Response timeout"));
+      }, this.responseTimeoutMs);
+      this.pending = { resolve, reject, timer };
+    });
+
+    await this.transport.writeMsg(payload, this.writeWithoutResponse);
+    return response;
+  }
+
+  private handleMsg(data: Buffer) {
+    if (!this.pending) return;
+    const code = responseCode(data);
+    if (code >= 0x8000 || code === 0x0008) {
+      const pending = this.pending;
+      clearTimeout(pending.timer);
+      this.pending = null;
+      pending.resolve(data);
+    }
   }
 }
