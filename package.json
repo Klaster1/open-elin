@@ -1,5 +1,6 @@
 {
   "name": "demo-node",
+  "type": "module",
   "version": "0.1.0",
   "description": "Demo Node.js TypeScript prototype for BikeNet protocol (scan/list devices)",
   "main": "src/index.ts",
