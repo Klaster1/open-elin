@@ -1,0 +1,17 @@
+{
+  "name": "demo-node",
+  "version": "0.1.0",
+  "description": "Demo Node.js TypeScript prototype for BikeNet protocol (scan/list devices)",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "node src/index.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@abandonware/noble": "^1.9.2-26"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "typescript": "^5.9.3"
+  }
+}
