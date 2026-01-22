@@ -20,23 +20,12 @@ async function main() {
     return;
   }
 
-  const candidates = devices.filter((d) => d.name.includes("nxs"));
-  if (!candidates.length) {
-    console.log("No NXS devices found in scan. Devices seen:");
-    console.table(
-      devices.map((d, index) => ({
-        index,
-        id: d.id,
-        address: d.address,
-        name: d.name,
-        rssi: d.rssi,
-      })),
-    );
+  if (!devices.length) {
+    console.log("No NXS devices found in scan.");
     return;
   }
 
-  const device = candidates[0];
-  console.log(device);
+  const device = devices[0];
 
   try {
     const commands = new BikeNetCommands(protocol, device);

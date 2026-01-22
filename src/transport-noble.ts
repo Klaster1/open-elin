@@ -1,6 +1,5 @@
 export interface NobleTransportOptions {
   scanMs?: number;
-  nameFilter?: (name: string) => boolean;
   onMsgNotify?: (data: Buffer) => void;
   onPinNotify?: (data: Buffer) => void;
 }
@@ -25,19 +24,12 @@ export interface TransportConnection {
 
 export class NobleTransport {
   private readonly scanMs: number;
-  private readonly nameFilter: (name: string) => boolean;
   private readonly onMsgNotify?: (data: Buffer) => void;
   private readonly onPinNotify?: (data: Buffer) => void;
+  private readonly serviceUuid = "a5c1c000cc20ba910c1aef3f9e643d79";
 
   constructor(options: NobleTransportOptions) {
     this.scanMs = options.scanMs ?? 3000;
-    this.nameFilter =
-      options.nameFilter ??
-      ((name) =>
-        name.includes("nxs shifter") ||
-        name.includes("nxsshifter") ||
-        name === "nxs shifter rr" ||
-        name.includes("nxs"));
     this.onMsgNotify = options.onMsgNotify;
     this.onPinNotify = options.onPinNotify;
   }
@@ -50,9 +42,21 @@ export class NobleTransport {
       const id = (peripheral.id || peripheral.uuid || "<no-id>").toLowerCase();
       const address = (peripheral.address || "").toLowerCase();
       const name = (peripheral.advertisement?.localName || "").toLowerCase();
+      const serviceUuids: string[] =
+        peripheral.advertisement?.serviceUuids || [];
+      const normalizedServiceUuids = serviceUuids.map((u) =>
+        u.replace(/-/g, "").toLowerCase(),
+      );
+      const hasBikeNetService = normalizedServiceUuids.includes(
+        this.serviceUuid,
+      );
+      const hasManufacturerData =
+        (peripheral.advertisement?.manufacturerData?.length ?? 0) > 0;
       const rssi = peripheral.rssi ?? 0;
 
-      if (!this.nameFilter(name)) return;
+      if (!(hasBikeNetService && hasManufacturerData)) {
+        return;
+      }
       if (devices.has(id)) return;
 
       devices.set(id, {
@@ -66,7 +70,7 @@ export class NobleTransport {
 
     const noble = await import("@abandonware/noble");
     noble.default.on("discover", handler);
-    noble.default.startScanning([], true);
+    noble.default.startScanning([this.serviceUuid], true);
 
     await new Promise((resolve) => setTimeout(resolve, this.scanMs));
 
