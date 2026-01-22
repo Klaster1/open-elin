@@ -20,7 +20,6 @@ export interface GetListResponse {
   code: number;
   targetMac?: string;
   entries?: GetListEntry[];
-  raw: Buffer;
 }
 
 export interface ReadButtonMapResponse {
@@ -28,7 +27,31 @@ export interface ReadButtonMapResponse {
   code: number;
   targetMac?: string;
   mapHex?: string;
-  raw: Buffer;
+  mapBytes?: number[];
+  mapByteLength?: number;
+  entryCount?: number;
+  entries?: ButtonMapEntry[];
+}
+
+export interface ButtonTableResponse {
+  status: "success" | "error";
+  code: number;
+  targetMac?: string;
+  entries?: ButtonMapEntry[];
+}
+
+export interface ButtonMapEntry {
+  podAddressHex: string;
+  elinkAddressHex: string;
+  button1: { code: string; label?: string };
+  button2: { code: string; label?: string };
+  action: { code: string; label?: string };
+  function: { code: string; label?: string };
+  button1Label?: string;
+  button2Label?: string;
+  actionLabel?: string;
+  functionLabel?: string;
+  index: number;
 }
 
 function leInt(buf: Buffer, len: number) {
@@ -85,10 +108,10 @@ function parseGetListResponse(data: Buffer): GetListResponse {
     const payload =
       data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
     const entries = parseGetListPayload(payload) || undefined;
-    return { status: "success", code, targetMac, entries, raw: data };
+    return { status: "success", code, targetMac, entries };
   }
 
-  return { status: "error", code, targetMac, raw: data };
+  return { status: "error", code, targetMac };
 }
 
 function parseReadButtonMapResponse(data: Buffer): ReadButtonMapResponse {
@@ -108,10 +131,43 @@ function parseReadButtonMapResponse(data: Buffer): ReadButtonMapResponse {
       data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
     const reversed = Buffer.from(payload).reverse();
     const mapHex = reversed.toString("hex").toUpperCase();
-    return { status: "success", code, targetMac, mapHex, raw: data };
+    const mapBytes = Array.from(reversed.values());
+    const mapByteLength = mapBytes.length;
+    let entryCount: number | undefined;
+    let entries: ButtonMapEntry[] | undefined;
+
+    if (mapByteLength === 2) {
+      const len = ((mapBytes[0] & 0xff) << 8) | (mapBytes[1] & 0xff);
+      entryCount = len % 16 === 0 ? len / 16 : undefined;
+      return {
+        status: "success",
+        code,
+        targetMac,
+        mapHex,
+        mapBytes,
+        mapByteLength: len,
+        entryCount,
+      };
+    }
+
+    if (mapByteLength % 16 === 0) {
+      entries = parseButtonMapEntries(reversed);
+      entryCount = entries.length;
+    }
+
+    return {
+      status: "success",
+      code,
+      targetMac,
+      mapHex,
+      mapBytes,
+      mapByteLength,
+      entryCount,
+      entries,
+    };
   }
 
-  return { status: "error", code, targetMac, raw: data };
+  return { status: "error", code, targetMac };
 }
 
 export class BikeNetCommands {
@@ -134,6 +190,17 @@ export class BikeNetCommands {
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseReadButtonMapResponse(response);
   }
+
+  async readButtonTable(): Promise<ButtonTableResponse> {
+    const payload = encodeReadButtonMap(this.device.address);
+    await this.protocol.sendCommand(this.device, payload);
+    const notify = await this.protocol.waitForPeripheralMessage(
+      this.device,
+      0x4002,
+      8000,
+    );
+    return parseButtonTableNotify(notify);
+  }
 }
 
 function encodeReadButtonMap(mac: string) {
@@ -141,3 +208,116 @@ function encodeReadButtonMap(mac: string) {
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
+
+function parseButtonTableNotify(data: Buffer): ButtonTableResponse {
+  const code = leInt(data, 2) & 0xffff;
+  const targetMac =
+    data.length >= 8
+      ? Buffer.from(data.slice(2, 8))
+          .reverse()
+          .toString("hex")
+          .match(/.{1,2}/g)!
+          .join(":")
+          .toUpperCase()
+      : undefined;
+
+  if (code === 0x4002) {
+    const payload =
+      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
+    const entries = payload.length >= 16 ? parseButtonMapEntries(payload) : [];
+    return { status: "success", code, targetMac, entries };
+  }
+
+  return { status: "error", code, targetMac };
+}
+
+function parseButtonMapEntries(buf: Buffer): ButtonMapEntry[] {
+  const entries: ButtonMapEntry[] = [];
+  const count = Math.floor(buf.length / 16);
+  for (let i = 0; i < count; i++) {
+    const off = i * 16;
+    const podAddressHex = buf
+      .slice(off, off + 6)
+      .toString("hex")
+      .toUpperCase();
+    const elinkAddressHex = buf
+      .slice(off + 6, off + 12)
+      .toString("hex")
+      .toUpperCase();
+    const button1 = buf
+      .slice(off + 12, off + 13)
+      .toString("hex")
+      .toUpperCase();
+    const button2 = buf
+      .slice(off + 13, off + 14)
+      .toString("hex")
+      .toUpperCase();
+    const action = buf
+      .slice(off + 14, off + 15)
+      .toString("hex")
+      .toUpperCase();
+    const func = buf
+      .slice(off + 15, off + 16)
+      .toString("hex")
+      .toUpperCase();
+
+    entries.push({
+      podAddressHex,
+      elinkAddressHex,
+      button1: { code: button1, label: BUTTON_LABELS[button1] },
+      button2: { code: button2, label: BUTTON_LABELS[button2] },
+      action: { code: action, label: ACTION_LABELS[action] },
+      function: { code: func, label: FUNCTION_LABELS[func] },
+      button1Label: BUTTON_LABELS[button1],
+      button2Label: BUTTON_LABELS[button2],
+      actionLabel: ACTION_LABELS[action],
+      functionLabel: FUNCTION_LABELS[func],
+      index: i,
+    });
+  }
+  return entries;
+}
+
+const ACTION_LABELS: Record<string, string> = {
+  "00": "Press",
+  "01": "Release",
+  "02": "Double press",
+};
+
+const FUNCTION_LABELS: Record<string, string> = {
+  "0A": "Shift Up",
+  "0B": "Shift Down",
+  "0C": "Toggle",
+  "0D": "Seatpost Lock",
+  "0E": "Seatpost Unlock",
+  "0F": "Auto Up",
+  "10": "Auto Down",
+  "11": "Tune Mode",
+};
+
+const BUTTON_LABELS: Record<string, string> = {
+  "00": "-",
+  "01": "A-1",
+  "02": "A-2",
+  "03": "A-3",
+  "04": "A-4",
+  "05": "A-5",
+  "06": "B",
+  "07": "B-1",
+  "08": "B-2",
+  "09": "B-3",
+  "0A": "B-4",
+  "0B": "B-5",
+  "0C": "C",
+  "0D": "C-1",
+  "0E": "C-2",
+  "0F": "C-3",
+  "10": "C-4",
+  "11": "C-5",
+  "12": "D",
+  "13": "D-1",
+  "14": "D-2",
+  "15": "D-3",
+  "16": "D-4",
+  "17": "D-5",
+};

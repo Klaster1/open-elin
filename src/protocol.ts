@@ -74,6 +74,12 @@ export class BikeNetProtocol {
         reject: (err: Error) => void;
         timer: NodeJS.Timeout;
       } | null;
+      peripheralWaiters: Array<{
+        code: number;
+        resolve: (data: Buffer) => void;
+        reject: (err: Error) => void;
+        timer: NodeJS.Timeout;
+      }>;
     }
   >();
 
@@ -113,6 +119,24 @@ export class BikeNetProtocol {
     return response;
   }
 
+  async waitForPeripheralMessage(
+    device: TransportDevice,
+    code: number,
+    timeoutMs?: number,
+  ) {
+    const session = await this.getSession(device);
+    const waitMs = timeoutMs ?? this.responseTimeoutMs;
+    return new Promise<Buffer>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        session.peripheralWaiters = session.peripheralWaiters.filter(
+          (w) => w.resolve !== resolve,
+        );
+        reject(new Error("Peripheral message timeout"));
+      }, waitMs);
+      session.peripheralWaiters.push({ code, resolve, reject, timer });
+    });
+  }
+
   async disconnect(device: TransportDevice) {
     const session = this.sessions.get(device.id);
     if (!session) return;
@@ -132,6 +156,12 @@ export class BikeNetProtocol {
         reject: (err: Error) => void;
         timer: NodeJS.Timeout;
       },
+      peripheralWaiters: [] as Array<{
+        code: number;
+        resolve: (data: Buffer) => void;
+        reject: (err: Error) => void;
+        timer: NodeJS.Timeout;
+      }>,
     };
 
     await connection.subscribeMsg((data) => this.handleMsg(device.id, data));
@@ -156,8 +186,21 @@ export class BikeNetProtocol {
 
   private handleMsg(deviceId: string, data: Buffer) {
     const session = this.sessions.get(deviceId);
-    if (!session || !session.pending) return;
+    if (!session) return;
     const code = responseCode(data);
+    if (code < 0x8000) {
+      const matching = session.peripheralWaiters.filter((w) => w.code === code);
+      if (matching.length) {
+        session.peripheralWaiters = session.peripheralWaiters.filter(
+          (w) => w.code !== code,
+        );
+        matching.forEach((w) => {
+          clearTimeout(w.timer);
+          w.resolve(data);
+        });
+      }
+    }
+    if (!session.pending) return;
     if (code >= 0x8000 || code === 0x0008) {
       const pending = session.pending;
       clearTimeout(pending.timer);
