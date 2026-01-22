@@ -49,6 +49,12 @@ export interface RearCogInfoResponse {
   rawBytes?: number[];
 }
 
+export interface BasicResponse {
+  status: "success" | "error";
+  code: number;
+  targetMac?: string;
+}
+
 export interface ButtonMapEntry {
   podAddressHex: string;
   elinkAddressHex: string;
@@ -226,6 +232,20 @@ function parseRearCogInfoResponse(data: Buffer): RearCogInfoResponse {
   return { status: "error", code, targetMac };
 }
 
+function parseBasicResponse(data: Buffer): BasicResponse {
+  const code = leInt(data, 2) & 0xffff;
+  const targetMac =
+    data.length >= 8
+      ? Buffer.from(data.slice(2, 8))
+          .reverse()
+          .toString("hex")
+          .match(/.{1,2}/g)!
+          .join(":")
+          .toUpperCase()
+      : undefined;
+  return { status: code === 0x8000 ? "success" : "error", code, targetMac };
+}
+
 export class BikeNetCommands {
   private readonly protocol: BikeNetProtocol;
   private readonly device: TransportDevice;
@@ -263,6 +283,12 @@ export class BikeNetCommands {
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseRearCogInfoResponse(response);
   }
+
+  async blinkLed(): Promise<BasicResponse> {
+    const payload = encodeBlinkLed(this.device.address);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
+  }
 }
 
 function encodeReadButtonMap(mac: string) {
@@ -273,6 +299,12 @@ function encodeReadButtonMap(mac: string) {
 
 function encodeGetRearCogInfo(mac: string) {
   const cmd = reverseCommand("0x001F");
+  const revMac = reverseMacAddress(mac);
+  return hexToBuffer(cmd + revMac);
+}
+
+function encodeBlinkLed(mac: string) {
+  const cmd = reverseCommand("0x0004");
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
