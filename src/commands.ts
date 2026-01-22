@@ -85,6 +85,28 @@ export interface BatteryVoltageNotify {
   rawBytes?: number[];
 }
 
+export interface ButtonActionNotify {
+  status: "success" | "error";
+  code: number;
+  targetMac?: string;
+  buttonId?: number;
+  buttonHex?: string;
+  buttonLabel?: string;
+  actionFlag?: number;
+  actionLabel?: string;
+  rawHex?: string;
+  rawBytes?: number[];
+}
+
+export interface ShiftCompleteNotify {
+  status: "success" | "error";
+  code: number;
+  targetMac?: string;
+  payloadValue?: number;
+  rawHex?: string;
+  rawBytes?: number[];
+}
+
 export interface ButtonMapEntry {
   podAddressHex: string;
   elinkAddressHex: string;
@@ -381,6 +403,86 @@ export function parseBatteryVoltageNotify(
   return { status: "error", code, targetMac };
 }
 
+export function parseButtonActionNotify(data: Buffer): ButtonActionNotify {
+  const code = leInt(data, 2) & 0xffff;
+  const targetMac =
+    data.length >= 8
+      ? Buffer.from(data.slice(2, 8))
+          .reverse()
+          .toString("hex")
+          .match(/.{1,2}/g)!
+          .join(":")
+          .toUpperCase()
+      : undefined;
+
+  if (code === 0x4001) {
+    const payload =
+      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
+    const rawHex = payload.toString("hex").toUpperCase();
+    const rawBytes = Array.from(payload.values());
+    const buttonId = payload.length > 0 ? payload[0] & 0xff : undefined;
+    const actionFlag = payload.length > 1 ? payload[1] & 0xff : undefined;
+    const buttonHex =
+      buttonId === undefined
+        ? undefined
+        : buttonId.toString(16).padStart(2, "0").toUpperCase();
+    const buttonLabel = buttonHex ? BUTTON_LABELS[buttonHex] : undefined;
+    const actionHex =
+      actionFlag === undefined
+        ? undefined
+        : actionFlag.toString(16).padStart(2, "0").toUpperCase();
+    const actionLabel = actionHex ? ACTION_LABELS[actionHex] : undefined;
+
+    return {
+      status: "success",
+      code,
+      targetMac,
+      buttonId,
+      buttonHex,
+      buttonLabel,
+      actionFlag,
+      actionLabel,
+      rawHex,
+      rawBytes,
+    };
+  }
+
+  return { status: "error", code, targetMac };
+}
+
+export function parseShiftCompleteNotify(data: Buffer): ShiftCompleteNotify {
+  const code = leInt(data, 2) & 0xffff;
+  const targetMac =
+    data.length >= 8
+      ? Buffer.from(data.slice(2, 8))
+          .reverse()
+          .toString("hex")
+          .match(/.{1,2}/g)!
+          .join(":")
+          .toUpperCase()
+      : undefined;
+
+  if (code === 0x4003) {
+    const payload =
+      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
+    const rawHex = payload.toString("hex").toUpperCase();
+    const rawBytes = Array.from(payload.values());
+    const payloadValue = payload.length
+      ? leInt(payload, Math.min(4, payload.length))
+      : undefined;
+    return {
+      status: "success",
+      code,
+      targetMac,
+      payloadValue,
+      rawHex,
+      rawBytes,
+    };
+  }
+
+  return { status: "error", code, targetMac };
+}
+
 export class BikeNetCommands {
   private readonly protocol: BikeNetProtocol;
   private readonly device: TransportDevice;
@@ -450,6 +552,32 @@ export class BikeNetCommands {
       this.device,
       0x4000,
       (data) => handler(parseBatteryVoltageNotify(data, this.device.address)),
+    );
+  }
+
+  async subscribeToButtonAction(handler: (notify: ButtonActionNotify) => void) {
+    return this.protocol.subscribeToPeripheralMessage(
+      this.device,
+      0x4001,
+      (data) => handler(parseButtonActionNotify(data)),
+    );
+  }
+
+  async subscribeToShiftComplete(
+    handler: (notify: ShiftCompleteNotify) => void,
+  ) {
+    return this.protocol.subscribeToPeripheralMessage(
+      this.device,
+      0x4003,
+      (data) => handler(parseShiftCompleteNotify(data)),
+    );
+  }
+
+  async subscribeToButtonTable(handler: (notify: ButtonTableResponse) => void) {
+    return this.protocol.subscribeToPeripheralMessage(
+      this.device,
+      0x4002,
+      (data) => handler(parseButtonTableNotify(data)),
     );
   }
 }

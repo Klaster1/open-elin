@@ -23,18 +23,73 @@ async function main() {
 
   try {
     const commands = new BikeNetCommands(protocol, device);
-    const unsubscribeBattery = await commands.subscribeToBatteryVoltage(
-      (battery) => {
-        if (battery.status !== "success") return;
-        console.log("Battery notification:");
-        console.log({
-          targetMac: battery.targetMac,
-          isHub: battery.isHub,
-          batteryVoltage: battery.batteryVoltage,
-          rawHex: battery.rawHex,
-        });
-      },
-    );
+    let unsubscribeBattery: (() => void) | undefined;
+    let unsubscribeButton: (() => void) | undefined;
+    let unsubscribeShift: (() => void) | undefined;
+    let unsubscribeButtonTable: (() => void) | undefined;
+
+    process.on("SIGINT", async () => {
+      unsubscribeBattery?.();
+      unsubscribeButton?.();
+      unsubscribeShift?.();
+      unsubscribeButtonTable?.();
+      await protocol.disconnect(device).catch(() => undefined);
+      process.exit(0);
+    });
+
+    unsubscribeBattery = await commands.subscribeToBatteryVoltage((battery) => {
+      if (battery.status !== "success") return;
+      console.log("Battery notification:");
+      console.log({
+        targetMac: battery.targetMac,
+        isHub: battery.isHub,
+        batteryVoltage: battery.batteryVoltage,
+        rawHex: battery.rawHex,
+      });
+    });
+
+    unsubscribeButton = await commands.subscribeToButtonAction((action) => {
+      if (action.status !== "success") return;
+      console.log("Button action:");
+      console.log({
+        targetMac: action.targetMac,
+        buttonId: action.buttonId,
+        buttonHex: action.buttonHex,
+        buttonLabel: action.buttonLabel,
+        actionFlag: action.actionFlag,
+        actionLabel: action.actionLabel,
+        rawHex: action.rawHex,
+      });
+    });
+
+    unsubscribeShift = await commands.subscribeToShiftComplete((shift) => {
+      if (shift.status !== "success") return;
+      console.log("Shift complete:");
+      console.log({
+        targetMac: shift.targetMac,
+        payloadValue: shift.payloadValue,
+        rawHex: shift.rawHex,
+      });
+    });
+
+    unsubscribeButtonTable = await commands.subscribeToButtonTable((table) => {
+      if (table.status !== "success") return;
+      console.log("Button table notification:");
+      const rows = (table.entries ?? []).map((e) => ({
+        index: e.index,
+        pod: e.podAddressHex,
+        elink: e.elinkAddressHex,
+        button1Code: e.button1.code,
+        button1Label: e.button1Label ?? "",
+        button2Code: e.button2.code,
+        button2Label: e.button2Label ?? "",
+        actionCode: e.action.code,
+        actionLabel: e.actionLabel ?? "",
+        functionCode: e.function.code,
+        functionLabel: e.functionLabel ?? "",
+      }));
+      if (rows.length) console.table(rows);
+    });
 
     const listResponse = await commands.getList();
     if (listResponse.status === "success" && listResponse.entries?.length) {
@@ -92,14 +147,15 @@ async function main() {
     } else {
       console.log(buttonTable);
     }
-    unsubscribeBattery?.();
+    console.log("Listening for notifications. Press Ctrl+C to exit.");
+    await new Promise<void>(() => undefined);
   } finally {
     await protocol.disconnect(device).catch(() => undefined);
   }
 }
 
 main()
-  .then(() => process.exit(0))
+  .then(() => undefined)
   .catch((err) => {
     console.error("Fatal error", err);
     process.exit(1);
