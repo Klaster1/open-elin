@@ -289,6 +289,18 @@ export class BikeNetCommands {
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseBasicResponse(response);
   }
+
+  async shiftUp(): Promise<BasicResponse> {
+    const payload = encodeShiftUp(this.device.address);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
+  }
+
+  async shiftDown(): Promise<BasicResponse> {
+    const payload = encodeShiftDown(this.device.address);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
+  }
 }
 
 function encodeReadButtonMap(mac: string) {
@@ -305,6 +317,18 @@ function encodeGetRearCogInfo(mac: string) {
 
 function encodeBlinkLed(mac: string) {
   const cmd = reverseCommand("0x0004");
+  const revMac = reverseMacAddress(mac);
+  return hexToBuffer(cmd + revMac);
+}
+
+function encodeShiftUp(mac: string) {
+  const cmd = reverseCommand("0x0010");
+  const revMac = reverseMacAddress(mac);
+  return hexToBuffer(cmd + revMac);
+}
+
+function encodeShiftDown(mac: string) {
+  const cmd = reverseCommand("0x0011");
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
