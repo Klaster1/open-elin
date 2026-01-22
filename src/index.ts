@@ -31,10 +31,14 @@ async function main() {
         index: e.index,
         pod: e.podAddressHex,
         elink: e.elinkAddressHex,
-        button1: `${e.button1.code} ${e.button1Label ?? ""}`.trim(),
-        button2: `${e.button2.code} ${e.button2Label ?? ""}`.trim(),
-        action: `${e.action.code} ${e.actionLabel ?? ""}`.trim(),
-        function: `${e.function.code} ${e.functionLabel ?? ""}`.trim(),
+        button1Code: e.button1.code,
+        button1Label: e.button1Label ?? "",
+        button2Code: e.button2.code,
+        button2Label: e.button2Label ?? "",
+        actionCode: e.action.code,
+        actionLabel: e.actionLabel ?? "",
+        functionCode: e.function.code,
+        functionLabel: e.functionLabel ?? "",
       }));
       console.table(rows);
     } else {
