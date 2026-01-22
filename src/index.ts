@@ -6,7 +6,8 @@ const PIN_CODE = "1111";
 
 async function main() {
   const transport = new NobleTransport({
-    scanMs: 3000,
+    scanMs: 8000,
+    allowAllOnEmpty: true,
   });
   const protocol = new BikeNetProtocol(transport, {
     pinCode: PIN_CODE,
@@ -14,12 +15,27 @@ async function main() {
   });
 
   const devices = await protocol.listDevices();
-  const device = devices.at(0);
-  if (!device) {
+  if (!devices.length) {
     console.log("No devices found.");
     return;
   }
 
+  const candidates = devices.filter((d) => d.name.includes("nxs"));
+  if (!candidates.length) {
+    console.log("No NXS devices found in scan. Devices seen:");
+    console.table(
+      devices.map((d, index) => ({
+        index,
+        id: d.id,
+        address: d.address,
+        name: d.name,
+        rssi: d.rssi,
+      })),
+    );
+    return;
+  }
+
+  const device = candidates[0];
   console.log(device);
 
   try {
@@ -40,6 +56,23 @@ async function main() {
     } else {
       console.log(listResponse);
     }
+
+    const rearCogInfo = await commands.getRearCogInfo();
+    if (rearCogInfo.status === "success") {
+      const values = rearCogInfo.values ?? [];
+      console.log("Rear cog info:");
+      console.log({
+        targetMac: rearCogInfo.targetMac,
+        count: values.length,
+        rawHex: rearCogInfo.rawHex,
+      });
+      if (values.length) {
+        console.table(values.map((value, index) => ({ index, value })));
+      }
+    } else {
+      console.log(rearCogInfo);
+    }
+
     const buttonTable = await commands.readButtonTable();
     if (buttonTable.status === "success" && buttonTable.entries?.length) {
       console.log("Button table entries:");

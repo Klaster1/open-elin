@@ -40,6 +40,15 @@ export interface ButtonTableResponse {
   entries?: ButtonMapEntry[];
 }
 
+export interface RearCogInfoResponse {
+  status: "success" | "error";
+  code: number;
+  targetMac?: string;
+  values?: number[];
+  rawHex?: string;
+  rawBytes?: number[];
+}
+
 export interface ButtonMapEntry {
   podAddressHex: string;
   elinkAddressHex: string;
@@ -178,6 +187,45 @@ function parseReadButtonMapResponse(data: Buffer): ReadButtonMapResponse {
   return { status: "error", code, targetMac };
 }
 
+function parseRearCogInfoResponse(data: Buffer): RearCogInfoResponse {
+  const code = leInt(data, 2) & 0xffff;
+  const targetMac =
+    data.length >= 8
+      ? Buffer.from(data.slice(2, 8))
+          .reverse()
+          .toString("hex")
+          .match(/.{1,2}/g)!
+          .join(":")
+          .toUpperCase()
+      : undefined;
+
+  if (code === 0x8000) {
+    const payload =
+      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
+    const reversed = Buffer.from(payload).reverse();
+    const rawHex = reversed.toString("hex").toUpperCase();
+    const rawBytes = Array.from(reversed.values());
+    const values: number[] = [];
+
+    if (rawHex.length % 6 === 0 && rawHex.length > 0) {
+      const chunks: string[] = [];
+      for (let i = 0; i < rawHex.length; i += 6) {
+        chunks.push(rawHex.substring(i, i + 6));
+      }
+      for (const chunk of chunks.reverse()) {
+        if (chunk.length !== 6) continue;
+        const valueHex = chunk.substring(2, 6);
+        const value = parseInt(valueHex, 16) / 10;
+        if (!Number.isNaN(value)) values.push(value);
+      }
+    }
+
+    return { status: "success", code, targetMac, values, rawHex, rawBytes };
+  }
+
+  return { status: "error", code, targetMac };
+}
+
 export class BikeNetCommands {
   private readonly protocol: BikeNetProtocol;
   private readonly device: TransportDevice;
@@ -209,10 +257,22 @@ export class BikeNetCommands {
     );
     return parseButtonTableNotify(notify);
   }
+
+  async getRearCogInfo(): Promise<RearCogInfoResponse> {
+    const payload = encodeGetRearCogInfo(this.device.address);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseRearCogInfoResponse(response);
+  }
 }
 
 function encodeReadButtonMap(mac: string) {
   const cmd = reverseCommand("0x0015");
+  const revMac = reverseMacAddress(mac);
+  return hexToBuffer(cmd + revMac);
+}
+
+function encodeGetRearCogInfo(mac: string) {
+  const cmd = reverseCommand("0x001F");
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
