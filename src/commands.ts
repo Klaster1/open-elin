@@ -55,6 +55,26 @@ export interface BasicResponse {
   targetMac?: string;
 }
 
+export interface MotorParamsResponse {
+  status: "success" | "error";
+  code: number;
+  targetMac?: string;
+  values?: number[];
+  humanReadable?: MotorParamsReadable;
+  rawHex?: string;
+  rawBytes?: number[];
+}
+
+export interface MotorParamsReadable {
+  stallDetection: number;
+  pwmFrequency: number;
+  accelRampTimer: number;
+  rampStartDutyCycle: number;
+  overshiftDistance: number;
+  overshiftDelay: number;
+  multishiftDelay: number;
+}
+
 export interface ButtonMapEntry {
   podAddressHex: string;
   elinkAddressHex: string;
@@ -246,6 +266,62 @@ function parseBasicResponse(data: Buffer): BasicResponse {
   return { status: code === 0x8000 ? "success" : "error", code, targetMac };
 }
 
+function parseMotorParamsResponse(data: Buffer): MotorParamsResponse {
+  const code = leInt(data, 2) & 0xffff;
+  const targetMac =
+    data.length >= 8
+      ? Buffer.from(data.slice(2, 8))
+          .reverse()
+          .toString("hex")
+          .match(/.{1,2}/g)!
+          .join(":")
+          .toUpperCase()
+      : undefined;
+
+  if (code === 0x8000) {
+    const payload =
+      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
+    const rawHex = payload.toString("hex").toUpperCase();
+    const rawBytes = Array.from(payload.values());
+
+    const sizes = [2, 4, 2, 1, 2, 2, 2];
+    const values: number[] = [];
+    let offset = 0;
+    for (const size of sizes) {
+      if (offset + size > payload.length) break;
+      const slice = Buffer.from(payload.slice(offset, offset + size)).reverse();
+      const value = parseInt(slice.toString("hex"), 16);
+      values.push(Number.isNaN(value) ? 0 : value);
+      offset += size;
+    }
+
+    const humanReadable: MotorParamsReadable | undefined =
+      values.length >= 7
+        ? {
+            stallDetection: values[0],
+            pwmFrequency: values[1],
+            accelRampTimer: values[2],
+            rampStartDutyCycle: values[3],
+            overshiftDistance: values[4] / 10,
+            overshiftDelay: values[5],
+            multishiftDelay: values[6],
+          }
+        : undefined;
+
+    return {
+      status: "success",
+      code,
+      targetMac,
+      values,
+      humanReadable,
+      rawHex,
+      rawBytes,
+    };
+  }
+
+  return { status: "error", code, targetMac };
+}
+
 export class BikeNetCommands {
   private readonly protocol: BikeNetProtocol;
   private readonly device: TransportDevice;
@@ -301,6 +377,12 @@ export class BikeNetCommands {
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseBasicResponse(response);
   }
+
+  async getMotorParams(): Promise<MotorParamsResponse> {
+    const payload = encodeGetMotorParams(this.device.address);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseMotorParamsResponse(response);
+  }
 }
 
 function encodeReadButtonMap(mac: string) {
@@ -329,6 +411,12 @@ function encodeShiftUp(mac: string) {
 
 function encodeShiftDown(mac: string) {
   const cmd = reverseCommand("0x0011");
+  const revMac = reverseMacAddress(mac);
+  return hexToBuffer(cmd + revMac);
+}
+
+function encodeGetMotorParams(mac: string) {
+  const cmd = reverseCommand("0x0017");
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }

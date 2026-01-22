@@ -57,6 +57,19 @@ async function main() {
       console.log(listResponse);
     }
 
+    const motorParams = await commands.getMotorParams();
+    if (motorParams.status === "success") {
+      console.log("Motor params:");
+      console.log({
+        targetMac: motorParams.targetMac,
+        values: motorParams.values ?? [],
+        humanReadable: motorParams.humanReadable ?? null,
+        rawHex: motorParams.rawHex,
+      });
+    } else {
+      console.log(motorParams);
+    }
+
     const rearCogInfo = await commands.getRearCogInfo();
     if (rearCogInfo.status === "success") {
       const values = rearCogInfo.values ?? [];
