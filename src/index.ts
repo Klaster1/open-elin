@@ -24,6 +24,22 @@ async function main() {
 
   try {
     const commands = new BikeNetCommands(protocol, device);
+    const listResponse = await commands.getList();
+    if (listResponse.status === "success" && listResponse.entries?.length) {
+      console.log("Device list:");
+      const listRows = listResponse.entries.map((entry, index) => ({
+        index,
+        mac: entry.mac,
+        name: entry.name,
+        type: entry.type,
+        flag: entry.flag,
+        num: entry.num,
+        extra: entry.extra,
+      }));
+      console.table(listRows);
+    } else {
+      console.log(listResponse);
+    }
     const buttonTable = await commands.readButtonTable();
     if (buttonTable.status === "success" && buttonTable.entries?.length) {
       console.log("Button table entries:");
