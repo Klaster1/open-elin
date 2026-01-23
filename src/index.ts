@@ -2,16 +2,11 @@ import { BikeNetCommands } from "./commands.ts";
 import { BikeNetProtocol } from "./protocol.ts";
 import { NobleTransport } from "./transport-noble.ts";
 
-const PIN_CODE = "1111";
-
 async function main() {
   const transport = new NobleTransport({
     scanMs: 8000,
   });
-  const protocol = new BikeNetProtocol(transport, {
-    pinCode: PIN_CODE,
-    responseTimeoutMs: 8000,
-  });
+  const protocol = new BikeNetProtocol(transport);
 
   const devices = await protocol.listDevices();
   if (!devices.length) {

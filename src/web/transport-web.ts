@@ -92,22 +92,26 @@ export class WebBluetoothTransport {
       return Buffer.from(buffer.slice(byteOffset, byteOffset + byteLength));
     };
 
+    const toView = (payload: Buffer) => Uint8Array.from(payload);
+
     return {
       macAddress: device.address,
       writeWithoutResponse,
       writeMsg: async (payload, withoutResponse) => {
+        const view = toView(payload);
         if (withoutResponse && writeWithoutResponse) {
-          await msgChar.writeValueWithoutResponse(payload);
+          await msgChar.writeValueWithoutResponse(view);
         } else {
-          await msgChar.writeValue(payload);
+          await msgChar.writeValue(view);
         }
       },
       writePin: async (payload, withoutResponse) => {
         if (!pinChar) return;
+        const view = toView(payload);
         if (withoutResponse && "writeValueWithoutResponse" in pinChar) {
-          await (pinChar as any).writeValueWithoutResponse(payload);
+          await (pinChar as any).writeValueWithoutResponse(view);
         } else {
-          await pinChar.writeValue(payload);
+          await pinChar.writeValue(view);
         }
       },
       subscribeMsg: async (handler) => {

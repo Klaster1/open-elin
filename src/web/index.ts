@@ -3,8 +3,6 @@ import { BikeNetCommands } from "../commands.ts";
 import { BikeNetProtocol } from "../protocol.ts";
 import { WebBluetoothTransport } from "./transport-web.ts";
 
-const PIN_CODE = "1111";
-
 const logArea = document.querySelector<HTMLPreElement>("#log");
 const connectButton = document.querySelector<HTMLButtonElement>("#connect");
 
@@ -35,10 +33,7 @@ async function connectAndRun() {
   const transport = new WebBluetoothTransport({
     deviceNamePrefix: "",
   });
-  const protocol = new BikeNetProtocol(transport, {
-    pinCode: PIN_CODE,
-    responseTimeoutMs: 8000,
-  });
+  const protocol = new BikeNetProtocol(transport);
 
   const devices = await protocol.listDevices();
   if (!devices.length) {

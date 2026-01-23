@@ -63,10 +63,13 @@ function responseCode(data: Buffer) {
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 
+const DEFAULT_PIN_CODE = "1111";
+const DEFAULT_RESPONSE_TIMEOUT_MS = 5000;
+
 export class BikeNetProtocol {
   private readonly transport: ProtocolTransport;
   private readonly responseTimeoutMs: number;
-  private readonly pinCode?: string;
+  private readonly pinCode: string;
   private readonly sessions = new Map<
     string,
     {
@@ -94,11 +97,12 @@ export class BikeNetProtocol {
     options: {
       pinCode?: string;
       responseTimeoutMs?: number;
-    },
+    } = {},
   ) {
     this.transport = transport;
-    this.responseTimeoutMs = options.responseTimeoutMs ?? 5000;
-    this.pinCode = options.pinCode;
+    this.responseTimeoutMs =
+      options.responseTimeoutMs ?? DEFAULT_RESPONSE_TIMEOUT_MS;
+    this.pinCode = options.pinCode ?? DEFAULT_PIN_CODE;
   }
 
   async listDevices() {
@@ -197,13 +201,11 @@ export class BikeNetProtocol {
       }
     });
 
-    if (this.pinCode) {
-      const pinHex = processPin(this.pinCode);
-      await connection.writePin(
-        hexToBuffer(pinHex),
-        connection.writeWithoutResponse,
-      );
-    }
+    const pinHex = processPin(this.pinCode);
+    await connection.writePin(
+      hexToBuffer(pinHex),
+      connection.writeWithoutResponse,
+    );
 
     this.sessions.set(device.id, session);
     return session;
