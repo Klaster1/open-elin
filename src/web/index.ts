@@ -4,10 +4,14 @@ import { WebBluetoothTransport } from "./transport-web.ts";
 
 const logArea = document.querySelector<HTMLPreElement>("#log");
 const connectButton = document.querySelector<HTMLButtonElement>("#connect");
+const macInput = document.querySelector<HTMLInputElement>("#mac");
 
-if (!logArea || !connectButton) {
+if (!logArea || !connectButton || !macInput) {
   throw new Error("Missing UI elements");
 }
+
+const MAC_STORAGE_KEY = "bikenet.hubMac";
+macInput.value = localStorage.getItem(MAC_STORAGE_KEY) ?? "";
 
 function log(...parts: Array<string | number | object>) {
   const line = parts
@@ -21,6 +25,14 @@ async function connectAndRun() {
   connectButton.disabled = true;
   log("Requesting device...");
 
+  const macOverride = macInput.value.trim().toUpperCase();
+  if (!/^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/.test(macOverride)) {
+    log("Enter a valid hub MAC (AA:BB:CC:DD:EE:FF). Commands require it.");
+    connectButton.disabled = false;
+    return;
+  }
+  localStorage.setItem(MAC_STORAGE_KEY, macOverride);
+
   const transport = new WebBluetoothTransport({
     deviceNamePrefix: "",
   });
@@ -33,9 +45,11 @@ async function connectAndRun() {
   }
 
   const device = devices[0];
+  device.address = macOverride;
   log("Selected device:", {
     id: device.id,
     name: device.name,
+    mac: device.address,
   });
 
   const commands = new BikeNetCommands(protocol, device);

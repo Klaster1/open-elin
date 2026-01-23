@@ -37,6 +37,14 @@
         cursor: pointer;
         width: fit-content;
       }
+      input {
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #2d3446;
+        background: #0f1115;
+        color: inherit;
+        max-width: 240px;
+      }
       button:disabled {
         background: #4b4f5a;
         cursor: not-allowed;
@@ -67,8 +75,11 @@
     <div class="card">
       <p class="hint">
         Click connect to select the BikeNet hub (eLink) device. Requires Chrome
-        with Web Bluetooth enabled.
+        with Web Bluetooth enabled. Enter the hub MAC (eLink), since Web
+        Bluetooth does not expose it.
       </p>
+      <label class="hint" for="mac">Hub MAC (eLink)</label>
+      <input id="mac" placeholder="AA:BB:CC:DD:EE:FF" />
       <button id="connect">Connect + Run</button>
     </div>
     <div class="card">
