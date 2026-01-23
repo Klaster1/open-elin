@@ -12,8 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@abandonware/noble": "^1.9.2-26",
-    "buffer": "^6.0.3"
+    "@abandonware/noble": "^1.9.2-26"
   },
   "devDependencies": {
     "@types/node": "^25.0.10",
