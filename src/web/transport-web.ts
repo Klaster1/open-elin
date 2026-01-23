@@ -1,8 +1,8 @@
 export interface WebBluetoothTransportOptions {
   deviceNamePrefix?: string;
   optionalServiceUuids?: string[];
-  onMsgNotify?: (data: Buffer) => void;
-  onPinNotify?: (data: Buffer) => void;
+  onMsgNotify?: (data: Uint8Array) => void;
+  onPinNotify?: (data: Uint8Array) => void;
 }
 
 export interface TransportDevice {
@@ -16,16 +16,16 @@ export interface TransportDevice {
 export interface TransportConnection {
   macAddress: string;
   writeWithoutResponse: boolean;
-  writeMsg: (payload: Buffer, withoutResponse: boolean) => Promise<void>;
-  writePin: (payload: Buffer, withoutResponse: boolean) => Promise<void>;
-  subscribeMsg: (handler: (data: Buffer) => void) => Promise<void>;
-  subscribePin: (handler: (data: Buffer) => void) => Promise<void>;
+  writeMsg: (payload: Uint8Array, withoutResponse: boolean) => Promise<void>;
+  writePin: (payload: Uint8Array, withoutResponse: boolean) => Promise<void>;
+  subscribeMsg: (handler: (data: Uint8Array) => void) => Promise<void>;
+  subscribePin: (handler: (data: Uint8Array) => void) => Promise<void>;
   disconnect: () => Promise<void>;
 }
 
 export class WebBluetoothTransport {
-  private readonly onMsgNotify?: (data: Buffer) => void;
-  private readonly onPinNotify?: (data: Buffer) => void;
+  private readonly onMsgNotify?: (data: Uint8Array) => void;
+  private readonly onPinNotify?: (data: Uint8Array) => void;
   private readonly serviceUuid = "a5c1c000-cc20-ba91-0c1a-ef3f9e643d79";
   private readonly optionalServiceUuids?: string[];
   private readonly deviceNamePrefix?: string;
@@ -89,10 +89,14 @@ export class WebBluetoothTransport {
 
     const toBuffer = (value: DataView) => {
       const { buffer, byteOffset, byteLength } = value;
-      return Buffer.from(buffer.slice(byteOffset, byteOffset + byteLength));
+      return new Uint8Array(buffer.slice(byteOffset, byteOffset + byteLength));
     };
 
-    const toView = (payload: Buffer) => Uint8Array.from(payload);
+    const toView = (payload: Uint8Array) => {
+      const view = new Uint8Array(payload.byteLength);
+      view.set(payload);
+      return view;
+    };
 
     return {
       macAddress: device.address,

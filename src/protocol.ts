@@ -1,9 +1,11 @@
 export type BleWriteFn = (
-  payload: Buffer,
+  payload: Uint8Array,
   withoutResponse: boolean,
 ) => Promise<void>;
 
-export type BleSubscribeFn = (handler: (data: Buffer) => void) => Promise<void>;
+export type BleSubscribeFn = (
+  handler: (data: Uint8Array) => void,
+) => Promise<void>;
 
 export interface ProtocolTransport {
   listDevices: () => Promise<TransportDevice[]>;
@@ -28,13 +30,20 @@ export interface TransportConnection {
   disconnect: () => Promise<void>;
 }
 
-export function bufToHex(buf?: Buffer | null) {
+export function bufToHex(buf?: Uint8Array | null) {
   if (!buf) return "";
-  return Buffer.from(buf).toString("hex");
+  return Array.from(buf)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export function hexToBuffer(hex: string) {
-  return Buffer.from(hex, "hex");
+  const clean = hex.trim();
+  const out = new Uint8Array(Math.floor(clean.length / 2));
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(clean.substring(i * 2, i * 2 + 2), 16);
+  }
+  return out;
 }
 
 export function reverseCommand(cmd: string) {
@@ -57,7 +66,7 @@ export function processPin(pin: string) {
     .join("");
 }
 
-function responseCode(data: Buffer) {
+function responseCode(data: Uint8Array) {
   return (data[0] & 0xff) | ((data[1] & 0xff) << 8);
 }
 
@@ -75,19 +84,19 @@ export class BikeNetProtocol {
     {
       connection: TransportConnection;
       pending: {
-        resolve: (data: Buffer) => void;
+        resolve: (data: Uint8Array) => void;
         reject: (err: Error) => void;
         timer: TimeoutHandle;
       } | null;
       peripheralWaiters: Array<{
         code: number;
-        resolve: (data: Buffer) => void;
+        resolve: (data: Uint8Array) => void;
         reject: (err: Error) => void;
         timer: TimeoutHandle;
       }>;
       peripheralSubscriptions: Array<{
         code: number;
-        handler: (data: Buffer) => void;
+        handler: (data: Uint8Array) => void;
       }>;
     }
   >();
@@ -109,12 +118,12 @@ export class BikeNetProtocol {
     return this.transport.listDevices();
   }
 
-  async sendCommand(device: TransportDevice, payload: Buffer) {
+  async sendCommand(device: TransportDevice, payload: Uint8Array) {
     const session = await this.getSession(device);
     if (session.pending) {
       throw new Error("Command already in flight");
     }
-    const response = new Promise<Buffer>((resolve, reject) => {
+    const response = new Promise<Uint8Array>((resolve, reject) => {
       const timer = setTimeout(() => {
         session.pending = null;
         reject(new Error("Response timeout"));
@@ -136,7 +145,7 @@ export class BikeNetProtocol {
   ) {
     const session = await this.getSession(device);
     const waitMs = timeoutMs ?? this.responseTimeoutMs;
-    return new Promise<Buffer>((resolve, reject) => {
+    return new Promise<Uint8Array>((resolve, reject) => {
       const timer = setTimeout(() => {
         session.peripheralWaiters = session.peripheralWaiters.filter(
           (w) => w.resolve !== resolve,
@@ -157,7 +166,7 @@ export class BikeNetProtocol {
   async subscribeToPeripheralMessage(
     device: TransportDevice,
     code: number,
-    handler: (data: Buffer) => void,
+    handler: (data: Uint8Array) => void,
   ) {
     const session = await this.getSession(device);
     const subscription = { code, handler };
@@ -177,19 +186,19 @@ export class BikeNetProtocol {
     const session = {
       connection,
       pending: null as null | {
-        resolve: (data: Buffer) => void;
+        resolve: (data: Uint8Array) => void;
         reject: (err: Error) => void;
         timer: TimeoutHandle;
       },
       peripheralWaiters: [] as Array<{
         code: number;
-        resolve: (data: Buffer) => void;
+        resolve: (data: Uint8Array) => void;
         reject: (err: Error) => void;
         timer: TimeoutHandle;
       }>,
       peripheralSubscriptions: [] as Array<{
         code: number;
-        handler: (data: Buffer) => void;
+        handler: (data: Uint8Array) => void;
       }>,
     };
 
@@ -211,7 +220,7 @@ export class BikeNetProtocol {
     return session;
   }
 
-  private handleMsg(deviceId: string, data: Buffer) {
+  private handleMsg(deviceId: string, data: Uint8Array) {
     const session = this.sessions.get(deviceId);
     if (!session) return;
     const code = responseCode(data);

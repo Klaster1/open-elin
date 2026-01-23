@@ -1,4 +1,3 @@
-import { Buffer } from "buffer";
 import { BikeNetCommands } from "../commands.ts";
 import { BikeNetProtocol } from "../protocol.ts";
 import { WebBluetoothTransport } from "./transport-web.ts";
@@ -17,14 +16,6 @@ function log(...parts: Array<string | number | object>) {
   logArea.textContent += `${line}\n`;
   logArea.scrollTop = logArea.scrollHeight;
 }
-
-function installBufferPolyfill() {
-  if (!("Buffer" in globalThis)) {
-    (globalThis as any).Buffer = Buffer;
-  }
-}
-
-installBufferPolyfill();
 
 async function connectAndRun() {
   connectButton.disabled = true;

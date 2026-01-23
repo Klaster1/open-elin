@@ -121,7 +121,34 @@ export interface ButtonMapEntry {
   index: number;
 }
 
-function leInt(buf: Buffer, len: number) {
+const textDecoder = new TextDecoder("utf-8");
+
+function bytesToHex(bytes: Uint8Array) {
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function bytesToHexUpper(bytes: Uint8Array) {
+  return bytesToHex(bytes).toUpperCase();
+}
+
+function reverseBytes(bytes: Uint8Array) {
+  const out = Uint8Array.from(bytes);
+  out.reverse();
+  return out;
+}
+
+function macFromBytes(bytes: Uint8Array) {
+  const hex = bytesToHexUpper(reverseBytes(bytes));
+  return hex.match(/.{1,2}/g)!.join(":");
+}
+
+function decodeName(bytes: Uint8Array) {
+  return textDecoder.decode(bytes).replace(/\x00+$/, "");
+}
+
+function leInt(buf: Uint8Array, len: number) {
   let v = 0;
   for (let i = 0; i < len; i++) {
     v |= (buf[i] & 0xff) << (8 * i);
@@ -142,21 +169,15 @@ function encodeGetList(mac: string) {
   return hexToBuffer(cmd + revMac);
 }
 
-function parseGetListPayload(payload: Buffer): GetListEntry[] | null {
+function parseGetListPayload(payload: Uint8Array): GetListEntry[] | null {
   if (!payload.length || payload.length % 27 !== 0) return null;
   const count = payload.length / 27;
   const entries: GetListEntry[] = [];
   for (let i = 0; i < count; i++) {
     const off = i * 27;
-    const macPart = Buffer.from(payload.slice(off, off + 6));
-    const mac = Buffer.from(macPart)
-      .reverse()
-      .toString("hex")
-      .match(/.{1,2}/g)!
-      .join(":")
-      .toUpperCase();
-    const nameBuf = Buffer.from(payload.slice(off + 6, off + 22));
-    const name = nameBuf.toString("utf8").replace(/\x00+$/, "");
+    const mac = macFromBytes(payload.slice(off, off + 6));
+    const nameBuf = payload.slice(off + 6, off + 22);
+    const name = decodeName(nameBuf);
     const deviceId = payload[off + 22] & 0xff;
     const isConnected = (payload[off + 23] & 0xff) === 1;
     const batteryVoltage =
@@ -174,21 +195,13 @@ function parseGetListPayload(payload: Buffer): GetListEntry[] | null {
   return entries;
 }
 
-function parseGetListResponse(data: Buffer): GetListResponse {
+function parseGetListResponse(data: Uint8Array): GetListResponse {
   const code = leInt(data, 2) & 0xffff;
   const targetMac =
-    data.length >= 8
-      ? Buffer.from(data.slice(2, 8))
-          .reverse()
-          .toString("hex")
-          .match(/.{1,2}/g)!
-          .join(":")
-          .toUpperCase()
-      : undefined;
+    data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
   if (code === 0x8000) {
-    const payload =
-      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
+    const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const entries = parseGetListPayload(payload) || undefined;
     return { status: "success", code, targetMac, entries };
   }
@@ -196,23 +209,15 @@ function parseGetListResponse(data: Buffer): GetListResponse {
   return { status: "error", code, targetMac };
 }
 
-function parseReadButtonMapResponse(data: Buffer): ReadButtonMapResponse {
+function parseReadButtonMapResponse(data: Uint8Array): ReadButtonMapResponse {
   const code = leInt(data, 2) & 0xffff;
   const targetMac =
-    data.length >= 8
-      ? Buffer.from(data.slice(2, 8))
-          .reverse()
-          .toString("hex")
-          .match(/.{1,2}/g)!
-          .join(":")
-          .toUpperCase()
-      : undefined;
+    data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
   if (code === 0x8000) {
-    const payload =
-      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
-    const reversed = Buffer.from(payload).reverse();
-    const mapHex = reversed.toString("hex").toUpperCase();
+    const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
+    const reversed = reverseBytes(payload);
+    const mapHex = bytesToHexUpper(reversed);
     const mapBytes = Array.from(reversed.values());
     const mapByteLength = mapBytes.length;
     let entryCount: number | undefined;
@@ -252,23 +257,15 @@ function parseReadButtonMapResponse(data: Buffer): ReadButtonMapResponse {
   return { status: "error", code, targetMac };
 }
 
-function parseRearCogInfoResponse(data: Buffer): RearCogInfoResponse {
+function parseRearCogInfoResponse(data: Uint8Array): RearCogInfoResponse {
   const code = leInt(data, 2) & 0xffff;
   const targetMac =
-    data.length >= 8
-      ? Buffer.from(data.slice(2, 8))
-          .reverse()
-          .toString("hex")
-          .match(/.{1,2}/g)!
-          .join(":")
-          .toUpperCase()
-      : undefined;
+    data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
   if (code === 0x8000) {
-    const payload =
-      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
-    const reversed = Buffer.from(payload).reverse();
-    const rawHex = reversed.toString("hex").toUpperCase();
+    const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
+    const reversed = reverseBytes(payload);
+    const rawHex = bytesToHexUpper(reversed);
     const rawBytes = Array.from(reversed.values());
     const values: number[] = [];
 
@@ -291,36 +288,21 @@ function parseRearCogInfoResponse(data: Buffer): RearCogInfoResponse {
   return { status: "error", code, targetMac };
 }
 
-function parseBasicResponse(data: Buffer): BasicResponse {
+function parseBasicResponse(data: Uint8Array): BasicResponse {
   const code = leInt(data, 2) & 0xffff;
   const targetMac =
-    data.length >= 8
-      ? Buffer.from(data.slice(2, 8))
-          .reverse()
-          .toString("hex")
-          .match(/.{1,2}/g)!
-          .join(":")
-          .toUpperCase()
-      : undefined;
+    data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
   return { status: code === 0x8000 ? "success" : "error", code, targetMac };
 }
 
-function parseMotorParamsResponse(data: Buffer): MotorParamsResponse {
+function parseMotorParamsResponse(data: Uint8Array): MotorParamsResponse {
   const code = leInt(data, 2) & 0xffff;
   const targetMac =
-    data.length >= 8
-      ? Buffer.from(data.slice(2, 8))
-          .reverse()
-          .toString("hex")
-          .match(/.{1,2}/g)!
-          .join(":")
-          .toUpperCase()
-      : undefined;
+    data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
   if (code === 0x8000) {
-    const payload =
-      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
-    const rawHex = payload.toString("hex").toUpperCase();
+    const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
+    const rawHex = bytesToHexUpper(payload);
     const rawBytes = Array.from(payload.values());
 
     const sizes = [2, 4, 2, 1, 2, 2, 2];
@@ -328,8 +310,8 @@ function parseMotorParamsResponse(data: Buffer): MotorParamsResponse {
     let offset = 0;
     for (const size of sizes) {
       if (offset + size > payload.length) break;
-      const slice = Buffer.from(payload.slice(offset, offset + size)).reverse();
-      const value = parseInt(slice.toString("hex"), 16);
+      const slice = reverseBytes(payload.slice(offset, offset + size));
+      const value = parseInt(bytesToHex(slice), 16);
       values.push(Number.isNaN(value) ? 0 : value);
       offset += size;
     }
@@ -362,31 +344,23 @@ function parseMotorParamsResponse(data: Buffer): MotorParamsResponse {
 }
 
 export function parseBatteryVoltageNotify(
-  data: Buffer,
+  data: Uint8Array,
   hubMac?: string,
 ): BatteryVoltageNotify {
   const code = leInt(data, 2) & 0xffff;
   const targetMac =
-    data.length >= 8
-      ? Buffer.from(data.slice(2, 8))
-          .reverse()
-          .toString("hex")
-          .match(/.{1,2}/g)!
-          .join(":")
-          .toUpperCase()
-      : undefined;
+    data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
   if (code === 0x4000) {
-    const payload =
-      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
-    const rawHex = payload.toString("hex").toUpperCase();
+    const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
+    const rawHex = bytesToHexUpper(payload);
     const rawBytes = Array.from(payload.values());
     const normalizedHub = normalizeMac(hubMac);
     const normalizedTarget = normalizeMac(targetMac);
     const isHub =
       normalizedHub.length > 0 && normalizedHub === normalizedTarget;
     const batteryVoltage = isHub
-      ? parseInt(Buffer.from(payload).reverse().toString("hex"), 16)
+      ? parseInt(bytesToHex(reverseBytes(payload)), 16)
       : leInt(payload, Math.min(2, payload.length)) & 0xffff;
 
     return {
@@ -403,22 +377,14 @@ export function parseBatteryVoltageNotify(
   return { status: "error", code, targetMac };
 }
 
-export function parseButtonActionNotify(data: Buffer): ButtonActionNotify {
+export function parseButtonActionNotify(data: Uint8Array): ButtonActionNotify {
   const code = leInt(data, 2) & 0xffff;
   const targetMac =
-    data.length >= 8
-      ? Buffer.from(data.slice(2, 8))
-          .reverse()
-          .toString("hex")
-          .match(/.{1,2}/g)!
-          .join(":")
-          .toUpperCase()
-      : undefined;
+    data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
   if (code === 0x4001) {
-    const payload =
-      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
-    const rawHex = payload.toString("hex").toUpperCase();
+    const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
+    const rawHex = bytesToHexUpper(payload);
     const rawBytes = Array.from(payload.values());
     const buttonId = payload.length > 0 ? payload[0] & 0xff : undefined;
     const actionFlag = payload.length > 1 ? payload[1] & 0xff : undefined;
@@ -450,22 +416,16 @@ export function parseButtonActionNotify(data: Buffer): ButtonActionNotify {
   return { status: "error", code, targetMac };
 }
 
-export function parseShiftCompleteNotify(data: Buffer): ShiftCompleteNotify {
+export function parseShiftCompleteNotify(
+  data: Uint8Array,
+): ShiftCompleteNotify {
   const code = leInt(data, 2) & 0xffff;
   const targetMac =
-    data.length >= 8
-      ? Buffer.from(data.slice(2, 8))
-          .reverse()
-          .toString("hex")
-          .match(/.{1,2}/g)!
-          .join(":")
-          .toUpperCase()
-      : undefined;
+    data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
   if (code === 0x4003) {
-    const payload =
-      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
-    const rawHex = payload.toString("hex").toUpperCase();
+    const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
+    const rawHex = bytesToHexUpper(payload);
     const rawBytes = Array.from(payload.values());
     const payloadValue = payload.length
       ? leInt(payload, Math.min(4, payload.length))
@@ -618,21 +578,13 @@ function encodeGetMotorParams(mac: string) {
   return hexToBuffer(cmd + revMac);
 }
 
-function parseButtonTableNotify(data: Buffer): ButtonTableResponse {
+function parseButtonTableNotify(data: Uint8Array): ButtonTableResponse {
   const code = leInt(data, 2) & 0xffff;
   const targetMac =
-    data.length >= 8
-      ? Buffer.from(data.slice(2, 8))
-          .reverse()
-          .toString("hex")
-          .match(/.{1,2}/g)!
-          .join(":")
-          .toUpperCase()
-      : undefined;
+    data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
   if (code === 0x4002) {
-    const payload =
-      data.length > 8 ? Buffer.from(data.slice(8)) : Buffer.alloc(0);
+    const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const entries = payload.length >= 16 ? parseButtonMapEntries(payload) : [];
     return { status: "success", code, targetMac, entries };
   }
@@ -640,35 +592,17 @@ function parseButtonTableNotify(data: Buffer): ButtonTableResponse {
   return { status: "error", code, targetMac };
 }
 
-function parseButtonMapEntries(buf: Buffer): ButtonMapEntry[] {
+function parseButtonMapEntries(buf: Uint8Array): ButtonMapEntry[] {
   const entries: ButtonMapEntry[] = [];
   const count = Math.floor(buf.length / 16);
   for (let i = 0; i < count; i++) {
     const off = i * 16;
-    const podAddressHex = buf
-      .slice(off, off + 6)
-      .toString("hex")
-      .toUpperCase();
-    const elinkAddressHex = buf
-      .slice(off + 6, off + 12)
-      .toString("hex")
-      .toUpperCase();
-    const button1 = buf
-      .slice(off + 12, off + 13)
-      .toString("hex")
-      .toUpperCase();
-    const button2 = buf
-      .slice(off + 13, off + 14)
-      .toString("hex")
-      .toUpperCase();
-    const action = buf
-      .slice(off + 14, off + 15)
-      .toString("hex")
-      .toUpperCase();
-    const func = buf
-      .slice(off + 15, off + 16)
-      .toString("hex")
-      .toUpperCase();
+    const podAddressHex = bytesToHexUpper(buf.slice(off, off + 6));
+    const elinkAddressHex = bytesToHexUpper(buf.slice(off + 6, off + 12));
+    const button1 = bytesToHexUpper(buf.slice(off + 12, off + 13));
+    const button2 = bytesToHexUpper(buf.slice(off + 13, off + 14));
+    const action = bytesToHexUpper(buf.slice(off + 14, off + 15));
+    const func = bytesToHexUpper(buf.slice(off + 15, off + 16));
 
     entries.push({
       podAddressHex,

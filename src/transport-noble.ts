@@ -1,7 +1,7 @@
 export interface NobleTransportOptions {
   scanMs?: number;
-  onMsgNotify?: (data: Buffer) => void;
-  onPinNotify?: (data: Buffer) => void;
+  onMsgNotify?: (data: Uint8Array) => void;
+  onPinNotify?: (data: Uint8Array) => void;
 }
 
 export interface TransportDevice {
@@ -15,17 +15,17 @@ export interface TransportDevice {
 export interface TransportConnection {
   macAddress: string;
   writeWithoutResponse: boolean;
-  writeMsg: (payload: Buffer, withoutResponse: boolean) => Promise<void>;
-  writePin: (payload: Buffer, withoutResponse: boolean) => Promise<void>;
-  subscribeMsg: (handler: (data: Buffer) => void) => Promise<void>;
-  subscribePin: (handler: (data: Buffer) => void) => Promise<void>;
+  writeMsg: (payload: Uint8Array, withoutResponse: boolean) => Promise<void>;
+  writePin: (payload: Uint8Array, withoutResponse: boolean) => Promise<void>;
+  subscribeMsg: (handler: (data: Uint8Array) => void) => Promise<void>;
+  subscribePin: (handler: (data: Uint8Array) => void) => Promise<void>;
   disconnect: () => Promise<void>;
 }
 
 export class NobleTransport {
   private readonly scanMs: number;
-  private readonly onMsgNotify?: (data: Buffer) => void;
-  private readonly onPinNotify?: (data: Buffer) => void;
+  private readonly onMsgNotify?: (data: Uint8Array) => void;
+  private readonly onPinNotify?: (data: Uint8Array) => void;
   private readonly serviceUuid = "a5c1c000cc20ba910c1aef3f9e643d79";
 
   constructor(options: NobleTransportOptions) {
@@ -130,7 +130,10 @@ export class NobleTransport {
       writeWithoutResponse,
       writeMsg: (payload, withoutResponse) =>
         new Promise<void>((resolve, reject) => {
-          msgChar.write(payload, withoutResponse, (err: Error | null) =>
+          const data = Buffer.isBuffer(payload)
+            ? payload
+            : Buffer.from(payload);
+          msgChar.write(data, withoutResponse, (err: Error | null) =>
             err ? reject(err) : resolve(),
           );
         }),
@@ -140,7 +143,10 @@ export class NobleTransport {
             resolve();
             return;
           }
-          pinChar.write(payload, withoutResponse, (err: Error | null) =>
+          const data = Buffer.isBuffer(payload)
+            ? payload
+            : Buffer.from(payload);
+          pinChar.write(data, withoutResponse, (err: Error | null) =>
             err ? reject(err) : resolve(),
           );
         }),
@@ -151,7 +157,7 @@ export class NobleTransport {
               reject(err);
               return;
             }
-            msgChar.on("data", (data: Buffer) => {
+            msgChar.on("data", (data: Uint8Array) => {
               if (this.onMsgNotify) this.onMsgNotify(data);
               handler(data);
             });
@@ -173,7 +179,7 @@ export class NobleTransport {
               reject(err);
               return;
             }
-            pinChar.on("data", (data: Buffer) => {
+            pinChar.on("data", (data: Uint8Array) => {
               if (this.onPinNotify) this.onPinNotify(data);
               handler(data);
             });
@@ -189,7 +195,7 @@ export class NobleTransport {
 
   private async waitForPoweredOn() {
     const noble = await import("@abandonware/noble");
-    if (noble.default.state === "poweredOn") return;
+    // if (noble.default.state === "poweredOn") return;
     await new Promise<void>((resolve) => {
       const handler = (state: string) => {
         if (state === "poweredOn") {
