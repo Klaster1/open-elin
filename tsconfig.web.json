@@ -7,8 +7,8 @@
     "jsx": "preserve",
     "strict": false,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": [],
     "allowImportingTsExtensions": true
   },
-  "include": ["src", "index.html"]
+  "include": ["src/web", "index.html"]
 }

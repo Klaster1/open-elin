@@ -1,7 +1,7 @@
 import { Buffer } from "buffer";
 import { BikeNetCommands } from "../commands.ts";
 import { BikeNetProtocol } from "../protocol.ts";
-import { WebBluetoothTransport } from "../transport-web.ts";
+import { WebBluetoothTransport } from "./transport-web.ts";
 
 const PIN_CODE = "1111";
 
