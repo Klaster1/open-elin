@@ -61,6 +61,8 @@ function responseCode(data: Buffer) {
   return (data[0] & 0xff) | ((data[1] & 0xff) << 8);
 }
 
+type TimeoutHandle = ReturnType<typeof setTimeout>;
+
 export class BikeNetProtocol {
   private readonly transport: ProtocolTransport;
   private readonly responseTimeoutMs: number;
@@ -72,13 +74,13 @@ export class BikeNetProtocol {
       pending: {
         resolve: (data: Buffer) => void;
         reject: (err: Error) => void;
-        timer: NodeJS.Timeout;
+        timer: TimeoutHandle;
       } | null;
       peripheralWaiters: Array<{
         code: number;
         resolve: (data: Buffer) => void;
         reject: (err: Error) => void;
-        timer: NodeJS.Timeout;
+        timer: TimeoutHandle;
       }>;
       peripheralSubscriptions: Array<{
         code: number;
@@ -173,13 +175,13 @@ export class BikeNetProtocol {
       pending: null as null | {
         resolve: (data: Buffer) => void;
         reject: (err: Error) => void;
-        timer: NodeJS.Timeout;
+        timer: TimeoutHandle;
       },
       peripheralWaiters: [] as Array<{
         code: number;
         resolve: (data: Buffer) => void;
         reject: (err: Error) => void;
-        timer: NodeJS.Timeout;
+        timer: TimeoutHandle;
       }>,
       peripheralSubscriptions: [] as Array<{
         code: number;

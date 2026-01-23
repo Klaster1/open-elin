@@ -6,13 +6,18 @@
   "main": "src/index.ts",
   "scripts": {
     "start": "node src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "dev": "vite",
+    "build:web": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@abandonware/noble": "^1.9.2-26"
+    "@abandonware/noble": "^1.9.2-26",
+    "buffer": "^6.0.3"
   },
   "devDependencies": {
     "@types/node": "^25.0.10",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^5.4.11"
   }
 }
