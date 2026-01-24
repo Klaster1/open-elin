@@ -122,6 +122,7 @@ export interface ButtonMapEntry {
 }
 
 const textDecoder = new TextDecoder("utf-8");
+const textEncoder = new TextEncoder();
 
 function bytesToHex(bytes: Uint8Array) {
   return Array.from(bytes)
@@ -163,10 +164,34 @@ function normalizeMac(mac?: string) {
   return clean.match(/.{1,2}/g)!.join(":");
 }
 
+function encodeNameBytes(name: string) {
+  const out = new Uint8Array(16);
+  for (let i = 0; i < 16; i++) {
+    if (i < name.length) {
+      const bytes = textEncoder.encode(name.charAt(i));
+      out[i] = bytes.length ? bytes[0] : 0x00;
+    } else {
+      out[i] = 0x00;
+    }
+  }
+  return out;
+}
+
 function encodeGetList(mac: string) {
   const cmd = reverseCommand("0x0000");
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
+}
+
+function encodeSetName(mac: string, name: string) {
+  const cmd = reverseCommand("0x0009");
+  const revMac = reverseMacAddress(mac);
+  const header = hexToBuffer(cmd + revMac);
+  const nameBytes = encodeNameBytes(name);
+  const out = new Uint8Array(header.length + nameBytes.length);
+  out.set(header, 0);
+  out.set(nameBytes, header.length);
+  return out;
 }
 
 function parseGetListPayload(payload: Uint8Array): GetListEntry[] | null {
@@ -483,6 +508,16 @@ export class BikeNetCommands {
 
   async blinkLed(): Promise<BasicResponse> {
     const payload = encodeBlinkLed(this.device.address);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
+  }
+
+  async setDeviceName(
+    name: string,
+    targetMac?: string,
+  ): Promise<BasicResponse> {
+    const mac = targetMac ?? this.device.address;
+    const payload = encodeSetName(mac, name);
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseBasicResponse(response);
   }
