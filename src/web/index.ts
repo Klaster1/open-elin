@@ -157,6 +157,45 @@ class BikeNetApp extends LitElement {
       color: var(--muted, #98a6b5);
     }
 
+    .empty-state.stack {
+      margin-top: 0;
+      padding: 28px;
+      min-height: 280px;
+      flex-direction: column;
+      text-align: center;
+      gap: 14px;
+      border-style: solid;
+      border-color: #2b3a4b;
+      background: rgba(10, 16, 22, 0.8);
+    }
+
+    .empty-icon {
+      width: 120px;
+      height: 120px;
+      border-radius: 28px;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 30% 30%, #2d3c4c, #121a24);
+      border: 1px solid #2b3a4b;
+    }
+
+    .empty-icon svg {
+      width: 72px;
+      height: 72px;
+      opacity: 0.9;
+    }
+
+    .empty-title {
+      margin: 0;
+      font-size: 20px;
+      color: var(--text, #e7edf5);
+    }
+
+    .empty-message {
+      margin: 0;
+      max-width: 420px;
+    }
+
     .actions {
       display: flex;
       flex-wrap: wrap;
@@ -206,6 +245,7 @@ class BikeNetApp extends LitElement {
   private shiftStatusText = "Waiting for a shift-complete notification...";
   private shiftStatusKind: StatusKind = "wait";
   private logLines: string[] = [];
+  private pendingRouteMac = "";
 
   private commands: BikeNetCommands | null = null;
   private connectedDevice: TransportDevice | null = null;
@@ -357,11 +397,52 @@ class BikeNetApp extends LitElement {
       const decoded = decodeURIComponent(macParam);
       if (this.isValidMac(decoded) && decoded !== this.mac) {
         queueMicrotask(() => this.setMac(decoded, "route"));
+        this.pendingRouteMac = decoded;
       }
     }
 
     const canSend = this.connected && Boolean(this.mac);
     const canList = this.connected;
+
+    if (!this.connected) {
+      return html`
+        <section>
+          <div class="card empty-state stack">
+            <div class="empty-icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" fill="none">
+                <path
+                  d="M12 28c10-10 30-10 40 0"
+                  stroke="#7ef0c3"
+                  stroke-width="4"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M20 36c6-6 18-6 24 0"
+                  stroke="#7ef0c3"
+                  stroke-width="4"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M28 44c2-2 6-2 8 0"
+                  stroke="#7ef0c3"
+                  stroke-width="4"
+                  stroke-linecap="round"
+                />
+                <circle cx="32" cy="50" r="3" fill="#ffb454" />
+              </svg>
+            </div>
+            <h2 class="empty-title">Reconnect required</h2>
+            <p class="hint empty-message">
+              You opened the device page without an active Bluetooth session.
+              Chrome requires a user click to open the Bluetooth picker.
+            </p>
+            <sl-button variant="primary" @click=${this.handleReconnect}
+              >Connect to hub</sl-button
+            >
+          </div>
+        </section>
+      `;
+    }
 
     return html`
       <section>
@@ -491,6 +572,14 @@ class BikeNetApp extends LitElement {
       this.connectEmpty = true;
       this.appendLog("No device was selected.");
       console.error(err);
+    }
+  }
+
+  private async handleReconnect() {
+    await this.handleConnect();
+    if (this.mac) {
+      const target = this.pendingRouteMac || this.mac;
+      this.navigate(`/device/${encodeURIComponent(target)}`);
     }
   }
 
@@ -648,6 +737,10 @@ class BikeNetApp extends LitElement {
 
   private isMacRoute() {
     return window.location.hash.startsWith("#!/mac");
+  }
+
+  private isDeviceRoute() {
+    return window.location.hash.startsWith("#!/device/");
   }
 
   private async getList() {
