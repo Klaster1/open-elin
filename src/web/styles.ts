@@ -303,6 +303,11 @@ export const sharedStyles = css`
     color: var(--warn, #ffb454);
   }
 
+  .status.crit {
+    background: rgba(255, 102, 102, 0.16);
+    color: #ff8a8a;
+  }
+
   .status.wait {
     background: rgba(88, 110, 134, 0.2);
     color: #c0cad6;

@@ -18,6 +18,7 @@ const adStatusKind = signal<StatusKind>("wait");
 const shiftStatusText = signal("Waiting for a shift-complete notification...");
 const shiftStatusKind = signal<StatusKind>("wait");
 const logLines = signal<string[]>([]);
+const hubBatteryVoltage = signal<number | null>(null);
 const listEntries = signal<any[]>([]);
 const motorParams = signal<any | null>(null);
 const position = signal<{
@@ -49,6 +50,7 @@ export const appState = {
   shiftStatusText,
   shiftStatusKind,
   logLines,
+  hubBatteryVoltage,
   listEntries,
   motorParams,
   position,
@@ -161,6 +163,7 @@ async function connectWithTransport(
   connectEmpty.set(false);
   connected.set(false);
   demoMode.set(options.demo);
+  hubBatteryVoltage.set(null);
   pendingAdvertMac = null;
   appendLog(options.requestLabel);
 
@@ -222,6 +225,9 @@ async function connectWithTransport(
 async function subscribeNotifications(deviceCommands: BikeNetCommands) {
   await deviceCommands.subscribeToBatteryVoltage((battery) => {
     if (battery.status !== "success") return;
+    if (battery.isHub) {
+      hubBatteryVoltage.set(battery.batteryVoltage ?? null);
+    }
     appendLog("Battery notification", {
       targetMac: battery.targetMac,
       batteryVoltage: battery.batteryVoltage,
