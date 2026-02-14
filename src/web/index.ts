@@ -1,27 +1,38 @@
-import { LitElement, css, html } from "https://esm.sh/lit@3.2.1";
-import { Routes } from "https://esm.sh/@lit-labs/router@0.1.0";
-import "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/components/button/button.js";
-import "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/components/card/card.js";
-import "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/components/input/input.js";
-import "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/components/alert/alert.js";
-import "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/components/tag/tag.js";
-import { setBasePath } from "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/utilities/base-path.js";
+import { LitElement, css, html } from "lit";
+import { SignalWatcher } from "@lit-labs/signals";
+import { Routes } from "@lit-labs/router";
+import "@shoelace-style/shoelace/dist/themes/dark.css";
+import "@shoelace-style/shoelace/dist/components/button/button.js";
+import "@shoelace-style/shoelace/dist/components/card/card.js";
+import "@shoelace-style/shoelace/dist/components/input/input.js";
+import "@shoelace-style/shoelace/dist/components/alert/alert.js";
+import "@shoelace-style/shoelace/dist/components/tag/tag.js";
+import { setBasePath } from "@shoelace-style/shoelace/dist/utilities/base-path.js";
 
-import { BikeNetCommands } from "../commands.ts";
-import { BikeNetProtocol } from "../protocol.ts";
-import type { TransportDevice } from "../protocol.ts";
-import { WebBluetoothTransport } from "./transport-web.ts";
+import {
+  appActions,
+  appState,
+  isValidMac,
+  setShiftMacListener,
+} from "./store.ts";
 
-setBasePath("https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/");
+setBasePath("/node_modules/@shoelace-style/shoelace/dist/");
 document.documentElement.classList.add("sl-theme-dark");
-
-type StatusKind = "wait" | "warn" | "ok";
 
 type RouteParams = {
   mac?: string;
+  tab?: string;
 };
 
-class BikeNetApp extends LitElement {
+const deviceTabs = [
+  { id: "list", label: "Device list" },
+  { id: "motor", label: "Motor params" },
+  { id: "buttons", label: "Buttons" },
+  { id: "cogs", label: "Cogs" },
+  { id: "log", label: "Log" },
+];
+
+class BikeNetApp extends SignalWatcher(LitElement) {
   static styles = css`
     :host {
       display: block;
@@ -68,6 +79,79 @@ class BikeNetApp extends LitElement {
       padding: 18px 20px;
       border: 1px solid var(--panel-border, #223142);
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: sticky;
+      top: 20px;
+    }
+
+    .sidebar-head {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sidebar-title {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted, #98a6b5);
+    }
+
+    .sidebar-mac {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text, #e7edf5);
+    }
+
+    .nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #0f1620;
+      border: 1px solid transparent;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 600;
+      transition:
+        border-color 0.2s ease,
+        background 0.2s ease;
+    }
+
+    .nav-link:hover {
+      border-color: #2b3a4b;
+      background: #18222f;
+    }
+
+    .nav-link.active {
+      border-color: #3a4a5c;
+      background: #1c2836;
+      color: #e7edf5;
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
     }
 
     .card-head {
@@ -221,51 +305,42 @@ class BikeNetApp extends LitElement {
       .pane-grid {
         grid-template-columns: 1fr;
       }
+
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+      }
     }
   `;
-
-  static properties = {
-    connected: { state: true },
-    connectEmpty: { state: true },
-    mac: { state: true },
-    manualMac: { state: true },
-    adStatusText: { state: true },
-    adStatusKind: { state: true },
-    shiftStatusText: { state: true },
-    shiftStatusKind: { state: true },
-    logLines: { state: true },
-  };
-
-  private connected = false;
-  private connectEmpty = false;
-  private mac = "";
-  private manualMac = "";
-  private adStatusText = "Listening for advertisements...";
-  private adStatusKind: StatusKind = "wait";
-  private shiftStatusText = "Waiting for a shift-complete notification...";
-  private shiftStatusKind: StatusKind = "wait";
-  private logLines: string[] = [];
-  private pendingRouteMac = "";
-
-  private commands: BikeNetCommands | null = null;
-  private connectedDevice: TransportDevice | null = null;
-  private pendingAdvertMac: string | null = null;
-  private adTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  private macLockedByUser = false;
-  private readonly macStorageKey = "bikenetHubMac";
 
   private routes = new Routes(this, [
     { path: "/", render: () => this.renderLanding() },
     { path: "/mac", render: () => this.renderMac() },
     {
+      path: "/device/:mac/:tab",
+      render: (data: { params: RouteParams }) =>
+        this.renderDevice(data.params?.mac, data.params?.tab),
+    },
+    {
       path: "/device/:mac",
       render: (data: { params: RouteParams }) =>
-        this.renderDevice(data.params?.mac),
+        this.renderDevice(data.params?.mac, "log"),
     },
   ]);
 
   private onHashChange = () => {
     const path = this.getHashPath();
+    const normalized = this.normalizeRoute(path);
+    if (normalized && normalized !== path) {
+      const hash = `#!${normalized}`;
+      if (window.location.hash !== hash) {
+        window.location.hash = hash;
+      }
+      return;
+    }
     void this.routes.goto(path);
   };
 
@@ -276,21 +351,23 @@ class BikeNetApp extends LitElement {
       window.location.hash = "#!/";
     }
     this.onHashChange();
-    const storedMac = this.readStoredMac();
-    if (storedMac && this.isValidMac(storedMac) && !this.mac) {
-      this.setMac(storedMac, "stored");
-    }
+    const storedMac = appActions.initStoredMac();
     if (storedMac && this.isMacRoute()) {
-      this.navigate(`/device/${encodeURIComponent(storedMac)}`);
+      this.navigate(`/device/${encodeURIComponent(storedMac)}/log`);
     }
+    setShiftMacListener((value) => {
+      this.navigate(`/device/${encodeURIComponent(value)}/log`);
+    });
   }
 
   disconnectedCallback() {
+    setShiftMacListener(null);
     window.removeEventListener("hashchange", this.onHashChange);
     super.disconnectedCallback();
   }
 
   render() {
+    const mac = appState.mac.get();
     return html`
       <div class="app">
         <header class="hero">
@@ -301,10 +378,8 @@ class BikeNetApp extends LitElement {
               actions.
             </p>
           </div>
-          ${this.mac
-            ? html`<sl-tag class="route-chip" variant="success"
-                >${this.mac}</sl-tag
-              >`
+          ${mac
+            ? html`<sl-tag class="route-chip" variant="success">${mac}</sl-tag>`
             : null}
         </header>
         ${this.routes.outlet()}
@@ -313,6 +388,7 @@ class BikeNetApp extends LitElement {
   }
 
   private renderLanding() {
+    const connectEmpty = appState.connectEmpty.get();
     return html`
       <section>
         <div class="card">
@@ -327,7 +403,7 @@ class BikeNetApp extends LitElement {
               >Connect</sl-button
             >
           </div>
-          ${this.connectEmpty
+          ${connectEmpty
             ? html`<div class="empty-state">
                 No hub was selected. If the picker did not appear, make sure Web
                 Bluetooth is enabled and try again.
@@ -339,6 +415,11 @@ class BikeNetApp extends LitElement {
   }
 
   private renderMac() {
+    const manualMac = appState.manualMac.get();
+    const adStatusKind = appState.adStatusKind.get();
+    const adStatusText = appState.adStatusText.get();
+    const shiftStatusKind = appState.shiftStatusKind.get();
+    const shiftStatusText = appState.shiftStatusText.get();
     return html`
       <section>
         <div class="card">
@@ -355,9 +436,7 @@ class BikeNetApp extends LitElement {
               <p class="hint">
                 We listen for manufacturer data in advertisements.
               </p>
-              <div class="status ${this.adStatusKind}">
-                ${this.adStatusText}
-              </div>
+              <div class="status ${adStatusKind}">${adStatusText}</div>
               <p class="hint">Keep the hub awake and nearby.</p>
             </div>
             <div class="pane">
@@ -365,16 +444,14 @@ class BikeNetApp extends LitElement {
               <p class="hint">
                 Shift once so we receive a Shift Complete event with the MAC.
               </p>
-              <div class="status ${this.shiftStatusKind}">
-                ${this.shiftStatusText}
-              </div>
+              <div class="status ${shiftStatusKind}">${shiftStatusText}</div>
               <p class="hint">A single shift up or down is enough.</p>
             </div>
             <div class="pane">
               <h2>Manual entry</h2>
               <sl-input
                 placeholder="AA:BB:CC:DD:EE:FF"
-                value=${this.manualMac}
+                value=${manualMac}
                 @sl-input=${this.onManualInput}
               ></sl-input>
               <div class="row">
@@ -392,19 +469,22 @@ class BikeNetApp extends LitElement {
     `;
   }
 
-  private renderDevice(macParam?: string) {
+  private renderDevice(macParam?: string, tabParam?: string) {
+    const currentMac = appState.mac.get();
     if (macParam) {
       const decoded = decodeURIComponent(macParam);
-      if (this.isValidMac(decoded) && decoded !== this.mac) {
-        queueMicrotask(() => this.setMac(decoded, "route"));
-        this.pendingRouteMac = decoded;
+      if (isValidMac(decoded) && decoded !== currentMac) {
+        queueMicrotask(() => appActions.setPendingRouteMac(decoded));
+        queueMicrotask(() => appActions.setMacFromRoute(decoded));
       }
     }
 
-    const canSend = this.connected && Boolean(this.mac);
-    const canList = this.connected;
+    const connected = appState.connected.get();
+    const targetMac =
+      currentMac || (macParam ? decodeURIComponent(macParam) : "");
+    const activeTab = this.normalizeTab(tabParam);
 
-    if (!this.connected) {
+    if (!connected) {
       return html`
         <section>
           <div class="card empty-state stack">
@@ -445,277 +525,229 @@ class BikeNetApp extends LitElement {
     }
 
     return html`
-      <section>
-        <div class="card">
-          <div class="card-head">
-            <h2>3. Actions</h2>
-            <p class="hint">
-              MAC locked in. You can query and control the hub.
-            </p>
+      <section class="shell">
+        <aside class="card sidebar">
+          <div class="sidebar-head">
+            <div class="sidebar-title">Active hub</div>
+            <div class="sidebar-mac">${targetMac || "Unknown"}</div>
+            <div class="status ok">Connected</div>
           </div>
-          <div class="actions">
-            <sl-button ?disabled=${!canList} @click=${this.getList}
-              >Get list</sl-button
-            >
-            <sl-button ?disabled=${!canSend} @click=${this.getMotorParams}
-              >Get motor params</sl-button
-            >
-            <sl-button ?disabled=${!canSend} @click=${this.getPosition}
-              >Get position</sl-button
-            >
-            <sl-button ?disabled=${!canSend} @click=${this.shiftUp}
-              >Shift up</sl-button
-            >
-            <sl-button ?disabled=${!canSend} @click=${this.shiftDown}
-              >Shift down</sl-button
-            >
-            <sl-button ?disabled=${!canSend} @click=${this.readButtonMap}
-              >Read button map</sl-button
-            >
-            <sl-button ?disabled=${!canSend} @click=${this.readButtonTable}
-              >Read button table</sl-button
-            >
-            <sl-button ?disabled=${!canSend} @click=${this.getRearCogInfo}
-              >Get rear cog info</sl-button
-            >
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head">
-            <h2>Log</h2>
-            <p class="hint">Notifications and command results appear here.</p>
-          </div>
-          <pre class="log">${this.logLines.join("\n")}</pre>
-        </div>
+          <nav class="nav-list">
+            ${deviceTabs.map((tab) =>
+              this.renderNavLink(tab.id, tab.label, activeTab, targetMac),
+            )}
+          </nav>
+        </aside>
+        <div class="content">${this.renderDeviceTab(activeTab)}</div>
       </section>
+    `;
+  }
+
+  private renderNavLink(
+    tabId: string,
+    label: string,
+    activeTab: string,
+    macValue: string,
+  ) {
+    const href = macValue
+      ? `#!/device/${encodeURIComponent(macValue)}/${tabId}`
+      : "#!/";
+    return html`
+      <a class="nav-link ${activeTab === tabId ? "active" : ""}" href=${href}
+        >${label}</a
+      >
+    `;
+  }
+
+  private renderDeviceTab(activeTab: string) {
+    switch (activeTab) {
+      case "list":
+        return this.renderListTab();
+      case "motor":
+        return this.renderMotorTab();
+      case "buttons":
+        return this.renderButtonsTab();
+      case "cogs":
+        return this.renderCogsTab();
+      case "log":
+      default:
+        return this.renderLogTab();
+    }
+  }
+
+  private renderListTab() {
+    const canList = appState.connected.get();
+    const entries = appState.listEntries.get();
+    return html`
+      <div class="card">
+        <div class="card-head">
+          <h2>Device list</h2>
+          <p class="hint">Scan the hub for linked devices.</p>
+        </div>
+        <div class="actions">
+          <sl-button ?disabled=${!canList} @click=${this.getList}
+            >Get list</sl-button
+          >
+        </div>
+        ${entries.length
+          ? html`<pre class="log">
+${entries
+                .map((entry, index) => `${index + 1}. ${JSON.stringify(entry)}`)
+                .join("\n")}</pre
+            >`
+          : html`<div class="empty-state">No device list loaded yet.</div>`}
+      </div>
+    `;
+  }
+
+  private renderMotorTab() {
+    const canSend = appState.connected.get() && Boolean(appState.mac.get());
+    const motorParams = appState.motorParams.get();
+    return html`
+      <div class="card">
+        <div class="card-head">
+          <h2>Motor params</h2>
+          <p class="hint">Latest motor configuration snapshot.</p>
+        </div>
+        <div class="actions">
+          <sl-button ?disabled=${!canSend} @click=${this.getMotorParams}
+            >Get motor params</sl-button
+          >
+        </div>
+        ${motorParams
+          ? html`<pre class="log">${JSON.stringify(motorParams, null, 2)}</pre>`
+          : html`<div class="empty-state">No motor params fetched yet.</div>`}
+      </div>
+    `;
+  }
+
+  private renderButtonsTab() {
+    const canSend = appState.connected.get() && Boolean(appState.mac.get());
+    const buttonMap = appState.buttonMap.get();
+    const buttonTable = appState.buttonTable.get();
+    return html`
+      <div class="card">
+        <div class="card-head">
+          <h2>Buttons</h2>
+          <p class="hint">Read the button map and table from the hub.</p>
+        </div>
+        <div class="actions">
+          <sl-button ?disabled=${!canSend} @click=${this.readButtonMap}
+            >Read button map</sl-button
+          >
+          <sl-button ?disabled=${!canSend} @click=${this.readButtonTable}
+            >Read button table</sl-button
+          >
+        </div>
+        ${buttonMap
+          ? html`<pre class="log">${JSON.stringify(buttonMap, null, 2)}</pre>`
+          : html`<div class="empty-state">No button map loaded yet.</div>`}
+        ${buttonTable
+          ? html`<pre class="log">${JSON.stringify(buttonTable, null, 2)}</pre>`
+          : html`<div class="empty-state">No button table loaded yet.</div>`}
+      </div>
+    `;
+  }
+
+  private renderCogsTab() {
+    const canSend = appState.connected.get() && Boolean(appState.mac.get());
+    const rearCogInfo = appState.rearCogInfo.get();
+    const position = appState.position.get();
+    const frontCog = appState.frontCogInfo.get();
+    return html`
+      <div class="card">
+        <div class="card-head">
+          <h2>Cogs</h2>
+          <p class="hint">Rear cog diagnostics and live position snapshots.</p>
+        </div>
+        <div class="actions">
+          <sl-button ?disabled=${!canSend} @click=${this.getRearCogInfo}
+            >Get rear cog info</sl-button
+          >
+          <sl-button ?disabled=${!canSend} @click=${this.getPosition}
+            >Get position</sl-button
+          >
+          <sl-button ?disabled=${!canSend} @click=${this.shiftUp}
+            >Shift up</sl-button
+          >
+          <sl-button ?disabled=${!canSend} @click=${this.shiftDown}
+            >Shift down</sl-button
+          >
+        </div>
+        ${rearCogInfo
+          ? html`<pre class="log">${JSON.stringify(rearCogInfo, null, 2)}</pre>`
+          : html`<div class="empty-state">No rear cog info yet.</div>`}
+        ${position
+          ? html`<pre class="log">${JSON.stringify(position, null, 2)}</pre>`
+          : html`<div class="empty-state">No position read yet.</div>`}
+        ${frontCog
+          ? html`<pre class="log">${JSON.stringify(frontCog, null, 2)}</pre>`
+          : html`<div class="empty-state">No front cog notification yet.</div>`}
+      </div>
+    `;
+  }
+
+  private renderLogTab() {
+    const logLines = appState.logLines.get();
+    return html`
+      <div class="card">
+        <div class="card-head">
+          <h2>Log</h2>
+          <p class="hint">Notifications and command results appear here.</p>
+        </div>
+        <pre class="log">${logLines.join("\n")}</pre>
+      </div>
     `;
   }
 
   private onManualInput(event: Event) {
     const target = event.target as HTMLInputElement;
-    this.manualMac = target.value.trim().toUpperCase();
+    appActions.setManualMac(target.value);
   }
 
   private applyManualMac() {
-    if (!this.manualMac) {
-      this.appendLog("Enter a hub MAC to continue.");
-      return;
-    }
-    if (!this.isValidMac(this.manualMac)) {
-      this.appendLog("Enter a valid hub MAC (AA:BB:CC:DD:EE:FF).");
-      return;
-    }
-    this.macLockedByUser = true;
-    this.setMac(this.manualMac, "manual entry");
+    appActions.applyManualMac();
   }
 
   private async handleConnect() {
-    this.connectEmpty = false;
-    this.connected = false;
-    this.appendLog("Requesting device...");
-
-    const transport = new WebBluetoothTransport({
-      deviceNamePrefix: "",
-      onAdvertisementMac: (mac) => {
-        this.pendingAdvertMac = mac;
-        if (!this.connectedDevice) return;
-        this.setMac(mac, "advertisements");
-      },
-    });
-    const protocol = new BikeNetProtocol(transport);
-
-    try {
-      const devices = await protocol.listDevices();
-      if (!devices.length) {
-        this.connectEmpty = true;
-        this.appendLog("No devices found.");
-        return;
-      }
-
-      const device = devices[0];
-      this.connectedDevice = device;
-      const storedMac = this.readStoredMac();
-      const macFromAdvert = device.address;
-      const macToUse = storedMac || macFromAdvert;
-
-      if (macToUse) {
-        this.setMac(macToUse, storedMac ? "stored" : "advertisements");
-      } else {
-        this.resetMacStatus();
-        this.startAdTimer();
-      }
-
-      device.address = this.mac || "";
-      this.appendLog("Selected device:", {
-        id: device.id,
-        name: device.name,
-        mac: device.address || "(none)",
-      });
-
-      const deviceCommands = new BikeNetCommands(protocol, device);
-      this.commands = deviceCommands;
-      this.connected = true;
-
-      if (this.mac) {
-        this.navigate(`/device/${encodeURIComponent(this.mac)}`);
-      } else {
-        this.navigate("/mac");
-        if (this.pendingAdvertMac) {
-          this.setMac(this.pendingAdvertMac, "advertisements");
-          this.pendingAdvertMac = null;
-        }
-      }
-
-      await this.subscribeNotifications(deviceCommands);
-      this.appendLog("Connected. Use the actions to query the hub.");
-    } catch (err) {
-      this.connectEmpty = true;
-      this.appendLog("No device was selected.");
-      console.error(err);
+    await appActions.connect();
+    const mac = appState.mac.get();
+    if (mac) {
+      this.navigate(`/device/${encodeURIComponent(mac)}/log`);
+    } else {
+      this.navigate("/mac");
     }
   }
 
   private async handleReconnect() {
-    await this.handleConnect();
-    if (this.mac) {
-      const target = this.pendingRouteMac || this.mac;
-      this.navigate(`/device/${encodeURIComponent(target)}`);
+    await appActions.connect();
+    const mac = appState.mac.get();
+    if (mac) {
+      const pending = appState.pendingRouteMac.get();
+      const target = pending || mac;
+      this.navigate(`/device/${encodeURIComponent(target)}/log`);
     }
   }
 
-  private async subscribeNotifications(deviceCommands: BikeNetCommands) {
-    await deviceCommands.subscribeToBatteryVoltage((battery) => {
-      if (battery.status !== "success") return;
-      this.appendLog("Battery notification", {
-        targetMac: battery.targetMac,
-        batteryVoltage: battery.batteryVoltage,
-        rawHex: battery.rawHex,
-      });
-    });
+  private normalizeTab(tab?: string) {
+    if (!tab) return "log";
+    const match = deviceTabs.find((item) => item.id === tab);
+    return match ? match.id : "log";
+  }
 
-    await deviceCommands.subscribeToButtonAction((action) => {
-      if (action.status !== "success") return;
-      this.appendLog("Button action", {
-        targetMac: action.targetMac,
-        buttonId: action.buttonId,
-        buttonLabel: action.buttonLabel,
-        actionLabel: action.actionLabel,
-        rawHex: action.rawHex,
-      });
-    });
-
-    await deviceCommands.subscribeToShiftComplete((shift) => {
-      if (shift.status !== "success") return;
-      this.appendLog("Shift complete", {
-        targetMac: shift.targetMac,
-        payloadValue: shift.payloadValue,
-        rawHex: shift.rawHex,
-      });
-      if (!this.mac && shift.targetMac) {
-        this.setMac(shift.targetMac, "shift-complete");
-        this.navigate(`/device/${encodeURIComponent(this.mac)}`);
+  private normalizeRoute(path: string) {
+    const baseMatch = path.match(/^\/device\/([^/]+)$/);
+    if (baseMatch) {
+      return `/device/${baseMatch[1]}/log`;
+    }
+    const tabMatch = path.match(/^\/device\/([^/]+)\/([^/]+)$/);
+    if (tabMatch) {
+      const tab = this.normalizeTab(tabMatch[2]);
+      if (tab !== tabMatch[2]) {
+        return `/device/${tabMatch[1]}/${tab}`;
       }
-    });
-
-    await deviceCommands.subscribeToButtonTable((table) => {
-      if (table.status !== "success") return;
-      this.appendLog("Button table", {
-        targetMac: table.targetMac,
-        entries: table.entries ?? [],
-      });
-    });
-
-    await deviceCommands.subscribeToFrontCog((frontCog) => {
-      if (frontCog.status !== "success") return;
-      this.appendLog("Front cog", {
-        targetMac: frontCog.targetMac,
-        rawHex: frontCog.rawHex,
-      });
-    });
-  }
-
-  private setMac(value: string, source: string) {
-    const normalized = value.trim().toUpperCase();
-    if (!this.isValidMac(normalized)) return false;
-    if (this.macLockedByUser && source !== "manual entry") return false;
-
-    this.mac = normalized;
-    this.storeMac(normalized);
-    if (this.connectedDevice) {
-      this.connectedDevice.address = normalized;
     }
-
-    this.appendLog(`Hub MAC set from ${source}:`, normalized);
-    if (source === "advertisements") {
-      this.adStatusKind = "ok";
-      this.adStatusText = "MAC discovered from advertisements.";
-    }
-    if (source === "shift-complete") {
-      this.shiftStatusKind = "ok";
-      this.shiftStatusText = "MAC captured from shift complete.";
-    }
-    if (source === "manual entry") {
-      this.adStatusKind = "warn";
-      this.adStatusText = "Manual MAC entry used.";
-    }
-    if (source === "stored") {
-      this.adStatusKind = "ok";
-      this.adStatusText = "MAC loaded from local storage.";
-    }
-    if (this.adTimeoutId) {
-      clearTimeout(this.adTimeoutId);
-      this.adTimeoutId = null;
-    }
-    return true;
-  }
-
-  private resetMacStatus() {
-    this.adStatusKind = "wait";
-    this.adStatusText = "Listening for advertisements...";
-    this.shiftStatusKind = "wait";
-    this.shiftStatusText = "Waiting for a shift-complete notification...";
-  }
-
-  private startAdTimer() {
-    if (this.adTimeoutId) {
-      clearTimeout(this.adTimeoutId);
-      this.adTimeoutId = null;
-    }
-    this.adTimeoutId = setTimeout(() => {
-      if (!this.mac) {
-        this.adStatusKind = "warn";
-        this.adStatusText = "Couldn't discover MAC from advertisements yet.";
-      }
-    }, 10000);
-  }
-
-  private readStoredMac() {
-    try {
-      const value = localStorage.getItem(this.macStorageKey);
-      return value ? value.trim().toUpperCase() : "";
-    } catch {
-      return "";
-    }
-  }
-
-  private storeMac(mac: string) {
-    try {
-      localStorage.setItem(this.macStorageKey, mac);
-    } catch {
-      // Ignore storage failures.
-    }
-  }
-
-  private appendLog(...parts: Array<string | number | object>) {
-    const line = parts
-      .map((p) => (typeof p === "string" ? p : JSON.stringify(p, null, 2)))
-      .join(" ");
-    const next = [...this.logLines, line];
-    this.logLines = next.slice(-400);
-  }
-
-  private isValidMac(value: string) {
-    return /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/.test(value);
+    return null;
   }
 
   private navigate(path: string) {
@@ -744,135 +776,41 @@ class BikeNetApp extends LitElement {
   }
 
   private async getList() {
-    if (!this.commands) {
-      this.appendLog("Connect to a hub first.");
-      return;
-    }
-    this.appendLog("Get list...");
-    try {
-      const response = await this.commands.getList();
-      if (response.status === "success" && response.entries?.length) {
-        response.entries.forEach((entry, index) =>
-          this.appendLog({ index, ...entry }),
-        );
-      }
-      this.appendLog("Get list result", response ?? {});
-    } catch (err) {
-      this.appendLog(
-        "Get list error",
-        err instanceof Error ? err.message : err,
-      );
-    }
+    await appActions.getList();
   }
 
   private async getMotorParams() {
-    if (!this.commands) return;
-    this.appendLog("Get motor params...");
-    try {
-      const response = await this.commands.getMotorParams();
-      if (response.status === "success") {
-        this.appendLog("Motor params", response.humanReadable ?? {});
-      }
-      this.appendLog("Get motor params result", response ?? {});
-    } catch (err) {
-      this.appendLog(
-        "Get motor params error",
-        err instanceof Error ? err.message : err,
-      );
-    }
+    await appActions.getMotorParams();
   }
 
   private async getPosition() {
-    if (!this.commands) return;
-    this.appendLog("Get position...");
-    try {
-      const response = await this.commands.getPosition();
-      if (response.status === "success") {
-        this.appendLog("Position", {
-          absolutePosition: response.absolutePosition,
-          gearPosition: response.gearPosition,
-        });
-      }
-      this.appendLog("Get position result", response ?? {});
-    } catch (err) {
-      this.appendLog(
-        "Get position error",
-        err instanceof Error ? err.message : err,
-      );
-    }
+    await appActions.getPosition();
   }
 
   private async shiftUp() {
-    if (!this.commands) return;
-    this.appendLog("Shift up...");
-    try {
-      const response = await this.commands.shiftUp();
-      this.appendLog("Shift up result", response ?? {});
-    } catch (err) {
-      this.appendLog(
-        "Shift up error",
-        err instanceof Error ? err.message : err,
-      );
-    }
+    await appActions.shiftUp();
   }
 
   private async shiftDown() {
-    if (!this.commands) return;
-    this.appendLog("Shift down...");
-    try {
-      const response = await this.commands.shiftDown();
-      this.appendLog("Shift down result", response ?? {});
-    } catch (err) {
-      this.appendLog(
-        "Shift down error",
-        err instanceof Error ? err.message : err,
-      );
-    }
+    await appActions.shiftDown();
   }
 
   private async readButtonMap() {
-    if (!this.commands) return;
-    this.appendLog("Read button map...");
-    try {
-      const response = await this.commands.readButtonMap();
-      this.appendLog("Read button map result", response ?? {});
-    } catch (err) {
-      this.appendLog(
-        "Read button map error",
-        err instanceof Error ? err.message : err,
-      );
-    }
+    await appActions.readButtonMap();
   }
 
   private async readButtonTable() {
-    if (!this.commands) return;
-    this.appendLog("Read button table...");
-    try {
-      const response = await this.commands.readButtonTable();
-      this.appendLog("Read button table result", response ?? {});
-    } catch (err) {
-      this.appendLog(
-        "Read button table error",
-        err instanceof Error ? err.message : err,
-      );
-    }
+    await appActions.readButtonTable();
   }
 
   private async getRearCogInfo() {
-    if (!this.commands) return;
-    this.appendLog("Get rear cog info...");
-    try {
-      const response = await this.commands.getRearCogInfo();
-      this.appendLog("Get rear cog info result", response ?? {});
-    } catch (err) {
-      this.appendLog(
-        "Get rear cog info error",
-        err instanceof Error ? err.message : err,
-      );
-    }
+    await appActions.getRearCogInfo();
   }
 }
 
-customElements.define("bikenet-app", BikeNetApp);
+customElements.define(
+  "bikenet-app",
+  BikeNetApp as unknown as CustomElementConstructor,
+);
 
 export {};
