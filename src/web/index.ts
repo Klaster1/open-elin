@@ -7,6 +7,12 @@ const connectButton = document.querySelector<HTMLButtonElement>("#connect");
 const macInput = document.querySelector<HTMLInputElement>("#mac");
 const listButton = document.querySelector<HTMLButtonElement>("#action-list");
 const motorButton = document.querySelector<HTMLButtonElement>("#action-motor");
+const positionButton =
+  document.querySelector<HTMLButtonElement>("#action-position");
+const shiftUpButton =
+  document.querySelector<HTMLButtonElement>("#action-shift-up");
+const shiftDownButton =
+  document.querySelector<HTMLButtonElement>("#action-shift-down");
 const mapButton = document.querySelector<HTMLButtonElement>("#action-map");
 const tableButton = document.querySelector<HTMLButtonElement>("#action-table");
 const cogsButton = document.querySelector<HTMLButtonElement>("#action-cogs");
@@ -17,6 +23,9 @@ if (
   !macInput ||
   !listButton ||
   !motorButton ||
+  !positionButton ||
+  !shiftUpButton ||
+  !shiftDownButton ||
   !mapButton ||
   !tableButton ||
   !cogsButton
@@ -29,6 +38,9 @@ let commands: BikeNetCommands | null = null;
 const actionButtons = [
   listButton,
   motorButton,
+  positionButton,
+  shiftUpButton,
+  shiftDownButton,
   mapButton,
   tableButton,
   cogsButton,
@@ -159,6 +171,27 @@ motorButton.addEventListener("click", () => {
     }
     return response;
   });
+});
+
+positionButton.addEventListener("click", () => {
+  runAction("Get position", async () => {
+    const response = await commands!.getPosition();
+    if (response.status === "success") {
+      log("Position", {
+        absolutePosition: response.absolutePosition,
+        gearPosition: response.gearPosition,
+      });
+    }
+    return response;
+  });
+});
+
+shiftUpButton.addEventListener("click", () => {
+  runAction("Shift up", () => commands!.shiftUp());
+});
+
+shiftDownButton.addEventListener("click", () => {
+  runAction("Shift down", () => commands!.shiftDown());
 });
 
 mapButton.addEventListener("click", () => {

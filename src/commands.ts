@@ -49,6 +49,16 @@ export interface RearCogInfoResponse {
   rawBytes?: number[];
 }
 
+export interface GetPositionResponse {
+  status: "success" | "error";
+  code: number;
+  targetMac?: string;
+  absolutePosition?: number;
+  gearPosition?: number;
+  rawHex?: string;
+  rawBytes?: number[];
+}
+
 export interface BasicResponse {
   status: "success" | "error";
   code: number;
@@ -313,6 +323,41 @@ function parseRearCogInfoResponse(data: Uint8Array): RearCogInfoResponse {
   return { status: "error", code, targetMac };
 }
 
+function parseGetPositionResponse(data: Uint8Array): GetPositionResponse {
+  const code = leInt(data, 2) & 0xffff;
+  const targetMac =
+    data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
+
+  if (code === 0x8000) {
+    const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
+    const rawHex = bytesToHexUpper(payload);
+    const rawBytes = Array.from(payload.values());
+
+    const view = new DataView(
+      payload.buffer,
+      payload.byteOffset,
+      payload.byteLength,
+    );
+    const absolutePosition =
+      payload.length >= 2 ? view.getUint16(0, true) / 10 : undefined;
+    const gearHex =
+      payload.length > 2 ? bytesToHex(payload.slice(2)) : undefined;
+    const gearPosition = gearHex ? parseInt(gearHex, 16) + 1 : undefined;
+
+    return {
+      status: "success",
+      code,
+      targetMac,
+      absolutePosition,
+      gearPosition,
+      rawHex,
+      rawBytes,
+    };
+  }
+
+  return { status: "error", code, targetMac };
+}
+
 function parseBasicResponse(data: Uint8Array): BasicResponse {
   const code = leInt(data, 2) & 0xffff;
   const targetMac =
@@ -506,6 +551,12 @@ export class BikeNetCommands {
     return parseRearCogInfoResponse(response);
   }
 
+  async getPosition(): Promise<GetPositionResponse> {
+    const payload = encodeGetPosition(this.device.address);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseGetPositionResponse(response);
+  }
+
   async blinkLed(): Promise<BasicResponse> {
     const payload = encodeBlinkLed(this.device.address);
     const response = await this.protocol.sendCommand(this.device, payload);
@@ -585,6 +636,12 @@ function encodeReadButtonMap(mac: string) {
 
 function encodeGetRearCogInfo(mac: string) {
   const cmd = reverseCommand("0x001F");
+  const revMac = reverseMacAddress(mac);
+  return hexToBuffer(cmd + revMac);
+}
+
+function encodeGetPosition(mac: string) {
+  const cmd = reverseCommand("0x0013");
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
