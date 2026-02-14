@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BikeNet Web Bluetooth</title>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600&display=swap");
-
       :root {
         color-scheme: light dark;
         --bg: #0b1116;
@@ -19,12 +17,15 @@
         --accent-strong: #1aa876;
         --warn: #ffb454;
         --danger: #ff7a7a;
-        --mono:
-          "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-        --sans:
-          "Space Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+        --mono: Consolas, ui-monospace, SFMono-Regular, Menlo, monospace;
+        --sans: Roboto, "Segoe UI", system-ui, -apple-system, sans-serif;
         background: var(--bg);
         color: var(--text);
+      }
+
+      html {
+        scrollbar-gutter: stable;
+        overflow-y: scroll;
       }
 
       body {
