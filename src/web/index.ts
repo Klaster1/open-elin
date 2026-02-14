@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
-import { Routes } from "@lit-labs/router";
+import { Router } from "@lit-labs/router";
 import "@shoelace-style/shoelace/dist/themes/dark.css";
 import "@shoelace-style/shoelace/dist/components/button/button.js";
 import "@shoelace-style/shoelace/dist/components/card/card.js";
@@ -32,38 +32,37 @@ type RouteParams = {
 class BikeNetApp extends SignalWatcher(LitElement) {
   static styles = [sharedStyles];
 
-  private routes = new Routes(this, [
+  private router = new Router(this, [
     { path: "/", render: () => this.renderLandingRoute() },
     { path: "/mac", render: () => this.renderMacRoute() },
     {
+      path: "/device/:mac",
+      enter: async ({ mac }) => {
+        await this.router.goto(`/device/${encodeURIComponent(mac)}/log`);
+        return false;
+      },
+      render: () => html``,
+    },
+    {
       path: "/device/:mac/:tab",
-      render: (data: { params: RouteParams }) =>
-        this.renderDeviceRoute(data.params?.mac, data.params?.tab),
+      enter: async ({ mac, tab }) => {
+        const normalizedTab = this.normalizeTab(tab);
+        if (normalizedTab !== tab) {
+          await this.router.goto(
+            `/device/${encodeURIComponent(mac)}/${normalizedTab}`,
+          );
+          return false;
+        }
+      },
+      render: (params: RouteParams) =>
+        this.renderDeviceRoute(params.mac, params.tab),
     },
   ]);
 
-  private onHashChange = () => {
-    const path = this.getHashPath();
-    const normalized = this.normalizeRoute(path);
-    if (normalized && normalized !== path) {
-      const hash = `#!${normalized}`;
-      if (window.location.hash !== hash) {
-        window.location.hash = hash;
-      }
-      return;
-    }
-    void this.routes.goto(path);
-  };
-
   connectedCallback() {
     super.connectedCallback();
-    window.addEventListener("hashchange", this.onHashChange);
-    if (!window.location.hash.startsWith("#!/")) {
-      window.location.hash = "#!/";
-    }
-    this.onHashChange();
     const storedMac = appActions.initStoredMac();
-    if (storedMac && this.isMacRoute()) {
+    if (storedMac && window.location.pathname.startsWith("/mac")) {
       this.navigate(`/device/${encodeURIComponent(storedMac)}/log`);
     }
     setShiftMacListener((value) => {
@@ -73,7 +72,6 @@ class BikeNetApp extends SignalWatcher(LitElement) {
 
   disconnectedCallback() {
     setShiftMacListener(null);
-    window.removeEventListener("hashchange", this.onHashChange);
     super.disconnectedCallback();
   }
 
@@ -85,7 +83,7 @@ class BikeNetApp extends SignalWatcher(LitElement) {
             <h1>BikeNet Web Bluetooth</h1>
           </div>
         </header>
-        ${this.routes.outlet()}
+        ${this.router.outlet()}
       </div>
     `;
   }
@@ -102,9 +100,8 @@ class BikeNetApp extends SignalWatcher(LitElement) {
 
   private renderDeviceRoute(macParam?: string, tabParam?: string) {
     const currentMac = appState.mac.get();
-    const routeInfo = this.parseDeviceRoute();
-    const routeMac = routeInfo?.mac || macParam;
-    const routeTab = routeInfo?.tab || tabParam;
+    const routeMac = macParam;
+    const routeTab = tabParam;
 
     if (routeMac) {
       const decoded = decodeURIComponent(routeMac);
@@ -153,51 +150,9 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     return match ? match.id : "log";
   }
 
-  private normalizeRoute(path: string) {
-    const baseMatch = path.match(/^\/device\/([^/]+)$/);
-    if (baseMatch) {
-      return `/device/${baseMatch[1]}/log`;
-    }
-    const tabMatch = path.match(/^\/device\/([^/]+)\/([^/]+)$/);
-    if (tabMatch) {
-      const tab = this.normalizeTab(tabMatch[2]);
-      if (tab !== tabMatch[2]) {
-        return `/device/${tabMatch[1]}/${tab}`;
-      }
-    }
-    return null;
-  }
-
-  private parseDeviceRoute() {
-    const path = this.getHashPath();
-    const match = path.match(/^\/device\/([^/]+)\/([^/]+)$/);
-    if (!match) return null;
-    return { mac: match[1], tab: match[2] };
-  }
-
   private navigate(path: string) {
     const normalized = path.startsWith("/") ? path : `/${path}`;
-    const hash = `#!${normalized}`;
-    if (window.location.hash !== hash) {
-      window.location.hash = hash;
-    } else {
-      void this.routes.goto(normalized);
-    }
-  }
-
-  private getHashPath() {
-    const hash = window.location.hash;
-    if (hash.startsWith("#!/")) return hash.slice(2) || "/";
-    if (hash.startsWith("#")) return hash.slice(1) || "/";
-    return "/";
-  }
-
-  private isMacRoute() {
-    return window.location.hash.startsWith("#!/mac");
-  }
-
-  private isDeviceRoute() {
-    return window.location.hash.startsWith("#!/device/");
+    void this.router.goto(normalized);
   }
 }
 
