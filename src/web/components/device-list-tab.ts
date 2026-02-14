@@ -3,6 +3,7 @@ import { SignalWatcher } from "@lit-labs/signals";
 
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
+import "./refresh-button.ts";
 
 class DeviceListTab extends SignalWatcher(LitElement) {
   static styles = [sharedStyles];
@@ -22,23 +23,10 @@ class DeviceListTab extends SignalWatcher(LitElement) {
         <div class="card-head">
           <div class="card-head-row">
             <h2>Device list</h2>
-            <sl-button
-              size="small"
+            <refresh-button
               ?disabled=${!canList}
-              @click=${this.onGetList}
-            >
-              <svg
-                slot="prefix"
-                class="button-icon"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  d="M20 5v5h-5M4 19v-5h5M6.5 7.5a7 7 0 0 1 11 2.5M17.5 16.5a7 7 0 0 1-11-2.5"
-                ></path>
-              </svg>
-              Refresh
-            </sl-button>
+              @refresh-requested=${this.onGetList}
+            ></refresh-button>
           </div>
           <p class="hint">Scan the hub for linked devices.</p>
         </div>

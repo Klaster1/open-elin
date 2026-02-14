@@ -203,6 +203,31 @@ export const sharedStyles = css`
     font-size: 14px;
   }
 
+  .param-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+  }
+
+  .param-grid div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .param-grid dt {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted, #98a6b5);
+  }
+
+  .param-grid dd {
+    margin: 0;
+    font-size: 14px;
+  }
+
   .card-head {
     display: flex;
     flex-direction: column;
