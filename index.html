@@ -79,9 +79,10 @@
     <h1>BikeNet Web Bluetooth Demo</h1>
     <div class="card">
       <p class="hint">
-        Click connect to select the BikeNet hub (eLink) device. Requires Chrome
-        with Web Bluetooth enabled. The hub MAC is pulled from advertisements
-        when available. If you cannot connect, enter the hub MAC manually.
+        Connect to the BikeNet hub (eLink). We try to learn the hub MAC from
+        advertisements first. If that fails, shift a gear once to trigger a
+        Shift Complete event and we will grab the MAC from that. Manual entry is
+        the fallback. Until a MAC is known, only Get list is enabled.
       </p>
       <label class="hint" for="mac">Hub MAC (eLink)</label>
       <input id="mac" placeholder="AA:BB:CC:DD:EE:FF (optional)" />

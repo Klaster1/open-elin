@@ -1,5 +1,6 @@
 import { BikeNetCommands } from "../commands.ts";
 import { BikeNetProtocol } from "../protocol.ts";
+import type { TransportDevice } from "../protocol.ts";
 import { WebBluetoothTransport } from "./transport-web.ts";
 
 const logArea = document.querySelector<HTMLPreElement>("#log");
@@ -34,22 +35,39 @@ if (
 }
 
 let commands: BikeNetCommands | null = null;
+let connectedDevice: TransportDevice | null = null;
 
-const actionButtons = [
-  listButton,
-  motorButton,
-  positionButton,
-  shiftUpButton,
-  shiftDownButton,
-  mapButton,
-  tableButton,
-  cogsButton,
-];
-
-const setActionsEnabled = (enabled: boolean) => {
-  actionButtons.forEach((button) => {
-    button.disabled = !enabled;
+const setActionState = (connected: boolean, hasMac: boolean) => {
+  listButton.disabled = !connected;
+  const disableActions = !connected || !hasMac;
+  [
+    motorButton,
+    positionButton,
+    shiftUpButton,
+    shiftDownButton,
+    mapButton,
+    tableButton,
+    cogsButton,
+  ].forEach((button) => {
+    button.disabled = disableActions;
   });
+};
+
+const normalizeMacInput = (value: string) => value.trim().toUpperCase();
+
+const isValidMac = (value: string) =>
+  /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/.test(value);
+
+const setMacIfAllowed = (mac: string, source: string) => {
+  const normalized = normalizeMacInput(mac);
+  if (!normalized || !isValidMac(normalized)) return false;
+  if (!connectedDevice) return false;
+  if (connectedDevice.address === normalized) return true;
+  connectedDevice.address = normalized;
+  macInput.value = normalized;
+  log(`Hub MAC set from ${source}:`, normalized);
+  setActionState(true, true);
+  return true;
 };
 
 function log(...parts: Array<string | number | object>) {
@@ -62,12 +80,12 @@ function log(...parts: Array<string | number | object>) {
 
 async function connectAndRun() {
   connectButton.disabled = true;
-  setActionsEnabled(false);
+  setActionState(false, false);
   log("Requesting device...");
 
-  const macOverride = macInput.value.trim().toUpperCase();
+  const macOverride = normalizeMacInput(macInput.value);
   const hasMacOverride = macOverride.length > 0;
-  if (hasMacOverride && !/^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/.test(macOverride)) {
+  if (hasMacOverride && !isValidMac(macOverride)) {
     log("Enter a valid hub MAC (AA:BB:CC:DD:EE:FF), or leave it blank.");
     connectButton.disabled = false;
     return;
@@ -85,27 +103,26 @@ async function connectAndRun() {
   }
 
   const device = devices[0];
+  connectedDevice = device;
   const macFromAdvert = device.address;
   const macToUse = macOverride || macFromAdvert;
-  if (!macToUse) {
-    log("No hub MAC found in advertisements.");
-    log("If commands fail, enter the hub MAC manually and try again.");
-    connectButton.disabled = false;
-    return;
-  }
   if (!macOverride && macFromAdvert) {
     macInput.value = macFromAdvert;
   }
-  device.address = macToUse;
+  device.address = macToUse ?? "";
+  if (!macToUse) {
+    log("No hub MAC available yet.");
+    log("Waiting for advertisements or a shift-complete notification.");
+  }
   log("Selected device:", {
     id: device.id,
     name: device.name,
-    mac: device.address,
+    mac: device.address || "(none)",
   });
 
   const deviceCommands = new BikeNetCommands(protocol, device);
   commands = deviceCommands;
-  setActionsEnabled(true);
+  setActionState(true, Boolean(macToUse));
 
   await deviceCommands.subscribeToBatteryVoltage((battery) => {
     if (battery.status !== "success") return;
@@ -134,9 +151,28 @@ async function connectAndRun() {
       payloadValue: shift.payloadValue,
       rawHex: shift.rawHex,
     });
+    if (!connectedDevice?.address && shift.targetMac) {
+      setMacIfAllowed(shift.targetMac, "shift-complete");
+    }
   });
 
-  log("Connected. Use the read-only actions to query the hub.");
+  await deviceCommands.subscribeToButtonTable((table) => {
+    if (table.status !== "success") return;
+    log("Button table", {
+      targetMac: table.targetMac,
+      entries: table.entries ?? [],
+    });
+  });
+
+  await deviceCommands.subscribeToFrontCog((frontCog) => {
+    if (frontCog.status !== "success") return;
+    log("Front cog", {
+      targetMac: frontCog.targetMac,
+      rawHex: frontCog.rawHex,
+    });
+  });
+
+  log("Connected. Use the actions to query the hub.");
 }
 
 async function runAction<T>(label: string, action: () => Promise<T>) {
@@ -211,6 +247,21 @@ connectButton.addEventListener("click", () => {
     log("Fatal error", err?.message ?? String(err));
     console.error(err);
     connectButton.disabled = false;
-    setActionsEnabled(false);
+    setActionState(false, false);
   });
+});
+
+macInput.addEventListener("change", () => {
+  if (!connectedDevice) return;
+  const value = normalizeMacInput(macInput.value);
+  if (!value) {
+    connectedDevice.address = "";
+    setActionState(true, false);
+    return;
+  }
+  if (!isValidMac(value)) {
+    log("Enter a valid hub MAC (AA:BB:CC:DD:EE:FF).");
+    return;
+  }
+  setMacIfAllowed(value, "manual entry");
 });

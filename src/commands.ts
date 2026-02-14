@@ -117,6 +117,14 @@ export interface ShiftCompleteNotify {
   rawBytes?: number[];
 }
 
+export interface FrontCogNotify {
+  status: "success" | "error";
+  code: number;
+  targetMac?: string;
+  rawHex?: string;
+  rawBytes?: number[];
+}
+
 export interface ButtonMapEntry {
   podAddressHex: string;
   elinkAddressHex: string;
@@ -513,6 +521,27 @@ export function parseShiftCompleteNotify(
   return { status: "error", code, targetMac };
 }
 
+export function parseFrontCogNotify(data: Uint8Array): FrontCogNotify {
+  const code = leInt(data, 2) & 0xffff;
+  const targetMac =
+    data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
+
+  if (code === 0x4004) {
+    const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
+    const rawHex = bytesToHexUpper(payload);
+    const rawBytes = Array.from(payload.values());
+    return {
+      status: "success",
+      code,
+      targetMac,
+      rawHex,
+      rawBytes,
+    };
+  }
+
+  return { status: "error", code, targetMac };
+}
+
 export class BikeNetCommands {
   private readonly protocol: BikeNetProtocol;
   private readonly device: TransportDevice;
@@ -624,6 +653,14 @@ export class BikeNetCommands {
       this.device,
       0x4002,
       (data) => handler(parseButtonTableNotify(data)),
+    );
+  }
+
+  async subscribeToFrontCog(handler: (notify: FrontCogNotify) => void) {
+    return this.protocol.subscribeToPeripheralMessage(
+      this.device,
+      0x4004,
+      (data) => handler(parseFrontCogNotify(data)),
     );
   }
 }
