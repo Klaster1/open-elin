@@ -131,10 +131,7 @@ export class BikeNetProtocol {
       session.pending = { resolve, reject, timer };
     });
 
-    await session.connection.writeMsg(
-      payload,
-      session.connection.writeWithoutResponse,
-    );
+    await session.connection.writeMsg(payload, false);
     return response;
   }
 
@@ -211,10 +208,7 @@ export class BikeNetProtocol {
     });
 
     const pinHex = processPin(this.pinCode);
-    await connection.writePin(
-      hexToBuffer(pinHex),
-      connection.writeWithoutResponse,
-    );
+    await connection.writePin(hexToBuffer(pinHex), false);
 
     this.sessions.set(device.id, session);
     return session;

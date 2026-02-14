@@ -115,7 +115,7 @@ export class WebBluetoothTransport {
         ).watchAdvertisements();
         await Promise.race([
           macPromise,
-          new Promise((resolve) => setTimeout(resolve, 1500)),
+          new Promise((resolve) => setTimeout(resolve, 5000)),
         ]);
       } catch {
         // Ignore if the platform blocks active advertisement watching.
@@ -178,7 +178,6 @@ export class WebBluetoothTransport {
         }
       },
       subscribeMsg: async (handler) => {
-        await msgChar.startNotifications();
         msgChar.addEventListener("characteristicvaluechanged", (event) => {
           const value = (event.target as BluetoothRemoteGATTCharacteristic)
             .value;
@@ -187,10 +186,10 @@ export class WebBluetoothTransport {
           if (this.onMsgNotify) this.onMsgNotify(data);
           handler(data);
         });
+        await msgChar.startNotifications();
       },
       subscribePin: async (handler) => {
         if (!pinChar) return;
-        await pinChar.startNotifications();
         pinChar.addEventListener("characteristicvaluechanged", (event) => {
           const value = (event.target as BluetoothRemoteGATTCharacteristic)
             .value;
@@ -199,6 +198,7 @@ export class WebBluetoothTransport {
           if (this.onPinNotify) this.onPinNotify(data);
           handler(data);
         });
+        await pinChar.startNotifications();
       },
       disconnect: async () => {
         bluetoothDevice.gatt?.disconnect();
