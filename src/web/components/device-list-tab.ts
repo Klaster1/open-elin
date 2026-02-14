@@ -7,19 +7,40 @@ import { sharedStyles } from "../styles.ts";
 class DeviceListTab extends SignalWatcher(LitElement) {
   static styles = [sharedStyles];
 
+  connectedCallback() {
+    super.connectedCallback();
+    if (appState.connected.get()) {
+      void appActions.getList();
+    }
+  }
+
   render() {
     const canList = appState.connected.get();
     const entries = appState.listEntries.get();
     return html`
       <div class="card">
         <div class="card-head">
-          <h2>Device list</h2>
+          <div class="card-head-row">
+            <h2>Device list</h2>
+            <sl-button
+              size="small"
+              ?disabled=${!canList}
+              @click=${this.onGetList}
+            >
+              <svg
+                slot="prefix"
+                class="button-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  d="M20 5v5h-5M4 19v-5h5M6.5 7.5a7 7 0 0 1 11 2.5M17.5 16.5a7 7 0 0 1-11-2.5"
+                ></path>
+              </svg>
+              Refresh
+            </sl-button>
+          </div>
           <p class="hint">Scan the hub for linked devices.</p>
-        </div>
-        <div class="actions">
-          <sl-button ?disabled=${!canList} @click=${this.onGetList}
-            >Get list</sl-button
-          >
         </div>
         ${entries.length
           ? html`<div class="device-list">

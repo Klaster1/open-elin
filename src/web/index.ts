@@ -15,7 +15,6 @@ import {
   isValidMac,
   setShiftMacListener,
 } from "./store.ts";
-import { deviceTabs } from "./device-tabs.ts";
 import { sharedStyles } from "./styles.ts";
 import "./components/landing-page.ts";
 import "./components/mac-page.ts";
@@ -47,16 +46,6 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     },
     {
       path: "/device/:mac/:tab",
-      enter: async ({ mac, tab }) => {
-        const normalizedTab = this.normalizeTab(tab);
-        if (normalizedTab !== tab) {
-          await this.navigate(
-            `/device/${encodeURIComponent(mac)}/${normalizedTab}`,
-            { replace: true },
-          );
-          return false;
-        }
-      },
       render: (params: RouteParams) =>
         this.renderDeviceRoute(params.mac, params.tab),
     },
@@ -105,7 +94,6 @@ class BikeNetApp extends SignalWatcher(LitElement) {
   private renderDeviceRoute(macParam?: string, tabParam?: string) {
     const currentMac = appState.mac.get();
     const routeMac = macParam;
-    const routeTab = tabParam;
 
     if (routeMac) {
       const decoded = decodeURIComponent(routeMac);
@@ -117,7 +105,7 @@ class BikeNetApp extends SignalWatcher(LitElement) {
 
     const targetMac =
       currentMac || (routeMac ? decodeURIComponent(routeMac) : "");
-    const activeTab = this.normalizeTab(routeTab);
+    const activeTab = tabParam || "log";
 
     return html`
       <device-page
@@ -155,12 +143,6 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     if (mac) {
       void this.navigate(`/device/${encodeURIComponent(mac)}/log`);
     }
-  }
-
-  private normalizeTab(tab?: string) {
-    if (!tab) return "log";
-    const match = deviceTabs.find((item) => item.id === tab);
-    return match ? match.id : "log";
   }
 
   private async navigate(path: string, options: { replace?: boolean } = {}) {

@@ -210,6 +210,13 @@ export const sharedStyles = css`
     margin-bottom: 16px;
   }
 
+  .card-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
   .hint {
     color: var(--muted, #98a6b5);
     font-size: 13px;
@@ -226,6 +233,16 @@ export const sharedStyles = css`
   sl-button::part(base) {
     border-radius: 10px;
     font-weight: 600;
+  }
+
+  .button-icon {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .demo-button::part(base) {
