@@ -5,10 +5,40 @@ import { WebBluetoothTransport } from "./transport-web.ts";
 const logArea = document.querySelector<HTMLPreElement>("#log");
 const connectButton = document.querySelector<HTMLButtonElement>("#connect");
 const macInput = document.querySelector<HTMLInputElement>("#mac");
+const listButton = document.querySelector<HTMLButtonElement>("#action-list");
+const motorButton = document.querySelector<HTMLButtonElement>("#action-motor");
+const mapButton = document.querySelector<HTMLButtonElement>("#action-map");
+const tableButton = document.querySelector<HTMLButtonElement>("#action-table");
+const cogsButton = document.querySelector<HTMLButtonElement>("#action-cogs");
 
-if (!logArea || !connectButton || !macInput) {
+if (
+  !logArea ||
+  !connectButton ||
+  !macInput ||
+  !listButton ||
+  !motorButton ||
+  !mapButton ||
+  !tableButton ||
+  !cogsButton
+) {
   throw new Error("Missing UI elements");
 }
+
+let commands: BikeNetCommands | null = null;
+
+const actionButtons = [
+  listButton,
+  motorButton,
+  mapButton,
+  tableButton,
+  cogsButton,
+];
+
+const setActionsEnabled = (enabled: boolean) => {
+  actionButtons.forEach((button) => {
+    button.disabled = !enabled;
+  });
+};
 
 function log(...parts: Array<string | number | object>) {
   const line = parts
@@ -20,6 +50,7 @@ function log(...parts: Array<string | number | object>) {
 
 async function connectAndRun() {
   connectButton.disabled = true;
+  setActionsEnabled(false);
   log("Requesting device...");
 
   const macOverride = macInput.value.trim().toUpperCase();
@@ -60,9 +91,11 @@ async function connectAndRun() {
     mac: device.address,
   });
 
-  const commands = new BikeNetCommands(protocol, device);
+  const deviceCommands = new BikeNetCommands(protocol, device);
+  commands = deviceCommands;
+  setActionsEnabled(true);
 
-  await commands.subscribeToBatteryVoltage((battery) => {
+  await deviceCommands.subscribeToBatteryVoltage((battery) => {
     if (battery.status !== "success") return;
     log("Battery notification", {
       targetMac: battery.targetMac,
@@ -71,7 +104,7 @@ async function connectAndRun() {
     });
   });
 
-  await commands.subscribeToButtonAction((action) => {
+  await deviceCommands.subscribeToButtonAction((action) => {
     if (action.status !== "success") return;
     log("Button action", {
       targetMac: action.targetMac,
@@ -82,7 +115,7 @@ async function connectAndRun() {
     });
   });
 
-  await commands.subscribeToShiftComplete((shift) => {
+  await deviceCommands.subscribeToShiftComplete((shift) => {
     if (shift.status !== "success") return;
     log("Shift complete", {
       targetMac: shift.targetMac,
@@ -91,30 +124,60 @@ async function connectAndRun() {
     });
   });
 
-  const listResponse = await commands.getList();
-  if (listResponse.status === "success" && listResponse.entries?.length) {
-    log("Device list:");
-    listResponse.entries.forEach((entry, index) => {
-      log({ index, ...entry });
-    });
-  } else {
-    log("List response", listResponse);
-  }
-
-  const motorParams = await commands.getMotorParams();
-  if (motorParams.status === "success") {
-    log("Motor params", motorParams.humanReadable ?? {});
-  } else {
-    log("Motor params error", motorParams);
-  }
-
-  log("Listening for notifications. Use the bike controls to trigger events.");
+  log("Connected. Use the read-only actions to query the hub.");
 }
+
+async function runAction<T>(label: string, action: () => Promise<T>) {
+  if (!commands) {
+    log("Connect to a hub first.");
+    return;
+  }
+  try {
+    log(label + "...");
+    const result = await action();
+    log(label + " result", result ?? {});
+  } catch (err) {
+    log(label + " error", err?.message ?? String(err));
+  }
+}
+
+listButton.addEventListener("click", () => {
+  runAction("Get list", async () => {
+    const response = await commands!.getList();
+    if (response.status === "success" && response.entries?.length) {
+      response.entries.forEach((entry, index) => log({ index, ...entry }));
+    }
+    return response;
+  });
+});
+
+motorButton.addEventListener("click", () => {
+  runAction("Get motor params", async () => {
+    const response = await commands!.getMotorParams();
+    if (response.status === "success") {
+      log("Motor params", response.humanReadable ?? {});
+    }
+    return response;
+  });
+});
+
+mapButton.addEventListener("click", () => {
+  runAction("Read button map", () => commands!.readButtonMap());
+});
+
+tableButton.addEventListener("click", () => {
+  runAction("Read button table", () => commands!.readButtonTable());
+});
+
+cogsButton.addEventListener("click", () => {
+  runAction("Get rear cog info", () => commands!.getRearCogInfo());
+});
 
 connectButton.addEventListener("click", () => {
   connectAndRun().catch((err) => {
     log("Fatal error", err?.message ?? String(err));
     console.error(err);
     connectButton.disabled = false;
+    setActionsEnabled(false);
   });
 });

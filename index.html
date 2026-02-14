@@ -55,6 +55,11 @@
         padding: 16px;
         border: 1px solid #23293a;
       }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
       pre {
         white-space: pre-wrap;
         word-break: break-word;
@@ -81,6 +86,16 @@
       <label class="hint" for="mac">Hub MAC (eLink)</label>
       <input id="mac" placeholder="AA:BB:CC:DD:EE:FF (optional)" />
       <button id="connect">Connect + Run</button>
+    </div>
+    <div class="card">
+      <p class="hint">Read-only actions (available after connect).</p>
+      <div class="actions">
+        <button id="action-list" disabled>Get list</button>
+        <button id="action-motor" disabled>Get motor params</button>
+        <button id="action-map" disabled>Read button map</button>
+        <button id="action-table" disabled>Read button table</button>
+        <button id="action-cogs" disabled>Get rear cog info</button>
+      </div>
     </div>
     <div class="card">
       <pre id="log"></pre>
