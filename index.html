@@ -75,11 +75,11 @@
     <div class="card">
       <p class="hint">
         Click connect to select the BikeNet hub (eLink) device. Requires Chrome
-        with Web Bluetooth enabled. Enter the hub MAC (eLink), since Web
-        Bluetooth does not expose it.
+        with Web Bluetooth enabled. The hub MAC is pulled from advertisements
+        when available. If you cannot connect, enter the hub MAC manually.
       </p>
       <label class="hint" for="mac">Hub MAC (eLink)</label>
-      <input id="mac" placeholder="AA:BB:CC:DD:EE:FF" />
+      <input id="mac" placeholder="AA:BB:CC:DD:EE:FF (optional)" />
       <button id="connect">Connect + Run</button>
     </div>
     <div class="card">

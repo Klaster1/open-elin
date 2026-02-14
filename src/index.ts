@@ -103,9 +103,9 @@ async function main() {
       console.log(listResponse);
     }
 
-    const renameResponse = await commands.setDeviceName("ELINK KLASTER");
-    console.log("Rename response:");
-    console.log(renameResponse);
+    // const renameResponse = await commands.setDeviceName("ELINK KLASTER");
+    // console.log("Rename response:");
+    // console.log(renameResponse);
 
     const motorParams = await commands.getMotorParams();
     if (motorParams.status === "success") {

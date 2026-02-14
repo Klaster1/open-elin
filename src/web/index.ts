@@ -10,9 +10,6 @@ if (!logArea || !connectButton || !macInput) {
   throw new Error("Missing UI elements");
 }
 
-const MAC_STORAGE_KEY = "bikenet.hubMac";
-macInput.value = localStorage.getItem(MAC_STORAGE_KEY) ?? "";
-
 function log(...parts: Array<string | number | object>) {
   const line = parts
     .map((p) => (typeof p === "string" ? p : JSON.stringify(p, null, 2)))
@@ -26,12 +23,12 @@ async function connectAndRun() {
   log("Requesting device...");
 
   const macOverride = macInput.value.trim().toUpperCase();
-  if (!/^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/.test(macOverride)) {
-    log("Enter a valid hub MAC (AA:BB:CC:DD:EE:FF). Commands require it.");
+  const hasMacOverride = macOverride.length > 0;
+  if (hasMacOverride && !/^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/.test(macOverride)) {
+    log("Enter a valid hub MAC (AA:BB:CC:DD:EE:FF), or leave it blank.");
     connectButton.disabled = false;
     return;
   }
-  localStorage.setItem(MAC_STORAGE_KEY, macOverride);
 
   const transport = new WebBluetoothTransport({
     deviceNamePrefix: "",
@@ -45,7 +42,18 @@ async function connectAndRun() {
   }
 
   const device = devices[0];
-  device.address = macOverride;
+  const macFromAdvert = device.address;
+  const macToUse = macOverride || macFromAdvert;
+  if (!macToUse) {
+    log("No hub MAC found in advertisements.");
+    log("If commands fail, enter the hub MAC manually and try again.");
+    connectButton.disabled = false;
+    return;
+  }
+  if (!macOverride && macFromAdvert) {
+    macInput.value = macFromAdvert;
+  }
+  device.address = macToUse;
   log("Selected device:", {
     id: device.id,
     name: device.name,

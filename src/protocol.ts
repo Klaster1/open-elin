@@ -73,7 +73,7 @@ function responseCode(data: Uint8Array) {
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 
 const DEFAULT_PIN_CODE = "1111";
-const DEFAULT_RESPONSE_TIMEOUT_MS = 5000;
+const DEFAULT_RESPONSE_TIMEOUT_MS = 15000;
 
 export class BikeNetProtocol {
   private readonly transport: ProtocolTransport;

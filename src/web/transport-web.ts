@@ -27,6 +27,7 @@ export class WebBluetoothTransport {
   private readonly onMsgNotify?: (data: Uint8Array) => void;
   private readonly onPinNotify?: (data: Uint8Array) => void;
   private readonly serviceUuid = "a5c1c000-cc20-ba91-0c1a-ef3f9e643d79";
+  private readonly manufacturerCompanyId = 0xde98;
   private readonly optionalServiceUuids?: string[];
   private readonly deviceNamePrefix?: string;
 
@@ -53,17 +54,75 @@ export class WebBluetoothTransport {
         this.serviceUuid,
         ...(this.optionalServiceUuids ?? []),
       ],
+      optionalManufacturerData: [this.manufacturerCompanyId],
     });
 
-    return [
-      {
-        id: device.id,
-        address: "",
-        name: device.name ?? "",
-        rssi: 0,
-        peripheral: device,
-      },
-    ];
+    const transportDevice: TransportDevice = {
+      id: device.id,
+      address: "",
+      name: device.name ?? "",
+      rssi: 0,
+      peripheral: device,
+    };
+
+    const toBuffer = (value: DataView) => {
+      const { buffer, byteOffset, byteLength } = value;
+      return new Uint8Array(buffer.slice(byteOffset, byteOffset + byteLength));
+    };
+
+    const toHex = (value: number) => value.toString(16).padStart(2, "0");
+
+    const extractMac = (value: Uint8Array) => {
+      if (value.length < 6) return "";
+      const reversedMac = [...value.slice(-6)].reverse();
+      return reversedMac.map(toHex).join(":").toUpperCase();
+    };
+
+    if ("watchAdvertisements" in device) {
+      let resolveMac: ((value: string) => void) | null = null;
+      const macPromise = new Promise<string>((resolve) => {
+        resolveMac = resolve;
+      });
+
+      device.addEventListener(
+        "advertisementreceived",
+        (event: BluetoothAdvertisingEvent) => {
+          const md = event.manufacturerData.get(this.manufacturerCompanyId);
+          if (!md) return;
+          const bytes = toBuffer(md);
+          const mac = extractMac(bytes);
+          if (mac) {
+            transportDevice.address = mac;
+            resolveMac?.(mac);
+            resolveMac = null;
+          }
+          console.log(
+            "manufacturer data:",
+            [...bytes].map((x) => toHex(x)).join(" "),
+          );
+          if (mac) {
+            console.log("advertised mac:", mac);
+          }
+        },
+        {
+          once: true,
+        },
+      );
+
+      try {
+        await (
+          device as BluetoothDevice & { watchAdvertisements(): Promise<void> }
+        ).watchAdvertisements();
+        await Promise.race([
+          macPromise,
+          new Promise((resolve) => setTimeout(resolve, 1500)),
+        ]);
+      } catch {
+        // Ignore if the platform blocks active advertisement watching.
+      }
+    }
+
+    return [transportDevice];
   }
 
   async connect(device: TransportDevice): Promise<TransportConnection> {
