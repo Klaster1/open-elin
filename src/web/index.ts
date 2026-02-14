@@ -362,7 +362,6 @@ class BikeNetApp extends SignalWatcher(LitElement) {
   }
 
   render() {
-    const mac = appState.mac.get();
     return html`
       <div class="app">
         <header class="hero">
@@ -373,9 +372,6 @@ class BikeNetApp extends SignalWatcher(LitElement) {
               actions.
             </p>
           </div>
-          ${mac
-            ? html`<sl-tag class="route-chip" variant="success">${mac}</sl-tag>`
-            : null}
         </header>
         ${this.routes.outlet()}
       </div>
