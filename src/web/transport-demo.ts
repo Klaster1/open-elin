@@ -21,6 +21,9 @@ const DEMO_BATTERY_CODE = 0x4000;
 const DEMO_BUTTON_TABLE_CODE = 0x4002;
 const DEMO_SHIFT_COMPLETE_CODE = 0x4003;
 
+const DEMO_RESPONSE_DELAY_MS = 350;
+const DEMO_NOTIFY_DELAY_MS = 400;
+const DEMO_SHIFT_DELAY_MS = 650;
 const DEMO_BATTERY_INTERVAL_MS = 5000;
 
 const DEMO_DEVICE: TransportDevice = {
@@ -78,7 +81,6 @@ export class DemoTransport implements ProtocolTransport {
           DEMO_BUTTON_TABLE_CODE,
           device.address,
           this.buildButtonTablePayload(),
-          0,
         );
         return;
       case 0x001f:
@@ -98,23 +100,30 @@ export class DemoTransport implements ProtocolTransport {
       case 0x0017:
         this.queueResponse(device.address, this.buildMotorParamsPayload());
         return;
+      case 0x0009:
+        this.queueResponse(device.address);
+        return;
       case 0x0004:
       default:
         this.queueResponse(device.address);
     }
   }
 
-  private queueResponse(targetMac: string, payload?: Uint8Array) {
-    queueMicrotask(() => {
+  private queueResponse(
+    targetMac: string,
+    payload?: Uint8Array,
+    delayMs = DEMO_RESPONSE_DELAY_MS,
+  ) {
+    setTimeout(() => {
       this.emitFrame(DEMO_RESPONSE_CODE, targetMac, payload);
-    });
+    }, delayMs);
   }
 
   private queueNotify(
     code: number,
     targetMac: string,
     payload?: Uint8Array,
-    delayMs = 0,
+    delayMs = DEMO_NOTIFY_DELAY_MS,
   ) {
     setTimeout(() => {
       this.emitFrame(code, targetMac, payload);
@@ -123,7 +132,12 @@ export class DemoTransport implements ProtocolTransport {
 
   private queueShiftComplete(targetMac: string, shift: DemoShiftComplete) {
     const payload = this.hexToBytes(shift.rawHex);
-    this.queueNotify(DEMO_SHIFT_COMPLETE_CODE, targetMac, payload);
+    this.queueNotify(
+      DEMO_SHIFT_COMPLETE_CODE,
+      targetMac,
+      payload,
+      DEMO_SHIFT_DELAY_MS,
+    );
   }
 
   private emitFrame(code: number, targetMac: string, payload?: Uint8Array) {

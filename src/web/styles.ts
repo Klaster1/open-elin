@@ -84,6 +84,41 @@ export const sharedStyles = css`
     letter-spacing: 0.08em;
   }
 
+  .sidebar-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid #233143;
+    background: #0f1620;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .icon-button:hover {
+    border-color: #2b3a4b;
+    background: #18222f;
+  }
+
+  .icon-button svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
   .sidebar-mac {
     font-size: 18px;
     font-weight: 600;
@@ -321,6 +356,32 @@ export const sharedStyles = css`
     gap: 12px;
   }
 
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .dialog-cancel {
+    margin-right: auto;
+  }
+
+  sl-dialog::part(header) {
+    padding: 6px 10px 0;
+  }
+
+  sl-dialog::part(body) {
+    padding: 4px 10px 0;
+  }
+
+  sl-dialog::part(footer) {
+    padding: 4px 10px 8px;
+  }
+
+  sl-dialog::part(close-button) {
+    display: none;
+  }
+
   sl-button::part(base) {
     border-radius: 10px;
     font-weight: 600;
@@ -334,6 +395,10 @@ export const sharedStyles = css`
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
+  }
+
+  .inline-spinner {
+    font-size: 14px;
   }
 
   .demo-button::part(base) {
@@ -354,6 +419,10 @@ export const sharedStyles = css`
     border-color: #2b3b4c;
     background: #0e141b;
     color: inherit;
+  }
+
+  sl-input::part(form-control) {
+    gap: 6px;
   }
 
   .pane-grid {

@@ -8,10 +8,21 @@ import "./refresh-button.ts";
 class DeviceListTab extends SignalWatcher(LitElement) {
   static styles = [sharedStyles];
 
+  static properties = {
+    loading: { type: Boolean, attribute: false },
+  };
+
+  declare loading: boolean;
+
+  constructor() {
+    super();
+    this.loading = false;
+  }
+
   connectedCallback() {
     super.connectedCallback();
     if (appState.connected.get()) {
-      void appActions.getList();
+      void this.onGetList();
     }
   }
 
@@ -25,6 +36,7 @@ class DeviceListTab extends SignalWatcher(LitElement) {
             <h2>Device list</h2>
             <refresh-button
               ?disabled=${!canList}
+              .loading=${this.loading}
               @refresh-requested=${this.onGetList}
             ></refresh-button>
           </div>
@@ -40,7 +52,13 @@ class DeviceListTab extends SignalWatcher(LitElement) {
   }
 
   private async onGetList() {
-    await appActions.getList();
+    if (this.loading) return;
+    this.loading = true;
+    try {
+      await appActions.getList();
+    } finally {
+      this.loading = false;
+    }
   }
 
   private renderEntry(entry: {

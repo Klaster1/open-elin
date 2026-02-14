@@ -8,10 +8,21 @@ import "./refresh-button.ts";
 class DeviceButtonsTab extends SignalWatcher(LitElement) {
   static styles = [sharedStyles];
 
+  static properties = {
+    loading: { type: Boolean, attribute: false },
+  };
+
+  declare loading: boolean;
+
+  constructor() {
+    super();
+    this.loading = false;
+  }
+
   connectedCallback() {
     super.connectedCallback();
     if (appState.connected.get() && appState.mac.get()) {
-      void appActions.readButtonTable();
+      void this.onReadButtonTable();
     }
   }
 
@@ -25,6 +36,7 @@ class DeviceButtonsTab extends SignalWatcher(LitElement) {
             <h2>Buttons</h2>
             <refresh-button
               ?disabled=${!canSend}
+              .loading=${this.loading}
               @refresh-requested=${this.onReadButtonTable}
             ></refresh-button>
           </div>
@@ -42,7 +54,13 @@ class DeviceButtonsTab extends SignalWatcher(LitElement) {
   }
 
   private async onReadButtonTable() {
-    await appActions.readButtonTable();
+    if (this.loading) return;
+    this.loading = true;
+    try {
+      await appActions.readButtonTable();
+    } finally {
+      this.loading = false;
+    }
   }
 
   private renderMapping(entry: any, index: number) {

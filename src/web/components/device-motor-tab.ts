@@ -8,10 +8,21 @@ import "./refresh-button.ts";
 class DeviceMotorTab extends SignalWatcher(LitElement) {
   static styles = [sharedStyles];
 
+  static properties = {
+    loading: { type: Boolean, attribute: false },
+  };
+
+  declare loading: boolean;
+
+  constructor() {
+    super();
+    this.loading = false;
+  }
+
   connectedCallback() {
     super.connectedCallback();
     if (appState.connected.get() && appState.mac.get()) {
-      void appActions.getMotorParams();
+      void this.onGetMotorParams();
     }
   }
 
@@ -26,6 +37,7 @@ class DeviceMotorTab extends SignalWatcher(LitElement) {
             <h2>Motor params</h2>
             <refresh-button
               ?disabled=${!canSend}
+              .loading=${this.loading}
               @refresh-requested=${this.onGetMotorParams}
             ></refresh-button>
           </div>
@@ -48,7 +60,13 @@ class DeviceMotorTab extends SignalWatcher(LitElement) {
   }
 
   private async onGetMotorParams() {
-    await appActions.getMotorParams();
+    if (this.loading) return;
+    this.loading = true;
+    try {
+      await appActions.getMotorParams();
+    } finally {
+      this.loading = false;
+    }
   }
 
   private buildMotorEntries(value: any) {

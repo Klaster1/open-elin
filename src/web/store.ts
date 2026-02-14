@@ -73,6 +73,7 @@ export const appActions = {
   applyManualMac,
   connect,
   connectDemo,
+  renameHub,
   getList,
   getMotorParams,
   getPosition,
@@ -486,6 +487,27 @@ export async function readButtonTable() {
       "Read button table error",
       err instanceof Error ? err.message : err,
     );
+  }
+}
+
+export async function renameHub(name: string) {
+  const deviceCommands = commands.get();
+  const device = connectedDevice.get();
+  if (!deviceCommands || !device) {
+    appendLog("Connect to a hub first.");
+    return null;
+  }
+  appendLog("Rename hub...", name);
+  try {
+    const response = await deviceCommands.setDeviceName(name, device.address);
+    appendLog("Rename hub result", response ?? {});
+    if (response.status === "success") {
+      connectedDevice.set({ ...device, name });
+    }
+    return response;
+  } catch (err) {
+    appendLog("Rename hub error", err instanceof Error ? err.message : err);
+    return null;
   }
 }
 

@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 
-import { appState } from "../store.ts";
+import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import { deviceTabs } from "../device-tabs.ts";
 import "./empty-state.ts";
@@ -10,6 +10,7 @@ import "./device-motor-tab.ts";
 import "./device-buttons-tab.ts";
 import "./device-cogs-tab.ts";
 import "./device-log-tab.ts";
+import "./inline-spinner.ts";
 
 class DevicePage extends SignalWatcher(LitElement) {
   static styles = [sharedStyles];
@@ -17,15 +18,27 @@ class DevicePage extends SignalWatcher(LitElement) {
   static properties = {
     macValue: { type: String, attribute: "mac-value" },
     activeTab: { type: String, attribute: "active-tab" },
+    renameOpen: { type: Boolean, attribute: false },
+    renameValue: { type: String, attribute: false },
+    renameError: { type: String, attribute: false },
+    renameBusy: { type: Boolean, attribute: false },
   };
 
   declare macValue: string;
   declare activeTab: string;
+  declare renameOpen: boolean;
+  declare renameValue: string;
+  declare renameError: string;
+  declare renameBusy: boolean;
 
   constructor() {
     super();
     this.macValue = "";
     this.activeTab = "log";
+    this.renameOpen = false;
+    this.renameValue = "";
+    this.renameError = "";
+    this.renameBusy = false;
   }
 
   render() {
@@ -60,7 +73,19 @@ class DevicePage extends SignalWatcher(LitElement) {
       <section class="shell">
         <aside class="card sidebar">
           <div class="sidebar-head">
-            <div class="sidebar-name">${deviceName}</div>
+            <div class="sidebar-name-row">
+              <div class="sidebar-name">${deviceName}</div>
+              <button
+                class="icon-button"
+                type="button"
+                @click=${this.openRename}
+                aria-label="Rename hub"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 20h4l10.5-10.5-4-4L4 16v4zM14.5 5.5l4 4"></path>
+                </svg>
+              </button>
+            </div>
             <div class="sidebar-mac">${displayMac}</div>
             <div class="status ${batteryStatus.kind}">
               ${batteryStatus.label}
@@ -74,6 +99,40 @@ class DevicePage extends SignalWatcher(LitElement) {
         </aside>
         <div class="content">${this.renderDeviceTab(activeTab)}</div>
       </section>
+      <sl-dialog
+        label="Rename hub"
+        ?open=${this.renameOpen}
+        @sl-request-close=${this.onRenameRequestClose}
+      >
+        <sl-input
+          label="New name"
+          placeholder="Enter hub name"
+          .value=${this.renameValue}
+          ?invalid=${Boolean(this.renameError)}
+          help-text=${this.renameError}
+          @sl-input=${this.onRenameInput}
+          ?disabled=${this.renameBusy}
+        ></sl-input>
+        <div slot="footer" class="dialog-actions">
+          <sl-button
+            class="dialog-cancel"
+            ?disabled=${this.renameBusy}
+            @click=${this.closeRename}
+          >
+            Cancel
+          </sl-button>
+          <sl-button
+            variant="primary"
+            ?disabled=${this.renameBusy}
+            @click=${this.confirmRename}
+          >
+            ${this.renameBusy
+              ? html`<inline-spinner slot="prefix"></inline-spinner>`
+              : html``}
+            Rename
+          </sl-button>
+        </div>
+      </sl-dialog>
     `;
   }
 
@@ -119,6 +178,55 @@ class DevicePage extends SignalWatcher(LitElement) {
     this.dispatchEvent(
       new CustomEvent("demo-requested", { bubbles: true, composed: true }),
     );
+  }
+
+  private openRename() {
+    const currentName = appState.connectedDevice.get()?.name || "";
+    this.renameValue = currentName;
+    this.renameError = "";
+    this.renameOpen = true;
+  }
+
+  private closeRename() {
+    this.renameOpen = false;
+    this.renameError = "";
+  }
+
+  private onRenameRequestClose() {
+    if (this.renameBusy) {
+      event.preventDefault();
+      return;
+    }
+    this.closeRename();
+  }
+
+  private onRenameInput(event: Event) {
+    const target = event.target as HTMLInputElement | null;
+    this.renameValue = target?.value ?? "";
+    if (this.renameError) {
+      this.renameError = "";
+    }
+  }
+
+  private async confirmRename() {
+    const trimmed = this.renameValue.trim();
+    if (!trimmed) {
+      this.renameError = "Name is required.";
+      return;
+    }
+    if (this.renameBusy) return;
+    this.renameBusy = true;
+    try {
+      const response = await appActions.renameHub(trimmed);
+      if (response?.status === "success") {
+        this.renameOpen = false;
+        this.renameError = "";
+        return;
+      }
+      this.renameError = "Rename failed. Try again.";
+    } finally {
+      this.renameBusy = false;
+    }
   }
 
   private formatBatteryStatus(value: number | null) {
