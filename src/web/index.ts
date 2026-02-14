@@ -38,7 +38,9 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     {
       path: "/device/:mac",
       enter: async ({ mac }) => {
-        await this.router.goto(`/device/${encodeURIComponent(mac)}/log`);
+        await this.navigate(`/device/${encodeURIComponent(mac)}/log`, {
+          replace: true,
+        });
         return false;
       },
       render: () => html``,
@@ -48,8 +50,9 @@ class BikeNetApp extends SignalWatcher(LitElement) {
       enter: async ({ mac, tab }) => {
         const normalizedTab = this.normalizeTab(tab);
         if (normalizedTab !== tab) {
-          await this.router.goto(
+          await this.navigate(
             `/device/${encodeURIComponent(mac)}/${normalizedTab}`,
+            { replace: true },
           );
           return false;
         }
@@ -130,9 +133,9 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     await appActions.connect();
     const mac = appState.mac.get();
     if (mac) {
-      this.navigate(`/device/${encodeURIComponent(mac)}/log`);
+      void this.navigate(`/device/${encodeURIComponent(mac)}/log`);
     } else {
-      this.navigate("/mac");
+      void this.navigate("/mac");
     }
   }
 
@@ -142,7 +145,7 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     if (mac) {
       const pending = appState.pendingRouteMac.get();
       const target = pending || mac;
-      this.navigate(`/device/${encodeURIComponent(target)}/log`);
+      void this.navigate(`/device/${encodeURIComponent(target)}/log`);
     }
   }
 
@@ -150,7 +153,7 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     await appActions.connectDemo();
     const mac = appState.mac.get();
     if (mac) {
-      this.navigate(`/device/${encodeURIComponent(mac)}/log`);
+      void this.navigate(`/device/${encodeURIComponent(mac)}/log`);
     }
   }
 
@@ -160,9 +163,14 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     return match ? match.id : "log";
   }
 
-  private navigate(path: string) {
+  private async navigate(path: string, options: { replace?: boolean } = {}) {
     const normalized = path.startsWith("/") ? path : `/${path}`;
-    void this.router.goto(normalized);
+    if (options.replace) {
+      window.history.replaceState({}, "", normalized);
+    } else {
+      window.history.pushState({}, "", normalized);
+    }
+    await this.router.goto(normalized);
   }
 }
 
