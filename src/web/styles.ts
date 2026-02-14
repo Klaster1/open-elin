@@ -4,7 +4,8 @@ export const sharedStyles = css`
   :host {
     display: block;
     color: var(--text, #e7edf5);
-    font-family: var(--sans, "Space Grotesk", sans-serif);
+    --sans: Roboto, sans-serif;
+    font-family: Roboto, sans-serif;
   }
 
   .app {
@@ -401,9 +402,11 @@ export const sharedStyles = css`
     margin: 0;
     font-size: 12px;
     line-height: 1.5;
-    max-height: 60vh;
-    overflow: auto;
-    font-family: var(--mono, "JetBrains Mono", monospace);
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid #233143;
+    background: #0f1620;
+    font-family: var(--mono, Consolas, monospace);
   }
 
   @media (max-width: 900px) {
