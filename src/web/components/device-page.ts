@@ -4,6 +4,7 @@ import { SignalWatcher } from "@lit-labs/signals";
 import { appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import { deviceTabs } from "../device-tabs.ts";
+import "./empty-state.ts";
 import "./device-list-tab.ts";
 import "./device-motor-tab.ts";
 import "./device-buttons-tab.ts";
@@ -32,39 +33,12 @@ class DevicePage extends SignalWatcher(LitElement) {
     if (!connected) {
       return html`
         <section>
-          <div class="card empty-state stack">
-            <div class="empty-icon" aria-hidden="true">
-              <svg viewBox="0 0 64 64" fill="none">
-                <path
-                  d="M12 28c10-10 30-10 40 0"
-                  stroke="#7ef0c3"
-                  stroke-width="4"
-                  stroke-linecap="round"
-                />
-                <path
-                  d="M20 36c6-6 18-6 24 0"
-                  stroke="#7ef0c3"
-                  stroke-width="4"
-                  stroke-linecap="round"
-                />
-                <path
-                  d="M28 44c2-2 6-2 8 0"
-                  stroke="#7ef0c3"
-                  stroke-width="4"
-                  stroke-linecap="round"
-                />
-                <circle cx="32" cy="50" r="3" fill="#ffb454" />
-              </svg>
-            </div>
-            <h2 class="empty-title">Reconnect required</h2>
-            <p class="hint empty-message">
-              You opened the device page without an active Bluetooth session.
-              Chrome requires a user click to open the Bluetooth picker.
-            </p>
-            <sl-button variant="primary" @click=${this.onReconnect}
-              >Connect to hub</sl-button
-            >
-          </div>
+          <empty-state
+            title="Reconnect required"
+            message="You opened the device page without an active Bluetooth session. Chrome requires a user click to open the Bluetooth picker."
+            action-label="Connect to hub"
+            @empty-action=${this.onReconnect}
+          ></empty-state>
         </section>
       `;
     }

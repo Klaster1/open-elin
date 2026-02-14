@@ -3,33 +3,29 @@ import { SignalWatcher } from "@lit-labs/signals";
 
 import { appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
+import "./empty-state.ts";
 
 class LandingPage extends SignalWatcher(LitElement) {
   static styles = [sharedStyles];
 
   render() {
     const connectEmpty = appState.connectEmpty.get();
+    const connected = appState.connected.get();
+    if (connected) {
+      return html``;
+    }
+    const emptyTitle = connectEmpty ? "No hub selected" : "Ready to connect";
+    const emptyMessage = connectEmpty
+      ? "No hub was selected. If the picker did not appear, make sure Web Bluetooth is enabled and try again."
+      : "No hub connected yet. Click Connect to choose an eLink hub.";
     return html`
       <section>
-        <div class="card">
-          <div class="card-head">
-            <h2>1. Connection</h2>
-            <p class="hint">
-              Click Connect to pick the eLink hub from the Web Bluetooth picker.
-            </p>
-          </div>
-          <div class="row">
-            <sl-button variant="primary" @click=${this.onConnect}
-              >Connect</sl-button
-            >
-          </div>
-          ${connectEmpty
-            ? html`<div class="empty-state">
-                No hub was selected. If the picker did not appear, make sure Web
-                Bluetooth is enabled and try again.
-              </div>`
-            : null}
-        </div>
+        <empty-state
+          .title=${emptyTitle}
+          .message=${emptyMessage}
+          action-label="Connect"
+          @empty-action=${this.onConnect}
+        ></empty-state>
       </section>
     `;
   }
