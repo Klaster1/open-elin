@@ -1,256 +1,503 @@
+import { LitElement, css, html } from "https://esm.sh/lit@3.2.1";
+import { Routes } from "https://esm.sh/@lit-labs/router@0.1.0";
+import "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/components/button/button.js";
+import "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/components/card/card.js";
+import "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/components/input/input.js";
+import "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/components/alert/alert.js";
+import "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/components/tag/tag.js";
+import { setBasePath } from "https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/utilities/base-path.js";
+
 import { BikeNetCommands } from "../commands.ts";
 import { BikeNetProtocol } from "../protocol.ts";
 import type { TransportDevice } from "../protocol.ts";
 import { WebBluetoothTransport } from "./transport-web.ts";
 
-const logArea = document.querySelector<HTMLPreElement>("#log");
-const connectButton = document.querySelector<HTMLButtonElement>("#connect");
-const connectEmpty = document.querySelector<HTMLDivElement>("#connect-empty");
-const stepConnect = document.querySelector<HTMLElement>("#step-connect");
-const stepMac = document.querySelector<HTMLElement>("#step-mac");
-const stepReady = document.querySelector<HTMLElement>("#step-ready");
-const adStatus = document.querySelector<HTMLDivElement>("#ad-status");
-const shiftStatus = document.querySelector<HTMLDivElement>("#shift-status");
-const macInput = document.querySelector<HTMLInputElement>("#mac");
-const macApplyButton = document.querySelector<HTMLButtonElement>("#mac-apply");
-const listButton = document.querySelector<HTMLButtonElement>("#action-list");
-const motorButton = document.querySelector<HTMLButtonElement>("#action-motor");
-const positionButton =
-  document.querySelector<HTMLButtonElement>("#action-position");
-const shiftUpButton =
-  document.querySelector<HTMLButtonElement>("#action-shift-up");
-const shiftDownButton =
-  document.querySelector<HTMLButtonElement>("#action-shift-down");
-const mapButton = document.querySelector<HTMLButtonElement>("#action-map");
-const tableButton = document.querySelector<HTMLButtonElement>("#action-table");
-const cogsButton = document.querySelector<HTMLButtonElement>("#action-cogs");
+setBasePath("https://esm.sh/@shoelace-style/shoelace@2.14.0/dist/");
+document.documentElement.classList.add("sl-theme-dark");
 
-if (
-  !logArea ||
-  !connectButton ||
-  !connectEmpty ||
-  !stepConnect ||
-  !stepMac ||
-  !stepReady ||
-  !adStatus ||
-  !shiftStatus ||
-  !macInput ||
-  !macApplyButton ||
-  !listButton ||
-  !motorButton ||
-  !positionButton ||
-  !shiftUpButton ||
-  !shiftDownButton ||
-  !mapButton ||
-  !tableButton ||
-  !cogsButton
-) {
-  throw new Error("Missing UI elements");
-}
+type StatusKind = "wait" | "warn" | "ok";
 
-let commands: BikeNetCommands | null = null;
-let connectedDevice: TransportDevice | null = null;
-let pendingAdvertMac: string | null = null;
-let adTimeoutId: ReturnType<typeof setTimeout> | null = null;
-let macLockedByUser = false;
-
-const MAC_STORAGE_KEY = "bikenetHubMac";
-
-type Step = "connect" | "mac" | "ready";
-
-const setActionState = (connected: boolean, hasMac: boolean) => {
-  listButton.disabled = !connected;
-  const disableActions = !connected || !hasMac;
-  [
-    motorButton,
-    positionButton,
-    shiftUpButton,
-    shiftDownButton,
-    mapButton,
-    tableButton,
-    cogsButton,
-  ].forEach((button) => {
-    button.disabled = disableActions;
-  });
+type RouteParams = {
+  mac?: string;
 };
 
-const setStep = (step: Step) => {
-  stepConnect.classList.toggle("active", step === "connect");
-  stepMac.classList.toggle("active", step === "mac");
-  stepReady.classList.toggle("active", step === "ready");
-};
-
-const setStatus = (
-  element: HTMLDivElement,
-  variant: "wait" | "warn" | "ok",
-  text: string,
-) => {
-  element.textContent = text;
-  element.classList.remove("wait", "warn", "ok");
-  element.classList.add(variant);
-};
-
-const startAdTimer = () => {
-  if (adTimeoutId) {
-    clearTimeout(adTimeoutId);
-    adTimeoutId = null;
-  }
-  adTimeoutId = setTimeout(() => {
-    if (!connectedDevice?.address) {
-      setStatus(
-        adStatus,
-        "warn",
-        "Couldn't discover MAC from advertisements yet.",
-      );
+class BikeNetApp extends LitElement {
+  static styles = css`
+    :host {
+      display: block;
+      color: var(--text, #e7edf5);
+      font-family: var(--sans, "Space Grotesk", sans-serif);
     }
-  }, 10000);
-};
 
-const resetMacPaneStatus = () => {
-  setStatus(adStatus, "wait", "Listening for advertisements...");
-  setStatus(
-    shiftStatus,
-    "wait",
-    "Waiting for a shift-complete notification...",
-  );
-};
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 28px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
 
-const readStoredMac = () => {
-  try {
-    const value = localStorage.getItem(MAC_STORAGE_KEY);
-    return value ? value.trim().toUpperCase() : "";
-  } catch {
-    return "";
-  }
-};
+    .hero {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+    }
 
-const storeMac = (mac: string) => {
-  try {
-    localStorage.setItem(MAC_STORAGE_KEY, mac);
-  } catch {
-    // Ignore storage failures.
-  }
-};
+    h1 {
+      font-size: 32px;
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
 
-const setConnectEmpty = (show: boolean) => {
-  connectEmpty.hidden = !show;
-};
+    h2 {
+      font-size: 18px;
+      margin: 0;
+    }
 
-const normalizeMacInput = (value: string) => value.trim().toUpperCase();
+    .subtitle {
+      color: var(--muted, #98a6b5);
+      margin: 8px 0 0;
+      font-size: 14px;
+    }
 
-const isValidMac = (value: string) =>
-  /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/.test(value);
+    .card {
+      background: var(--panel, #141c24);
+      border-radius: 16px;
+      padding: 18px 20px;
+      border: 1px solid var(--panel-border, #223142);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    }
 
-const setMacIfAllowed = (mac: string, source: string) => {
-  const normalized = normalizeMacInput(mac);
-  if (!normalized || !isValidMac(normalized)) return false;
-  if (!connectedDevice) return false;
-  if (macLockedByUser && source !== "manual entry") return false;
-  if (connectedDevice.address === normalized) return true;
-  connectedDevice.address = normalized;
-  macInput.value = normalized;
-  storeMac(normalized);
-  log(`Hub MAC set from ${source}:`, normalized);
-  if (source === "advertisements") {
-    setStatus(adStatus, "ok", "MAC discovered from advertisements.");
-  }
-  if (source === "shift-complete") {
-    setStatus(shiftStatus, "ok", "MAC captured from shift complete.");
-  }
-  if (source === "manual entry") {
-    setStatus(adStatus, "warn", "Manual MAC entry used.");
-  }
-  if (adTimeoutId) {
-    clearTimeout(adTimeoutId);
-    adTimeoutId = null;
-  }
-  setActionState(true, true);
-  setStep("ready");
-  return true;
-};
+    .card-head {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
 
-function log(...parts: Array<string | number | object>) {
-  const line = parts
-    .map((p) => (typeof p === "string" ? p : JSON.stringify(p, null, 2)))
-    .join(" ");
-  logArea.textContent += `${line}\n`;
-  logArea.scrollTop = logArea.scrollHeight;
-}
+    .hint {
+      color: var(--muted, #98a6b5);
+      font-size: 13px;
+      margin: 0;
+    }
 
-async function connectAndRun() {
-  connectButton.disabled = true;
-  setActionState(false, false);
-  setConnectEmpty(false);
-  setStep("connect");
-  log("Requesting device...");
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
 
-  const macOverride = normalizeMacInput(macInput.value);
-  const hasMacOverride = macOverride.length > 0;
-  if (hasMacOverride && !isValidMac(macOverride)) {
-    log("Enter a valid hub MAC (AA:BB:CC:DD:EE:FF), or leave it blank.");
-    connectButton.disabled = false;
-    return;
-  }
+    sl-button::part(base) {
+      border-radius: 10px;
+      font-weight: 600;
+    }
 
-  const transport = new WebBluetoothTransport({
-    deviceNamePrefix: "",
-    onAdvertisementMac: (mac) => {
-      pendingAdvertMac = mac;
-      if (!connectedDevice) return;
-      setMacIfAllowed(mac, "advertisements");
+    sl-input::part(base) {
+      border-radius: 10px;
+      border-color: #2b3b4c;
+      background: #0e141b;
+      color: inherit;
+    }
+
+    .pane-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .pane {
+      background: var(--panel-strong, #1a2430);
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid #2b3a4b;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 200px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #243243;
+      color: var(--muted, #98a6b5);
+    }
+
+    .status.ok {
+      background: rgba(53, 194, 139, 0.18);
+      color: #7ef0c3;
+    }
+
+    .status.warn {
+      background: rgba(255, 180, 84, 0.15);
+      color: var(--warn, #ffb454);
+    }
+
+    .status.wait {
+      background: rgba(88, 110, 134, 0.2);
+      color: #c0cad6;
+    }
+
+    .empty-state {
+      margin-top: 16px;
+      padding: 18px;
+      border-radius: 12px;
+      border: 1px dashed #3a4a5c;
+      background: rgba(20, 30, 40, 0.6);
+      min-height: 140px;
+      display: flex;
+      align-items: center;
+      color: var(--muted, #98a6b5);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .log {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.5;
+      max-height: 60vh;
+      overflow: auto;
+      font-family: var(--mono, "JetBrains Mono", monospace);
+    }
+
+    .route-chip {
+      margin-left: auto;
+    }
+
+    @media (max-width: 900px) {
+      .pane-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  `;
+
+  static properties = {
+    connected: { state: true },
+    connectEmpty: { state: true },
+    mac: { state: true },
+    manualMac: { state: true },
+    adStatusText: { state: true },
+    adStatusKind: { state: true },
+    shiftStatusText: { state: true },
+    shiftStatusKind: { state: true },
+    logLines: { state: true },
+  };
+
+  private connected = false;
+  private connectEmpty = false;
+  private mac = "";
+  private manualMac = "";
+  private adStatusText = "Listening for advertisements...";
+  private adStatusKind: StatusKind = "wait";
+  private shiftStatusText = "Waiting for a shift-complete notification...";
+  private shiftStatusKind: StatusKind = "wait";
+  private logLines: string[] = [];
+
+  private commands: BikeNetCommands | null = null;
+  private connectedDevice: TransportDevice | null = null;
+  private pendingAdvertMac: string | null = null;
+  private adTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private macLockedByUser = false;
+  private readonly macStorageKey = "bikenetHubMac";
+
+  private routes = new Routes(this, [
+    { path: "/", render: () => this.renderLanding() },
+    { path: "/mac", render: () => this.renderMac() },
+    {
+      path: "/device/:mac",
+      render: (data: { params: RouteParams }) =>
+        this.renderDevice(data.params?.mac),
     },
-  });
-  const protocol = new BikeNetProtocol(transport);
+  ]);
 
-  try {
-    const devices = await protocol.listDevices();
-    if (!devices.length) {
-      log("No devices found.");
-      setConnectEmpty(true);
-      connectButton.disabled = false;
-      setStep("connect");
+  private onHashChange = () => {
+    const path = this.getHashPath();
+    void this.routes.goto(path);
+  };
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("hashchange", this.onHashChange);
+    if (!window.location.hash.startsWith("#!/")) {
+      window.location.hash = "#!/";
+    }
+    this.onHashChange();
+    const storedMac = this.readStoredMac();
+    if (storedMac && this.isValidMac(storedMac) && !this.mac) {
+      this.setMac(storedMac, "stored");
+    }
+    if (storedMac && this.isMacRoute()) {
+      this.navigate(`/device/${encodeURIComponent(storedMac)}`);
+    }
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("hashchange", this.onHashChange);
+    super.disconnectedCallback();
+  }
+
+  render() {
+    return html`
+      <div class="app">
+        <header class="hero">
+          <div>
+            <h1>BikeNet Web Bluetooth</h1>
+            <p class="subtitle">
+              Multi-step connect flow to discover the hub MAC and unlock
+              actions.
+            </p>
+          </div>
+          ${this.mac
+            ? html`<sl-tag class="route-chip" variant="success"
+                >${this.mac}</sl-tag
+              >`
+            : null}
+        </header>
+        ${this.routes.outlet()}
+      </div>
+    `;
+  }
+
+  private renderLanding() {
+    return html`
+      <section>
+        <div class="card">
+          <div class="card-head">
+            <h2>1. Connection</h2>
+            <p class="hint">
+              Click Connect to pick the eLink hub from the Web Bluetooth picker.
+            </p>
+          </div>
+          <div class="row">
+            <sl-button variant="primary" @click=${this.handleConnect}
+              >Connect</sl-button
+            >
+          </div>
+          ${this.connectEmpty
+            ? html`<div class="empty-state">
+                No hub was selected. If the picker did not appear, make sure Web
+                Bluetooth is enabled and try again.
+              </div>`
+            : null}
+        </div>
+      </section>
+    `;
+  }
+
+  private renderMac() {
+    return html`
+      <section>
+        <div class="card">
+          <div class="card-head">
+            <h2>2. MAC acquisition</h2>
+            <p class="hint">
+              We need the hub MAC to send commands. Use one of the methods
+              below.
+            </p>
+          </div>
+          <div class="pane-grid">
+            <div class="pane">
+              <h2>Auto discover (ads)</h2>
+              <p class="hint">
+                We listen for manufacturer data in advertisements.
+              </p>
+              <div class="status ${this.adStatusKind}">
+                ${this.adStatusText}
+              </div>
+              <p class="hint">Keep the hub awake and nearby.</p>
+            </div>
+            <div class="pane">
+              <h2>Shift a gear</h2>
+              <p class="hint">
+                Shift once so we receive a Shift Complete event with the MAC.
+              </p>
+              <div class="status ${this.shiftStatusKind}">
+                ${this.shiftStatusText}
+              </div>
+              <p class="hint">A single shift up or down is enough.</p>
+            </div>
+            <div class="pane">
+              <h2>Manual entry</h2>
+              <sl-input
+                placeholder="AA:BB:CC:DD:EE:FF"
+                value=${this.manualMac}
+                @sl-input=${this.onManualInput}
+              ></sl-input>
+              <div class="row">
+                <sl-button variant="default" @click=${this.applyManualMac}
+                  >Use this MAC</sl-button
+                >
+              </div>
+              <p class="hint">
+                Find the MAC with nRF Connect or any Bluetooth scanner app.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  private renderDevice(macParam?: string) {
+    if (macParam) {
+      const decoded = decodeURIComponent(macParam);
+      if (this.isValidMac(decoded) && decoded !== this.mac) {
+        queueMicrotask(() => this.setMac(decoded, "route"));
+      }
+    }
+
+    const canSend = this.connected && Boolean(this.mac);
+    const canList = this.connected;
+
+    return html`
+      <section>
+        <div class="card">
+          <div class="card-head">
+            <h2>3. Actions</h2>
+            <p class="hint">
+              MAC locked in. You can query and control the hub.
+            </p>
+          </div>
+          <div class="actions">
+            <sl-button ?disabled=${!canList} @click=${this.getList}
+              >Get list</sl-button
+            >
+            <sl-button ?disabled=${!canSend} @click=${this.getMotorParams}
+              >Get motor params</sl-button
+            >
+            <sl-button ?disabled=${!canSend} @click=${this.getPosition}
+              >Get position</sl-button
+            >
+            <sl-button ?disabled=${!canSend} @click=${this.shiftUp}
+              >Shift up</sl-button
+            >
+            <sl-button ?disabled=${!canSend} @click=${this.shiftDown}
+              >Shift down</sl-button
+            >
+            <sl-button ?disabled=${!canSend} @click=${this.readButtonMap}
+              >Read button map</sl-button
+            >
+            <sl-button ?disabled=${!canSend} @click=${this.readButtonTable}
+              >Read button table</sl-button
+            >
+            <sl-button ?disabled=${!canSend} @click=${this.getRearCogInfo}
+              >Get rear cog info</sl-button
+            >
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2>Log</h2>
+            <p class="hint">Notifications and command results appear here.</p>
+          </div>
+          <pre class="log">${this.logLines.join("\n")}</pre>
+        </div>
+      </section>
+    `;
+  }
+
+  private onManualInput(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this.manualMac = target.value.trim().toUpperCase();
+  }
+
+  private applyManualMac() {
+    if (!this.manualMac) {
+      this.appendLog("Enter a hub MAC to continue.");
       return;
     }
+    if (!this.isValidMac(this.manualMac)) {
+      this.appendLog("Enter a valid hub MAC (AA:BB:CC:DD:EE:FF).");
+      return;
+    }
+    this.macLockedByUser = true;
+    this.setMac(this.manualMac, "manual entry");
+  }
 
-    const device = devices[0];
-    connectedDevice = device;
-    const storedMac = hasMacOverride ? "" : readStoredMac();
-    const macFromAdvert = device.address;
-    const macToUse = macOverride || storedMac || macFromAdvert;
-    macLockedByUser = hasMacOverride;
-    if (!macOverride && macToUse) {
-      macInput.value = macToUse;
-    }
-    device.address = macToUse ?? "";
-    if (!macToUse) {
-      resetMacPaneStatus();
-      startAdTimer();
-      log("No hub MAC available yet.");
-      log("Waiting for advertisements or a shift-complete notification.");
-    }
-    log("Selected device:", {
-      id: device.id,
-      name: device.name,
-      mac: device.address || "(none)",
+  private async handleConnect() {
+    this.connectEmpty = false;
+    this.connected = false;
+    this.appendLog("Requesting device...");
+
+    const transport = new WebBluetoothTransport({
+      deviceNamePrefix: "",
+      onAdvertisementMac: (mac) => {
+        this.pendingAdvertMac = mac;
+        if (!this.connectedDevice) return;
+        this.setMac(mac, "advertisements");
+      },
     });
+    const protocol = new BikeNetProtocol(transport);
 
-    const deviceCommands = new BikeNetCommands(protocol, device);
-    commands = deviceCommands;
-    setActionState(true, Boolean(macToUse));
-    if (macToUse) {
-      setStep("ready");
-      storeMac(macToUse);
-    } else {
-      setStep("mac");
-    }
-    if (!macToUse && pendingAdvertMac) {
-      setMacIfAllowed(pendingAdvertMac, "advertisements");
-      pendingAdvertMac = null;
-    }
+    try {
+      const devices = await protocol.listDevices();
+      if (!devices.length) {
+        this.connectEmpty = true;
+        this.appendLog("No devices found.");
+        return;
+      }
 
+      const device = devices[0];
+      this.connectedDevice = device;
+      const storedMac = this.readStoredMac();
+      const macFromAdvert = device.address;
+      const macToUse = storedMac || macFromAdvert;
+
+      if (macToUse) {
+        this.setMac(macToUse, storedMac ? "stored" : "advertisements");
+      } else {
+        this.resetMacStatus();
+        this.startAdTimer();
+      }
+
+      device.address = this.mac || "";
+      this.appendLog("Selected device:", {
+        id: device.id,
+        name: device.name,
+        mac: device.address || "(none)",
+      });
+
+      const deviceCommands = new BikeNetCommands(protocol, device);
+      this.commands = deviceCommands;
+      this.connected = true;
+
+      if (this.mac) {
+        this.navigate(`/device/${encodeURIComponent(this.mac)}`);
+      } else {
+        this.navigate("/mac");
+        if (this.pendingAdvertMac) {
+          this.setMac(this.pendingAdvertMac, "advertisements");
+          this.pendingAdvertMac = null;
+        }
+      }
+
+      await this.subscribeNotifications(deviceCommands);
+      this.appendLog("Connected. Use the actions to query the hub.");
+    } catch (err) {
+      this.connectEmpty = true;
+      this.appendLog("No device was selected.");
+      console.error(err);
+    }
+  }
+
+  private async subscribeNotifications(deviceCommands: BikeNetCommands) {
     await deviceCommands.subscribeToBatteryVoltage((battery) => {
       if (battery.status !== "success") return;
-      log("Battery notification", {
+      this.appendLog("Battery notification", {
         targetMac: battery.targetMac,
         batteryVoltage: battery.batteryVoltage,
         rawHex: battery.rawHex,
@@ -259,7 +506,7 @@ async function connectAndRun() {
 
     await deviceCommands.subscribeToButtonAction((action) => {
       if (action.status !== "success") return;
-      log("Button action", {
+      this.appendLog("Button action", {
         targetMac: action.targetMac,
         buttonId: action.buttonId,
         buttonLabel: action.buttonLabel,
@@ -270,19 +517,20 @@ async function connectAndRun() {
 
     await deviceCommands.subscribeToShiftComplete((shift) => {
       if (shift.status !== "success") return;
-      log("Shift complete", {
+      this.appendLog("Shift complete", {
         targetMac: shift.targetMac,
         payloadValue: shift.payloadValue,
         rawHex: shift.rawHex,
       });
-      if (!connectedDevice?.address && shift.targetMac) {
-        setMacIfAllowed(shift.targetMac, "shift-complete");
+      if (!this.mac && shift.targetMac) {
+        this.setMac(shift.targetMac, "shift-complete");
+        this.navigate(`/device/${encodeURIComponent(this.mac)}`);
       }
     });
 
     await deviceCommands.subscribeToButtonTable((table) => {
       if (table.status !== "success") return;
-      log("Button table", {
+      this.appendLog("Button table", {
         targetMac: table.targetMac,
         entries: table.entries ?? [],
       });
@@ -290,122 +538,248 @@ async function connectAndRun() {
 
     await deviceCommands.subscribeToFrontCog((frontCog) => {
       if (frontCog.status !== "success") return;
-      log("Front cog", {
+      this.appendLog("Front cog", {
         targetMac: frontCog.targetMac,
         rawHex: frontCog.rawHex,
       });
     });
+  }
 
-    log("Connected. Use the actions to query the hub.");
-  } catch (err) {
-    log("No device was selected.");
-    setConnectEmpty(true);
-    connectButton.disabled = false;
-    setActionState(false, false);
-    setStep("connect");
-    if (err instanceof Error) {
-      console.error(err);
+  private setMac(value: string, source: string) {
+    const normalized = value.trim().toUpperCase();
+    if (!this.isValidMac(normalized)) return false;
+    if (this.macLockedByUser && source !== "manual entry") return false;
+
+    this.mac = normalized;
+    this.storeMac(normalized);
+    if (this.connectedDevice) {
+      this.connectedDevice.address = normalized;
+    }
+
+    this.appendLog(`Hub MAC set from ${source}:`, normalized);
+    if (source === "advertisements") {
+      this.adStatusKind = "ok";
+      this.adStatusText = "MAC discovered from advertisements.";
+    }
+    if (source === "shift-complete") {
+      this.shiftStatusKind = "ok";
+      this.shiftStatusText = "MAC captured from shift complete.";
+    }
+    if (source === "manual entry") {
+      this.adStatusKind = "warn";
+      this.adStatusText = "Manual MAC entry used.";
+    }
+    if (source === "stored") {
+      this.adStatusKind = "ok";
+      this.adStatusText = "MAC loaded from local storage.";
+    }
+    if (this.adTimeoutId) {
+      clearTimeout(this.adTimeoutId);
+      this.adTimeoutId = null;
+    }
+    return true;
+  }
+
+  private resetMacStatus() {
+    this.adStatusKind = "wait";
+    this.adStatusText = "Listening for advertisements...";
+    this.shiftStatusKind = "wait";
+    this.shiftStatusText = "Waiting for a shift-complete notification...";
+  }
+
+  private startAdTimer() {
+    if (this.adTimeoutId) {
+      clearTimeout(this.adTimeoutId);
+      this.adTimeoutId = null;
+    }
+    this.adTimeoutId = setTimeout(() => {
+      if (!this.mac) {
+        this.adStatusKind = "warn";
+        this.adStatusText = "Couldn't discover MAC from advertisements yet.";
+      }
+    }, 10000);
+  }
+
+  private readStoredMac() {
+    try {
+      const value = localStorage.getItem(this.macStorageKey);
+      return value ? value.trim().toUpperCase() : "";
+    } catch {
+      return "";
+    }
+  }
+
+  private storeMac(mac: string) {
+    try {
+      localStorage.setItem(this.macStorageKey, mac);
+    } catch {
+      // Ignore storage failures.
+    }
+  }
+
+  private appendLog(...parts: Array<string | number | object>) {
+    const line = parts
+      .map((p) => (typeof p === "string" ? p : JSON.stringify(p, null, 2)))
+      .join(" ");
+    const next = [...this.logLines, line];
+    this.logLines = next.slice(-400);
+  }
+
+  private isValidMac(value: string) {
+    return /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/.test(value);
+  }
+
+  private navigate(path: string) {
+    const normalized = path.startsWith("/") ? path : `/${path}`;
+    const hash = `#!${normalized}`;
+    if (window.location.hash !== hash) {
+      window.location.hash = hash;
+    } else {
+      void this.routes.goto(normalized);
+    }
+  }
+
+  private getHashPath() {
+    const hash = window.location.hash;
+    if (hash.startsWith("#!/")) return hash.slice(2) || "/";
+    if (hash.startsWith("#")) return hash.slice(1) || "/";
+    return "/";
+  }
+
+  private isMacRoute() {
+    return window.location.hash.startsWith("#!/mac");
+  }
+
+  private async getList() {
+    if (!this.commands) {
+      this.appendLog("Connect to a hub first.");
+      return;
+    }
+    this.appendLog("Get list...");
+    try {
+      const response = await this.commands.getList();
+      if (response.status === "success" && response.entries?.length) {
+        response.entries.forEach((entry, index) =>
+          this.appendLog({ index, ...entry }),
+        );
+      }
+      this.appendLog("Get list result", response ?? {});
+    } catch (err) {
+      this.appendLog(
+        "Get list error",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  private async getMotorParams() {
+    if (!this.commands) return;
+    this.appendLog("Get motor params...");
+    try {
+      const response = await this.commands.getMotorParams();
+      if (response.status === "success") {
+        this.appendLog("Motor params", response.humanReadable ?? {});
+      }
+      this.appendLog("Get motor params result", response ?? {});
+    } catch (err) {
+      this.appendLog(
+        "Get motor params error",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  private async getPosition() {
+    if (!this.commands) return;
+    this.appendLog("Get position...");
+    try {
+      const response = await this.commands.getPosition();
+      if (response.status === "success") {
+        this.appendLog("Position", {
+          absolutePosition: response.absolutePosition,
+          gearPosition: response.gearPosition,
+        });
+      }
+      this.appendLog("Get position result", response ?? {});
+    } catch (err) {
+      this.appendLog(
+        "Get position error",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  private async shiftUp() {
+    if (!this.commands) return;
+    this.appendLog("Shift up...");
+    try {
+      const response = await this.commands.shiftUp();
+      this.appendLog("Shift up result", response ?? {});
+    } catch (err) {
+      this.appendLog(
+        "Shift up error",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  private async shiftDown() {
+    if (!this.commands) return;
+    this.appendLog("Shift down...");
+    try {
+      const response = await this.commands.shiftDown();
+      this.appendLog("Shift down result", response ?? {});
+    } catch (err) {
+      this.appendLog(
+        "Shift down error",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  private async readButtonMap() {
+    if (!this.commands) return;
+    this.appendLog("Read button map...");
+    try {
+      const response = await this.commands.readButtonMap();
+      this.appendLog("Read button map result", response ?? {});
+    } catch (err) {
+      this.appendLog(
+        "Read button map error",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  private async readButtonTable() {
+    if (!this.commands) return;
+    this.appendLog("Read button table...");
+    try {
+      const response = await this.commands.readButtonTable();
+      this.appendLog("Read button table result", response ?? {});
+    } catch (err) {
+      this.appendLog(
+        "Read button table error",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  private async getRearCogInfo() {
+    if (!this.commands) return;
+    this.appendLog("Get rear cog info...");
+    try {
+      const response = await this.commands.getRearCogInfo();
+      this.appendLog("Get rear cog info result", response ?? {});
+    } catch (err) {
+      this.appendLog(
+        "Get rear cog info error",
+        err instanceof Error ? err.message : err,
+      );
     }
   }
 }
 
-async function runAction<T>(label: string, action: () => Promise<T>) {
-  if (!commands) {
-    log("Connect to a hub first.");
-    return;
-  }
-  try {
-    log(label + "...");
-    const result = await action();
-    log(label + " result", result ?? {});
-  } catch (err) {
-    log(label + " error", err?.message ?? String(err));
-  }
-}
+customElements.define("bikenet-app", BikeNetApp);
 
-listButton.addEventListener("click", () => {
-  runAction("Get list", async () => {
-    const response = await commands!.getList();
-    if (response.status === "success" && response.entries?.length) {
-      response.entries.forEach((entry, index) => log({ index, ...entry }));
-    }
-    return response;
-  });
-});
-
-motorButton.addEventListener("click", () => {
-  runAction("Get motor params", async () => {
-    const response = await commands!.getMotorParams();
-    if (response.status === "success") {
-      log("Motor params", response.humanReadable ?? {});
-    }
-    return response;
-  });
-});
-
-positionButton.addEventListener("click", () => {
-  runAction("Get position", async () => {
-    const response = await commands!.getPosition();
-    if (response.status === "success") {
-      log("Position", {
-        absolutePosition: response.absolutePosition,
-        gearPosition: response.gearPosition,
-      });
-    }
-    return response;
-  });
-});
-
-shiftUpButton.addEventListener("click", () => {
-  runAction("Shift up", () => commands!.shiftUp());
-});
-
-shiftDownButton.addEventListener("click", () => {
-  runAction("Shift down", () => commands!.shiftDown());
-});
-
-mapButton.addEventListener("click", () => {
-  runAction("Read button map", () => commands!.readButtonMap());
-});
-
-tableButton.addEventListener("click", () => {
-  runAction("Read button table", () => commands!.readButtonTable());
-});
-
-cogsButton.addEventListener("click", () => {
-  runAction("Get rear cog info", () => commands!.getRearCogInfo());
-});
-
-connectButton.addEventListener("click", () => {
-  connectAndRun().catch((err) => {
-    log("Fatal error", err?.message ?? String(err));
-    console.error(err);
-    connectButton.disabled = false;
-    setActionState(false, false);
-    setStep("connect");
-    setConnectEmpty(true);
-  });
-});
-
-const applyManualMac = () => {
-  if (!connectedDevice) return;
-  const value = normalizeMacInput(macInput.value);
-  if (!value) {
-    log("Enter a hub MAC to continue.");
-    return;
-  }
-  if (!isValidMac(value)) {
-    log("Enter a valid hub MAC (AA:BB:CC:DD:EE:FF).");
-    return;
-  }
-  macLockedByUser = true;
-  setMacIfAllowed(value, "manual entry");
-};
-
-macApplyButton.addEventListener("click", applyManualMac);
-macInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") applyManualMac();
-});
-
-setStep("connect");
-setActionState(false, false);
+export {};
