@@ -204,6 +204,71 @@ export const sharedStyles = css`
     font-size: 14px;
   }
 
+  .mapping-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .mapping-card {
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: #101822;
+    border: 1px solid #233143;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mapping-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .mapping-title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .mapping-subtitle {
+    font-size: 12px;
+    color: var(--muted, #98a6b5);
+  }
+
+  .mapping-badge {
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    background: rgba(88, 110, 134, 0.2);
+    color: #c0cad6;
+  }
+
+  .mapping-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+  }
+
+  .mapping-grid div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .mapping-grid dt {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted, #98a6b5);
+  }
+
+  .mapping-grid dd {
+    margin: 0;
+    font-size: 14px;
+  }
+
   .param-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
