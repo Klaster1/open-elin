@@ -128,6 +128,81 @@ export const sharedStyles = css`
     gap: 18px;
   }
 
+  .device-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .device-card {
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: #101822;
+    border: 1px solid #233143;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .device-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .device-name {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .device-mac {
+    font-size: 12px;
+    color: var(--muted, #98a6b5);
+  }
+
+  .device-pill {
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    background: rgba(88, 110, 134, 0.2);
+    color: #c0cad6;
+  }
+
+  .device-pill.ok {
+    background: rgba(53, 194, 139, 0.18);
+    color: #7ef0c3;
+  }
+
+  .device-pill.warn {
+    background: rgba(255, 180, 84, 0.15);
+    color: var(--warn, #ffb454);
+  }
+
+  .device-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+  }
+
+  .device-meta div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .device-meta dt {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted, #98a6b5);
+  }
+
+  .device-meta dd {
+    margin: 0;
+    font-size: 14px;
+  }
+
   .card-head {
     display: flex;
     flex-direction: column;
@@ -290,6 +365,10 @@ export const sharedStyles = css`
     }
 
     .shell {
+      grid-template-columns: 1fr;
+    }
+
+    .device-meta {
       grid-template-columns: 1fr;
     }
 

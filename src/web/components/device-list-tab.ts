@@ -22,11 +22,9 @@ class DeviceListTab extends SignalWatcher(LitElement) {
           >
         </div>
         ${entries.length
-          ? html`<pre class="log">
-${entries
-                .map((entry, index) => `${index + 1}. ${JSON.stringify(entry)}`)
-                .join("\n")}</pre
-            >`
+          ? html`<div class="device-list">
+              ${entries.map((entry) => this.renderEntry(entry))}
+            </div>`
           : html`<div class="empty-state">No device list loaded yet.</div>`}
       </div>
     `;
@@ -34,6 +32,54 @@ ${entries
 
   private async onGetList() {
     await appActions.getList();
+  }
+
+  private renderEntry(entry: {
+    name?: string;
+    mac?: string;
+    deviceId?: number;
+    isConnected?: boolean;
+    batteryVoltage?: number;
+    rssi?: number;
+  }) {
+    const name = entry.name || "Unknown device";
+    const mac = entry.mac || "--";
+    const deviceId = entry.deviceId ?? "--";
+    const rssi = entry.rssi ?? "--";
+    const batteryText = this.formatBattery(entry.batteryVoltage);
+    return html`
+      <div class="device-card">
+        <div class="device-header">
+          <div>
+            <div class="device-name">${name}</div>
+            <div class="device-mac">${mac}</div>
+          </div>
+          <div class="device-pill ${entry.isConnected ? "ok" : "warn"}">
+            ${entry.isConnected ? "Connected" : "Offline"}
+          </div>
+        </div>
+        <dl class="device-meta">
+          <div>
+            <dt>Device ID</dt>
+            <dd>${deviceId}</dd>
+          </div>
+          <div>
+            <dt>Battery</dt>
+            <dd>${batteryText}</dd>
+          </div>
+          <div>
+            <dt>RSSI</dt>
+            <dd>${rssi}</dd>
+          </div>
+        </dl>
+      </div>
+    `;
+  }
+
+  private formatBattery(value?: number) {
+    if (value === undefined || value === null) return "--";
+    const volts = (value / 1000).toFixed(2);
+    return `${volts} V (${value} mV)`;
   }
 }
 
