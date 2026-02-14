@@ -5,104 +5,332 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BikeNet Web Bluetooth Demo</title>
     <style>
+      @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600&display=swap");
+
       :root {
         color-scheme: light dark;
-        font-family:
-          "Segoe UI",
-          system-ui,
-          -apple-system,
-          sans-serif;
-        background: #0f1115;
-        color: #e6e6e6;
+        --bg: #0b1116;
+        --panel: #141c24;
+        --panel-strong: #1a2430;
+        --panel-border: #223142;
+        --text: #e7edf5;
+        --muted: #98a6b5;
+        --accent: #35c28b;
+        --accent-strong: #1aa876;
+        --warn: #ffb454;
+        --danger: #ff7a7a;
+        --mono:
+          "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        --sans:
+          "Space Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
       }
+
       body {
         margin: 0;
-        padding: 32px;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 20% 20%, #1b2a3a 0%, transparent 45%),
+          radial-gradient(circle at 80% 10%, #203042 0%, transparent 40%),
+          radial-gradient(circle at 50% 100%, #182433 0%, transparent 55%),
+          var(--bg);
+        font-family: var(--sans);
+      }
+
+      .app {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 28px 60px;
         display: flex;
         flex-direction: column;
-        gap: 16px;
-        max-width: 960px;
+        gap: 22px;
       }
+
+      .hero {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
       h1 {
-        font-size: 24px;
+        font-size: 32px;
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+
+      h2 {
+        font-size: 18px;
         margin: 0;
       }
+
+      .subtitle {
+        color: var(--muted);
+        margin: 8px 0 0;
+        font-size: 14px;
+      }
+
+      .card {
+        background: var(--panel);
+        border-radius: 16px;
+        padding: 18px 20px;
+        border: 1px solid var(--panel-border);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      .card-head {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 0;
+      }
+
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+
       button {
-        background: #4c7dff;
-        color: white;
+        background: var(--accent);
+        color: #08120e;
         border: none;
         padding: 12px 18px;
         font-size: 14px;
-        border-radius: 8px;
+        font-weight: 600;
+        border-radius: 10px;
         cursor: pointer;
         width: fit-content;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+        box-shadow: 0 12px 24px rgba(26, 168, 118, 0.25);
       }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      button.secondary {
+        background: #2b3b4c;
+        color: var(--text);
+        box-shadow: none;
+      }
+
+      button:disabled {
+        background: #3a4654;
+        color: #c5ced8;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
       input {
         padding: 10px 12px;
-        border-radius: 8px;
-        border: 1px solid #2d3446;
-        background: #0f1115;
+        border-radius: 10px;
+        border: 1px solid #2b3b4c;
+        background: #0e141b;
         color: inherit;
-        max-width: 240px;
+        max-width: 260px;
       }
-      button:disabled {
-        background: #4b4f5a;
-        cursor: not-allowed;
+
+      .step {
+        display: none;
       }
-      .card {
-        background: #151924;
-        border-radius: 12px;
+
+      .step.active {
+        display: block;
+      }
+
+      .pane-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .pane {
+        background: var(--panel-strong);
+        border-radius: 14px;
         padding: 16px;
-        border: 1px solid #23293a;
+        border: 1px solid #2b3a4b;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 200px;
       }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #243243;
+        color: var(--muted);
+      }
+
+      .status.ok {
+        background: rgba(53, 194, 139, 0.18);
+        color: #7ef0c3;
+      }
+
+      .status.warn {
+        background: rgba(255, 180, 84, 0.15);
+        color: var(--warn);
+      }
+
+      .status.wait {
+        background: rgba(88, 110, 134, 0.2);
+        color: #c0cad6;
+      }
+
+      .empty-state {
+        margin-top: 16px;
+        padding: 18px;
+        border-radius: 12px;
+        border: 1px dashed #3a4a5c;
+        background: rgba(20, 30, 40, 0.6);
+        min-height: 140px;
+        display: flex;
+        align-items: center;
+        color: var(--muted);
+      }
+
       .actions {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
       }
-      pre {
+
+      .log {
         white-space: pre-wrap;
         word-break: break-word;
         margin: 0;
         font-size: 12px;
-        line-height: 1.4;
+        line-height: 1.5;
         max-height: 60vh;
         overflow: auto;
+        font-family: var(--mono);
       }
-      .hint {
-        color: #a2a8b6;
-        font-size: 12px;
+
+      @media (max-width: 900px) {
+        .pane-grid {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
   <body>
-    <h1>BikeNet Web Bluetooth Demo</h1>
-    <div class="card">
-      <p class="hint">
-        Connect to the BikeNet hub (eLink). We try to learn the hub MAC from
-        advertisements first. If that fails, shift a gear once to trigger a
-        Shift Complete event and we will grab the MAC from that. Manual entry is
-        the fallback. Until a MAC is known, only Get list is enabled.
-      </p>
-      <label class="hint" for="mac">Hub MAC (eLink)</label>
-      <input id="mac" placeholder="AA:BB:CC:DD:EE:FF (optional)" />
-      <button id="connect">Connect + Run</button>
-    </div>
-    <div class="card">
-      <p class="hint">Read-only actions (available after connect).</p>
-      <div class="actions">
-        <button id="action-list" disabled>Get list</button>
-        <button id="action-motor" disabled>Get motor params</button>
-        <button id="action-position" disabled>Get position</button>
-        <button id="action-shift-up" disabled>Shift up</button>
-        <button id="action-shift-down" disabled>Shift down</button>
-        <button id="action-map" disabled>Read button map</button>
-        <button id="action-table" disabled>Read button table</button>
-        <button id="action-cogs" disabled>Get rear cog info</button>
-      </div>
-    </div>
-    <div class="card">
-      <pre id="log"></pre>
+    <div class="app">
+      <header class="hero">
+        <div>
+          <h1>BikeNet Web Bluetooth</h1>
+          <p class="subtitle">
+            Multi-step connect flow to discover the hub MAC and unlock actions.
+          </p>
+        </div>
+      </header>
+
+      <section id="step-connect" class="step active">
+        <div class="card">
+          <div class="card-head">
+            <h2>1. Connection</h2>
+            <p class="hint">
+              Click Connect to pick the eLink hub from the Web Bluetooth picker.
+            </p>
+          </div>
+          <div class="row">
+            <button id="connect">Connect</button>
+          </div>
+          <div id="connect-empty" class="empty-state" hidden>
+            No hub was selected. If the picker did not appear, make sure Web
+            Bluetooth is enabled and try again.
+          </div>
+        </div>
+      </section>
+
+      <section id="step-mac" class="step">
+        <div class="card">
+          <div class="card-head">
+            <h2>2. MAC acquisition</h2>
+            <p class="hint">
+              We need the hub MAC to send commands. Use one of the methods
+              below.
+            </p>
+          </div>
+          <div class="pane-grid">
+            <div class="pane">
+              <h2>Auto discover (ads)</h2>
+              <p class="hint">
+                We listen for manufacturer data in advertisements.
+              </p>
+              <div id="ad-status" class="status wait">
+                Listening for advertisements...
+              </div>
+              <p class="hint">
+                Keep the hub awake and nearby. This is the fastest path.
+              </p>
+            </div>
+            <div class="pane">
+              <h2>Shift a gear</h2>
+              <p class="hint">
+                Shift once so we receive a Shift Complete event with the MAC.
+              </p>
+              <div id="shift-status" class="status wait">
+                Waiting for a shift-complete notification...
+              </div>
+              <p class="hint">A single shift up or down is enough.</p>
+            </div>
+            <div class="pane">
+              <h2>Manual entry</h2>
+              <label class="hint" for="mac">Hub MAC (eLink)</label>
+              <input id="mac" placeholder="AA:BB:CC:DD:EE:FF" />
+              <div class="row">
+                <button id="mac-apply" class="secondary">Use this MAC</button>
+              </div>
+              <p class="hint">
+                Find the MAC with nRF Connect or any Bluetooth scanner app.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="step-ready" class="step">
+        <div class="card">
+          <div class="card-head">
+            <h2>3. Actions</h2>
+            <p class="hint">
+              MAC locked in. You can query and control the hub.
+            </p>
+          </div>
+          <div class="actions">
+            <button id="action-list" disabled>Get list</button>
+            <button id="action-motor" disabled>Get motor params</button>
+            <button id="action-position" disabled>Get position</button>
+            <button id="action-shift-up" disabled>Shift up</button>
+            <button id="action-shift-down" disabled>Shift down</button>
+            <button id="action-map" disabled>Read button map</button>
+            <button id="action-table" disabled>Read button table</button>
+            <button id="action-cogs" disabled>Get rear cog info</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2>Log</h2>
+            <p class="hint">Notifications and command results appear here.</p>
+          </div>
+          <pre id="log" class="log"></pre>
+        </div>
+      </section>
     </div>
     <script type="module" src="/src/web/index.ts"></script>
   </body>

@@ -3,6 +3,7 @@ export interface WebBluetoothTransportOptions {
   optionalServiceUuids?: string[];
   onMsgNotify?: (data: Uint8Array) => void;
   onPinNotify?: (data: Uint8Array) => void;
+  onAdvertisementMac?: (mac: string) => void;
 }
 
 export interface TransportDevice {
@@ -26,6 +27,7 @@ export interface TransportConnection {
 export class WebBluetoothTransport {
   private readonly onMsgNotify?: (data: Uint8Array) => void;
   private readonly onPinNotify?: (data: Uint8Array) => void;
+  private readonly onAdvertisementMac?: (mac: string) => void;
   private readonly serviceUuid = "a5c1c000-cc20-ba91-0c1a-ef3f9e643d79";
   private readonly manufacturerCompanyId = 0xde98;
   private readonly optionalServiceUuids?: string[];
@@ -34,6 +36,7 @@ export class WebBluetoothTransport {
   constructor(options: WebBluetoothTransportOptions = {}) {
     this.onMsgNotify = options.onMsgNotify;
     this.onPinNotify = options.onPinNotify;
+    this.onAdvertisementMac = options.onAdvertisementMac;
     this.optionalServiceUuids = options.optionalServiceUuids;
     this.deviceNamePrefix = options.deviceNamePrefix;
   }
@@ -93,6 +96,7 @@ export class WebBluetoothTransport {
           const mac = extractMac(bytes);
           if (mac) {
             transportDevice.address = mac;
+            if (this.onAdvertisementMac) this.onAdvertisementMac(mac);
             resolveMac?.(mac);
             resolveMac = null;
           }
