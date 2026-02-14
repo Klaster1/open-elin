@@ -11,11 +11,26 @@ cd demo-node
 npm install
 ```
 
-2. Run scanner:
+CLI app (BLE scanner):
+
+1. Run the scanner:
 
 ```bash
 npm start
 ```
+
+Web app (browser UI):
+
+1. Start the Vite dev server:
+
+```bash
+npm run dev
+```
+
+2. Open it in your browser:
+
+- https://localhost:5173
+- https://<your-lan-ip>:5173 (for other devices on your network)
 
 Notes:
 
