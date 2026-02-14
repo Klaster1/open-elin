@@ -69,6 +69,7 @@ class DevicePage extends SignalWatcher(LitElement) {
       `;
     }
 
+    const deviceName = appState.connectedDevice.get()?.name || "Unknown";
     const displayMac = this.macValue || "Unknown";
     const activeTab = this.activeTab || "log";
 
@@ -76,7 +77,7 @@ class DevicePage extends SignalWatcher(LitElement) {
       <section class="shell">
         <aside class="card sidebar">
           <div class="sidebar-head">
-            <div class="sidebar-title">Active hub</div>
+            <div class="sidebar-name">${deviceName}</div>
             <div class="sidebar-mac">${displayMac}</div>
             <div class="status ok">Connected</div>
           </div>

@@ -83,10 +83,6 @@ class BikeNetApp extends SignalWatcher(LitElement) {
         <header class="hero">
           <div>
             <h1>BikeNet Web Bluetooth</h1>
-            <p class="subtitle">
-              Multi-step connect flow to discover the hub MAC and unlock
-              actions.
-            </p>
           </div>
         </header>
         ${this.routes.outlet()}

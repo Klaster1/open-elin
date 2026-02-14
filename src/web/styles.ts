@@ -76,6 +76,13 @@ export const sharedStyles = css`
     color: var(--muted, #98a6b5);
   }
 
+  .sidebar-name {
+    font-size: 13px;
+    color: var(--muted, #98a6b5);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
   .sidebar-mac {
     font-size: 18px;
     font-weight: 600;
