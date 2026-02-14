@@ -324,11 +324,6 @@ class BikeNetApp extends SignalWatcher(LitElement) {
       render: (data: { params: RouteParams }) =>
         this.renderDevice(data.params?.mac, data.params?.tab),
     },
-    {
-      path: "/device/:mac",
-      render: (data: { params: RouteParams }) =>
-        this.renderDevice(data.params?.mac, "log"),
-    },
   ]);
 
   private onHashChange = () => {
@@ -471,8 +466,12 @@ class BikeNetApp extends SignalWatcher(LitElement) {
 
   private renderDevice(macParam?: string, tabParam?: string) {
     const currentMac = appState.mac.get();
-    if (macParam) {
-      const decoded = decodeURIComponent(macParam);
+    const routeInfo = this.parseDeviceRoute();
+    const routeMac = routeInfo?.mac || macParam;
+    const routeTab = routeInfo?.tab || tabParam;
+
+    if (routeMac) {
+      const decoded = decodeURIComponent(routeMac);
       if (isValidMac(decoded) && decoded !== currentMac) {
         queueMicrotask(() => appActions.setPendingRouteMac(decoded));
         queueMicrotask(() => appActions.setMacFromRoute(decoded));
@@ -481,8 +480,8 @@ class BikeNetApp extends SignalWatcher(LitElement) {
 
     const connected = appState.connected.get();
     const targetMac =
-      currentMac || (macParam ? decodeURIComponent(macParam) : "");
-    const activeTab = this.normalizeTab(tabParam);
+      currentMac || (routeMac ? decodeURIComponent(routeMac) : "");
+    const activeTab = this.normalizeTab(routeTab);
 
     if (!connected) {
       return html`
@@ -748,6 +747,13 @@ ${entries
       }
     }
     return null;
+  }
+
+  private parseDeviceRoute() {
+    const path = this.getHashPath();
+    const match = path.match(/^\/device\/([^/]+)\/([^/]+)$/);
+    if (!match) return null;
+    return { mac: match[1], tab: match[2] };
   }
 
   private navigate(path: string) {
