@@ -36,9 +36,16 @@ class DevicePage extends SignalWatcher(LitElement) {
           <empty-state
             title="Reconnect required"
             message="You opened the device page without an active Bluetooth session. Chrome requires a user click to open the Bluetooth picker."
-            action-label="Connect to hub"
-            @empty-action=${this.onReconnect}
-          ></empty-state>
+          >
+            <div slot="actions" class="actions">
+              <sl-button variant="primary" @click=${this.onReconnect}
+                >Connect to hub</sl-button
+              >
+              <sl-button class="demo-button" @click=${this.onDemo}
+                >Demo</sl-button
+              >
+            </div>
+          </empty-state>
         </section>
       `;
     }
@@ -101,6 +108,12 @@ class DevicePage extends SignalWatcher(LitElement) {
   private onReconnect() {
     this.dispatchEvent(
       new CustomEvent("reconnect-requested", { bubbles: true, composed: true }),
+    );
+  }
+
+  private onDemo() {
+    this.dispatchEvent(
+      new CustomEvent("demo-requested", { bubbles: true, composed: true }),
     );
   }
 }

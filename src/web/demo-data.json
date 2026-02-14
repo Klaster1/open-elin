@@ -1,0 +1,115 @@
+{
+  "device": {
+    "id": "7bMYgoUvcUzFWLNT5kDJqA==",
+    "name": "XSHIFTER ELIN",
+    "mac": "D7:BA:AB:52:A0:E5",
+    "rssi": 0
+  },
+  "list": {
+    "entries": [
+      {
+        "mac": "D5:89:B2:13:FA:04",
+        "name": "NXS MTB Pod",
+        "deviceId": 10,
+        "isConnected": true,
+        "batteryVoltage": 3086,
+        "rssi": 178
+      }
+    ]
+  },
+  "motorParams": {
+    "rawHex": "FC0850C300001E001E0400F401C800",
+    "rawBytes": [252, 8, 80, 195, 0, 0, 30, 0, 30, 4, 0, 244, 1, 200, 0],
+    "humanReadable": {
+      "stallDetection": 2300,
+      "pwmFrequency": 50000,
+      "accelRampTimer": 30,
+      "rampStartDutyCycle": 30,
+      "overshiftDistance": 0.4,
+      "overshiftDelay": 500,
+      "multishiftDelay": 200
+    }
+  },
+  "buttonMap": {
+    "mapHex": "0070",
+    "mapBytes": [0, 112]
+  },
+  "buttonTable": [
+    {
+      "podAddressHex": "04FA13B289D5",
+      "elinkAddressHex": "E5A052ABBAD7",
+      "button1": { "code": "00", "label": "-" },
+      "button2": { "code": "00", "label": "-" },
+      "action": { "code": "00", "label": "Press" },
+      "function": { "code": "0A", "label": "Shift Up" }
+    },
+    {
+      "podAddressHex": "04FA13B289D5",
+      "elinkAddressHex": "E5A052ABBAD7",
+      "button1": { "code": "06", "label": "B" },
+      "button2": { "code": "00", "label": "-" },
+      "action": { "code": "00", "label": "Press" },
+      "function": { "code": "0B", "label": "Shift Down" }
+    },
+    {
+      "podAddressHex": "04FA13B289D5",
+      "elinkAddressHex": "E5A052ABBAD7",
+      "button1": { "code": "0C", "label": "C" },
+      "button2": { "code": "00", "label": "-" },
+      "action": { "code": "00", "label": "Press" },
+      "function": { "code": "11", "label": "Tune Mode" }
+    },
+    {
+      "podAddressHex": "04FA13B289D5",
+      "elinkAddressHex": "E5A052ABBAD7",
+      "button1": { "code": "0D", "label": "C-1" },
+      "button2": { "code": "00", "label": "-" },
+      "action": { "code": "00", "label": "Press" },
+      "function": { "code": "0A", "label": "Shift Up" }
+    },
+    {
+      "podAddressHex": "04FA13B289D5",
+      "elinkAddressHex": "E5A052ABBAD7",
+      "button1": { "code": "01", "label": "A-1" },
+      "button2": { "code": "00", "label": "-" },
+      "action": { "code": "00", "label": "Press" },
+      "function": { "code": "0B", "label": "Shift Down" }
+    },
+    {
+      "podAddressHex": "04FA13B289D5",
+      "elinkAddressHex": "E5A052ABBAD7",
+      "button1": { "code": "12", "label": "D" },
+      "button2": { "code": "00", "label": "-" },
+      "action": { "code": "00", "label": "Press" },
+      "function": { "code": "0B", "label": "Shift Down" }
+    },
+    {
+      "podAddressHex": "04FA13B289D5",
+      "elinkAddressHex": "E5A052ABBAD7",
+      "button1": { "code": "02", "label": "A-2" },
+      "button2": { "code": "00", "label": "-" },
+      "action": { "code": "00", "label": "Press" },
+      "function": { "code": "11", "label": "Tune Mode" }
+    }
+  ],
+  "rearCogInfo": {
+    "rawHex": "2000E61C00D41900BE1600AA13009611008210006E0F005A0E00460D00320C001E0B000A",
+    "rawBytes": [
+      32, 0, 230, 28, 0, 212, 25, 0, 190, 22, 0, 170, 19, 0, 150, 17, 0, 130,
+      16, 0, 110, 15, 0, 90, 14, 0, 70, 13, 0, 50, 12, 0, 30, 11, 0, 10
+    ]
+  },
+  "position": {
+    "rawHex": "D3000A",
+    "rawBytes": [211, 0, 10]
+  },
+  "shiftComplete": {
+    "up": { "rawHex": "BD0009" },
+    "down": { "rawHex": "D4000A" }
+  },
+  "batteryNotifications": [
+    { "targetMac": "D7:BA:AB:52:A0:E5", "rawHex": "1D10" },
+    { "targetMac": "D5:89:B2:13:FA:04", "rawHex": "070C" },
+    { "targetMac": "D5:89:B2:13:FA:04", "rawHex": "0B0C" }
+  ]
+}

@@ -153,6 +153,19 @@ export const sharedStyles = css`
     font-weight: 600;
   }
 
+  .demo-button::part(base) {
+    background: transparent;
+    border-color: #2b3a4b;
+    color: var(--muted, #98a6b5);
+    opacity: 0.7;
+  }
+
+  .demo-button::part(base):hover {
+    opacity: 1;
+    border-color: #3a4a5c;
+    color: var(--text, #e7edf5);
+  }
+
   sl-input::part(base) {
     border-radius: 10px;
     border-color: #2b3b4c;

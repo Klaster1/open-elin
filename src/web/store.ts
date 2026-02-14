@@ -2,8 +2,10 @@ import { signal } from "@lit-labs/signals";
 
 import { BikeNetCommands } from "../commands.ts";
 import { BikeNetProtocol } from "../protocol.ts";
+import type { ProtocolTransport } from "../protocol.ts";
 import type { TransportDevice } from "../protocol.ts";
 import { WebBluetoothTransport } from "./transport-web.ts";
+import { DemoTransport } from "./transport-demo.ts";
 
 export type StatusKind = "wait" | "warn" | "ok";
 
@@ -29,6 +31,7 @@ const frontCogInfo = signal<any | null>(null);
 const commands = signal<BikeNetCommands | null>(null);
 const connectedDevice = signal<TransportDevice | null>(null);
 const pendingRouteMac = signal("");
+const demoMode = signal(false);
 
 const macStorageKey = "bikenetHubMac";
 let macLockedByUser = false;
@@ -56,6 +59,7 @@ export const appState = {
   commands,
   connectedDevice,
   pendingRouteMac,
+  demoMode,
 };
 
 export const appActions = {
@@ -66,6 +70,7 @@ export const appActions = {
   setManualMac,
   applyManualMac,
   connect,
+  connectDemo,
   getList,
   getMotorParams,
   getPosition,
@@ -121,10 +126,6 @@ export function applyManualMac() {
 }
 
 export async function connect() {
-  connectEmpty.set(false);
-  connected.set(false);
-  appendLog("Requesting device...");
-
   const transport = new WebBluetoothTransport({
     deviceNamePrefix: "",
     onAdvertisementMac: (value) => {
@@ -133,6 +134,36 @@ export async function connect() {
       setMac(value, "advertisements");
     },
   });
+  await connectWithTransport(transport, {
+    requestLabel: "Requesting device...",
+    preferStoredMac: true,
+    demo: false,
+  });
+}
+
+export async function connectDemo() {
+  const transport = new DemoTransport();
+  await connectWithTransport(transport, {
+    requestLabel: "Starting demo transport...",
+    preferStoredMac: false,
+    demo: true,
+  });
+}
+
+async function connectWithTransport(
+  transport: ProtocolTransport,
+  options: {
+    requestLabel: string;
+    preferStoredMac: boolean;
+    demo: boolean;
+  },
+) {
+  connectEmpty.set(false);
+  connected.set(false);
+  demoMode.set(options.demo);
+  pendingAdvertMac = null;
+  appendLog(options.requestLabel);
+
   const protocol = new BikeNetProtocol(transport);
 
   try {
@@ -145,15 +176,22 @@ export async function connect() {
 
     const device = devices[0];
     connectedDevice.set(device);
-    const storedMac = readStoredMac();
+    const storedMac = options.preferStoredMac ? readStoredMac() : "";
     const macFromAdvert = device.address;
     const macToUse = storedMac || macFromAdvert;
 
     if (macToUse) {
-      setMac(macToUse, storedMac ? "stored" : "advertisements");
+      setMac(macToUse, storedMac ? "stored" : "advertisements", {
+        store: !options.demo,
+      });
     } else {
       resetMacStatus();
       startAdTimer();
+    }
+
+    if (options.demo) {
+      adStatusKind.set("ok");
+      adStatusText.set("Demo data loaded.");
     }
 
     device.address = mac.get() || "";
@@ -232,14 +270,20 @@ async function subscribeNotifications(deviceCommands: BikeNetCommands) {
   });
 }
 
-function setMac(value: string, source: string) {
+function setMac(
+  value: string,
+  source: string,
+  options: { store?: boolean } = {},
+) {
   const normalized = value.trim().toUpperCase();
   if (!isValidMac(normalized)) return false;
   if (macLockedByUser && source !== "manual entry") return false;
 
   const hadMac = Boolean(mac.get());
   mac.set(normalized);
-  storeMac(normalized);
+  if (options.store !== false) {
+    storeMac(normalized);
+  }
   const device = connectedDevice.get();
   if (device) {
     device.address = normalized;

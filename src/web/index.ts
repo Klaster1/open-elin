@@ -91,6 +91,7 @@ class BikeNetApp extends SignalWatcher(LitElement) {
   private renderLandingRoute() {
     return html`<landing-page
       @connect-requested=${this.handleConnect}
+      @demo-requested=${this.handleDemo}
     ></landing-page>`;
   }
 
@@ -120,6 +121,7 @@ class BikeNetApp extends SignalWatcher(LitElement) {
         .macValue=${targetMac}
         .activeTab=${activeTab}
         @reconnect-requested=${this.handleReconnect}
+        @demo-requested=${this.handleDemo}
       ></device-page>
     `;
   }
@@ -141,6 +143,14 @@ class BikeNetApp extends SignalWatcher(LitElement) {
       const pending = appState.pendingRouteMac.get();
       const target = pending || mac;
       this.navigate(`/device/${encodeURIComponent(target)}/log`);
+    }
+  }
+
+  private async handleDemo() {
+    await appActions.connectDemo();
+    const mac = appState.mac.get();
+    if (mac) {
+      this.navigate(`/device/${encodeURIComponent(mac)}/log`);
     }
   }
 

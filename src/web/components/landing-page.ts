@@ -20,12 +20,16 @@ class LandingPage extends SignalWatcher(LitElement) {
       : "No hub connected yet. Click Connect to choose an eLink hub.";
     return html`
       <section>
-        <empty-state
-          .title=${emptyTitle}
-          .message=${emptyMessage}
-          action-label="Connect"
-          @empty-action=${this.onConnect}
-        ></empty-state>
+        <empty-state .title=${emptyTitle} .message=${emptyMessage}>
+          <div slot="actions" class="actions">
+            <sl-button variant="primary" @click=${this.onConnect}
+              >Connect</sl-button
+            >
+            <sl-button class="demo-button" @click=${this.onDemo}
+              >Demo</sl-button
+            >
+          </div>
+        </empty-state>
       </section>
     `;
   }
@@ -33,6 +37,12 @@ class LandingPage extends SignalWatcher(LitElement) {
   private onConnect() {
     this.dispatchEvent(
       new CustomEvent("connect-requested", { bubbles: true, composed: true }),
+    );
+  }
+
+  private onDemo() {
+    this.dispatchEvent(
+      new CustomEvent("demo-requested", { bubbles: true, composed: true }),
     );
   }
 }
