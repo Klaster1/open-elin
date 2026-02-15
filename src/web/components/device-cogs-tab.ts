@@ -40,6 +40,7 @@ class DeviceCogsTab extends SignalWatcher(LitElement) {
         display: flex;
         gap: 8px;
         align-items: flex-end;
+        justify-content: center;
         overflow-x: auto;
         padding: 8px 2px 4px;
       }
