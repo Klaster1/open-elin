@@ -11,6 +11,14 @@ import { PodMock } from "./pod-mock.ts";
 import type { PodButtonActionEvent } from "./pod-mock.ts";
 
 export type StatusKind = "wait" | "warn" | "ok";
+export type Gear = {
+  gearNumber: number;
+  offsetApproximate: number;
+  offsetPrecise: number | null;
+  current: boolean;
+};
+export type Gears = Gear[];
+type GearMap = Record<string, Gears>;
 
 const connected = signal(false);
 const connectEmpty = signal(false);
@@ -36,6 +44,7 @@ const commands = signal<BikeNetCommands | null>(null);
 const connectedDevice = signal<TransportDevice | null>(null);
 const pendingRouteMac = signal("");
 const demoMode = signal(false);
+const gears = signal<GearMap>(readStoredGears());
 
 const globalScope = globalThis as typeof globalThis & {
   __demoPod?: PodMock;
@@ -90,6 +99,7 @@ demoPodBatteryWatcher.watch(demoPodBatteryLevel);
 demoState.updatePodBatteryLevel(demoPodBatteryLevel.get());
 
 const macStorageKey = "bikenetHubMac";
+const gearsStorageKey = "bikenetGears";
 let macLockedByUser = false;
 let pendingAdvertMac: string | null = null;
 let adTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -117,6 +127,7 @@ export const appState = {
   connectedDevice,
   pendingRouteMac,
   demoMode,
+  gears,
 };
 
 export const appActions = {
@@ -137,6 +148,8 @@ export const appActions = {
   readButtonMap,
   readButtonTable,
   getRearCogInfo,
+  ensureGearsForMac,
+  refreshCurrentGear,
 };
 
 export function setShiftMacListener(
@@ -312,6 +325,7 @@ async function subscribeNotifications(deviceCommands: BikeNetCommands) {
     if (!mac.get() && shift.targetMac) {
       setMac(shift.targetMac, "shift-complete");
     }
+    void refreshCurrentGear();
   });
 
   await deviceCommands.subscribeToButtonTable((table) => {
@@ -407,12 +421,58 @@ function readStoredMac() {
   }
 }
 
+function readStoredGears(): GearMap {
+  try {
+    const raw = localStorage.getItem(gearsStorageKey);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    const entries = Object.entries(parsed as Record<string, unknown>);
+    const result: GearMap = {};
+    for (const [macKey, value] of entries) {
+      if (!Array.isArray(value)) continue;
+      const normalized = value
+        .map((gear) => normalizeGear(gear))
+        .filter((gear): gear is Gear => Boolean(gear));
+      if (normalized.length) {
+        result[macKey.toUpperCase()] = normalized;
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
 function storeMac(value: string) {
   try {
     localStorage.setItem(macStorageKey, value);
   } catch {
     // Ignore storage failures.
   }
+}
+
+function storeGears(value: GearMap) {
+  try {
+    localStorage.setItem(gearsStorageKey, JSON.stringify(value));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function normalizeGear(gear: unknown): Gear | null {
+  if (!gear || typeof gear !== "object") return null;
+  const value = gear as Partial<Gear>;
+  if (typeof value.gearNumber !== "number") return null;
+  if (typeof value.offsetApproximate !== "number") return null;
+  const offsetPrecise =
+    typeof value.offsetPrecise === "number" ? value.offsetPrecise : null;
+  return {
+    gearNumber: value.gearNumber,
+    offsetApproximate: value.offsetApproximate,
+    offsetPrecise,
+    current: Boolean(value.current),
+  };
 }
 
 function appendLog(...parts: Array<string | number | object>) {
@@ -423,6 +483,67 @@ function appendLog(...parts: Array<string | number | object>) {
     .join(" ");
   const next = [...logLines.get(), line];
   logLines.set(next.slice(-400));
+}
+
+function getActiveMacKey() {
+  return (mac.get() || connectedDevice.get()?.address || "").toUpperCase();
+}
+
+function buildApproximateGears(values: number[]) {
+  return values.map((value, index) => ({
+    gearNumber: index + 1,
+    offsetApproximate: value,
+    offsetPrecise: null,
+    current: false,
+  }));
+}
+
+function setGearsForMac(macKey: string, nextGears: Gears) {
+  if (!macKey) return;
+  const normalized = macKey.toUpperCase();
+  const next = { ...gears.get(), [normalized]: nextGears };
+  gears.set(next);
+  storeGears(next);
+}
+
+function updateApproximateGears(macKey: string, values?: number[]) {
+  if (!macKey || !values?.length) return;
+  const normalized = macKey.toUpperCase();
+  const existing = gears.get()[normalized] ?? [];
+  const existingByNumber = new Map(
+    existing.map((gear) => [gear.gearNumber, gear]),
+  );
+  const updated = buildApproximateGears(values).map((gear) => {
+    const prior = existingByNumber.get(gear.gearNumber);
+    return prior
+      ? {
+          ...gear,
+          offsetPrecise: prior.offsetPrecise,
+          current: prior.current,
+        }
+      : gear;
+  });
+  setGearsForMac(normalized, updated);
+}
+
+function updatePreciseGear(
+  macKey: string,
+  currentGearNumber?: number,
+  preciseOffset?: number | null,
+) {
+  if (!macKey || !currentGearNumber) return;
+  const normalized = macKey.toUpperCase();
+  const existing = gears.get()[normalized];
+  if (!existing?.length) return;
+  const updated = existing.map((gear) => {
+    const isCurrent = gear.gearNumber === currentGearNumber;
+    return {
+      ...gear,
+      current: isCurrent,
+      offsetPrecise: isCurrent ? (preciseOffset ?? null) : gear.offsetPrecise,
+    };
+  });
+  setGearsForMac(normalized, updated);
 }
 
 const DEMO_BUTTON_SHIFT_MAP: Record<number, "up" | "down"> = {
@@ -504,14 +625,21 @@ export async function getPosition() {
         absolutePosition: response.absolutePosition,
         gearPosition: response.gearPosition,
       });
+      updatePreciseGear(
+        getActiveMacKey(),
+        response.gearPosition,
+        response.gearPosition ?? null,
+      );
       appendLog("Position", {
         absolutePosition: response.absolutePosition,
         gearPosition: response.gearPosition,
       });
     }
     appendLog("Get position result", response ?? {});
+    return response;
   } catch (err) {
     appendLog("Get position error", err instanceof Error ? err.message : err);
+    return null;
   }
 }
 
@@ -601,11 +729,31 @@ export async function getRearCogInfo() {
   try {
     const response = await deviceCommands.getRearCogInfo();
     rearCogInfo.set(response ?? null);
+    if (response?.status === "success") {
+      updateApproximateGears(getActiveMacKey(), response.values);
+    }
     appendLog("Get rear cog info result", response ?? {});
+    return response;
   } catch (err) {
     appendLog(
       "Get rear cog info error",
       err instanceof Error ? err.message : err,
     );
+    return null;
   }
+}
+
+export async function ensureGearsForMac(macKey: string) {
+  if (!macKey) return;
+  const normalized = macKey.toUpperCase();
+  const existing = gears.get()[normalized];
+  if (existing?.length) return;
+  await getRearCogInfo();
+  await getPosition();
+}
+
+export async function refreshCurrentGear() {
+  const activeMac = getActiveMacKey();
+  if (!activeMac) return;
+  await getPosition();
 }
