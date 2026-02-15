@@ -8,6 +8,7 @@ import { WebBluetoothTransport } from "./transport-web.ts";
 import { DemoTransport } from "./transport-demo.ts";
 import { demoState } from "./demo-state.ts";
 import { PodMock } from "./pod-mock.ts";
+import type { PodButtonActionEvent } from "./pod-mock.ts";
 
 export type StatusKind = "wait" | "warn" | "ok";
 
@@ -36,10 +37,50 @@ const connectedDevice = signal<TransportDevice | null>(null);
 const pendingRouteMac = signal("");
 const demoMode = signal(false);
 
-export const demoPod = new PodMock({
-  batteryLevel: demoState.state.get().list.entries[0]?.batteryVoltage ?? 3000,
-  podMac: demoState.state.get().list.entries[0]?.mac ?? "",
-});
+const globalScope = globalThis as typeof globalThis & {
+  __demoPod?: PodMock;
+  __demoPodLogAttached?: boolean;
+};
+
+export const demoPod =
+  globalScope.__demoPod ??
+  new PodMock({
+    batteryLevel: demoState.state.get().list.entries[0]?.batteryVoltage ?? 3000,
+    podMac: demoState.state.get().list.entries[0]?.mac ?? "",
+  });
+
+globalScope.__demoPod = demoPod;
+
+if (!globalScope.__demoPodLogAttached) {
+  demoPod.addEventListener("pod-button-action", (event) => {
+    if (!demoMode.get()) return;
+    const detail = (event as CustomEvent<PodButtonActionEvent>).detail;
+    if (!detail || detail.status !== "success") return;
+    appendLog("Button action", {
+      targetMac: detail.targetMac,
+      buttonId: detail.buttonId,
+      buttonLabel: detail.buttonLabel,
+      actionLabel: detail.actionLabel,
+      rawHex: detail.rawHex,
+    });
+
+    const direction = getDemoButtonDirection(detail.buttonId);
+    if (!direction || detail.actionFlag === undefined) return;
+    const mode = demoPod.state.get().mode;
+    const shouldShift =
+      (mode === "tune" && detail.actionFlag === 0) ||
+      (mode === "shift" && detail.actionFlag === 1);
+    if (!shouldShift) return;
+    const shift = demoState.state.get().shiftComplete[direction];
+    if (!shift) return;
+    appendLog("Shift complete", {
+      targetMac: demoState.state.get().device.mac,
+      payloadValue: parseShiftCompleteValue(shift.rawHex),
+      rawHex: shift.rawHex,
+    });
+  });
+  globalScope.__demoPodLogAttached = true;
+}
 
 const demoPodBatteryLevel = computed(() => demoPod.state.get().batteryLevel);
 const demoPodBatteryWatcher = new Signal.subtle.Watcher(() => {
@@ -382,6 +423,34 @@ function appendLog(...parts: Array<string | number | object>) {
     .join(" ");
   const next = [...logLines.get(), line];
   logLines.set(next.slice(-400));
+}
+
+const DEMO_BUTTON_SHIFT_MAP: Record<number, "up" | "down"> = {
+  1: "up",
+  0: "down",
+};
+
+function getDemoButtonDirection(buttonId?: number) {
+  if (buttonId === undefined) return undefined;
+  return DEMO_BUTTON_SHIFT_MAP[buttonId];
+}
+
+function parseShiftCompleteValue(rawHex: string) {
+  const bytes = hexToBytes(rawHex);
+  let value = 0;
+  for (let i = 0; i < Math.min(4, bytes.length); i += 1) {
+    value |= (bytes[i] & 0xff) << (8 * i);
+  }
+  return value >>> 0;
+}
+
+function hexToBytes(hex: string) {
+  const clean = hex.trim();
+  const bytes = new Uint8Array(Math.floor(clean.length / 2));
+  for (let i = 0; i < bytes.length; i += 1) {
+    bytes[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16) & 0xff;
+  }
+  return bytes;
 }
 
 export async function getList() {

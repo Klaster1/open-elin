@@ -301,7 +301,7 @@ export class DemoTransport implements ProtocolTransport {
   }
 
   private getPodMac() {
-    return getPodMac();
+    return demoState.getPodMac();
   }
 
   private buildButtonActionPayload(detail: {

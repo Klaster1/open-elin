@@ -11,6 +11,7 @@ import "./device-buttons-tab.ts";
 import "./device-cogs-tab.ts";
 import "./device-log-tab.ts";
 import "./inline-spinner.ts";
+import "./pod-mock-gui.ts";
 
 class DevicePage extends SignalWatcher(LitElement) {
   static styles = [sharedStyles];
@@ -68,6 +69,7 @@ class DevicePage extends SignalWatcher(LitElement) {
     const activeTab = this.activeTab || "log";
     const battery = appState.hubBatteryVoltage.get();
     const batteryStatus = this.formatBatteryStatus(battery);
+    const isDemo = appState.demoMode.get();
 
     return html`
       <section class="shell">
@@ -99,6 +101,7 @@ class DevicePage extends SignalWatcher(LitElement) {
         </aside>
         <div class="content">${this.renderDeviceTab(activeTab)}</div>
       </section>
+      ${isDemo ? html`<pod-mock-gui></pod-mock-gui>` : html``}
       <sl-dialog
         label="Rename hub"
         ?open=${this.renameOpen}

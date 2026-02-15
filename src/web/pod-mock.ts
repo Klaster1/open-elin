@@ -63,8 +63,24 @@ export class PodMock extends EventTarget {
     this.emitButtonSequence("A");
   }
 
+  pressButtonADown() {
+    this.emitButtonDown("A");
+  }
+
+  pressButtonAUp() {
+    this.emitButtonUp("A");
+  }
+
   pressButtonB() {
     this.emitButtonSequence("B");
+  }
+
+  pressButtonBDown() {
+    this.emitButtonDown("B");
+  }
+
+  pressButtonBUp() {
+    this.emitButtonUp("B");
   }
 
   pressButtonC() {
@@ -74,6 +90,16 @@ export class PodMock extends EventTarget {
     setTimeout(() => {
       this.emitButtonAction(BUTTON_IDS.C, 1);
     }, DEFAULT_RELEASE_DELAY_MS);
+  }
+
+  pressButtonCDown() {
+    if (!this.state.get().online) return;
+    this.toggleMode();
+    this.emitButtonAction(BUTTON_IDS.C, 0);
+  }
+
+  pressButtonCUp() {
+    this.emitButtonAction(BUTTON_IDS.C, 1);
   }
 
   private emitButtonSequence(button: PodButton) {
@@ -88,6 +114,18 @@ export class PodMock extends EventTarget {
     setTimeout(() => {
       this.emitButtonAction(buttonId, 1);
     }, releaseDelay);
+  }
+
+  private emitButtonDown(button: PodButton) {
+    if (!this.state.get().online) return;
+    const buttonId = BUTTON_IDS[button];
+    this.emitButtonAction(buttonId, 0);
+  }
+
+  private emitButtonUp(button: PodButton) {
+    if (!this.state.get().online) return;
+    const buttonId = BUTTON_IDS[button];
+    this.emitButtonAction(buttonId, 1);
   }
 
   private updateState(next: Partial<PodState>) {
