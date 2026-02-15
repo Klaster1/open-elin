@@ -27,6 +27,14 @@ import "./components/device-page.ts";
 setBasePath("/node_modules/@shoelace-style/shoelace/dist/");
 document.documentElement.classList.add("sl-theme-dark");
 
+function serializeMacForRoute(value: string) {
+  return value.trim().toUpperCase().replace(/:/g, "-");
+}
+
+function parseMacFromRoute(value: string) {
+  return decodeURIComponent(value).replace(/-/g, ":").toUpperCase();
+}
+
 type RouteParams = {
   mac?: string;
   tab?: string;
@@ -60,7 +68,8 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     {
       path: "/device/:mac",
       enter: async ({ mac }) => {
-        await this.navigate(`/device/${encodeURIComponent(mac)}/log`, {
+        const normalizedMac = serializeMacForRoute(parseMacFromRoute(mac));
+        await this.navigate(`/device/${normalizedMac}/log`, {
           replace: true,
         });
         return false;
@@ -78,10 +87,10 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     super.connectedCallback();
     const storedMac = appActions.initStoredMac();
     if (storedMac && window.location.pathname.startsWith("/mac")) {
-      this.navigate(`/device/${encodeURIComponent(storedMac)}/log`);
+      this.navigate(`/device/${serializeMacForRoute(storedMac)}/log`);
     }
     setShiftMacListener((value) => {
-      this.navigate(`/device/${encodeURIComponent(value)}/log`);
+      this.navigate(`/device/${serializeMacForRoute(value)}/log`);
     });
   }
 
@@ -119,8 +128,8 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     const routeMac = macParam;
 
     if (routeMac) {
-      const decoded = decodeURIComponent(routeMac);
-      const normalized = decoded.toUpperCase();
+      const parsedMac = parseMacFromRoute(routeMac);
+      const normalized = parsedMac.toUpperCase();
       const demoHubMac = demoState.state.get().device.mac.toUpperCase();
       if (
         normalized === demoHubMac &&
@@ -130,13 +139,13 @@ class BikeNetApp extends SignalWatcher(LitElement) {
         queueMicrotask(() => appActions.connectDemo());
       }
       if (isValidMac(normalized) && normalized !== currentMac) {
-        queueMicrotask(() => appActions.setPendingRouteMac(decoded));
-        queueMicrotask(() => appActions.setMacFromRoute(decoded));
+        queueMicrotask(() => appActions.setPendingRouteMac(parsedMac));
+        queueMicrotask(() => appActions.setMacFromRoute(parsedMac));
       }
     }
 
     const targetMac =
-      currentMac || (routeMac ? decodeURIComponent(routeMac) : "");
+      currentMac || (routeMac ? parseMacFromRoute(routeMac) : "");
     const activeTab = tabParam || "log";
 
     return html`
@@ -153,7 +162,7 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     await appActions.connect();
     const mac = appState.mac.get();
     if (mac) {
-      void this.navigate(`/device/${encodeURIComponent(mac)}/log`);
+      void this.navigate(`/device/${serializeMacForRoute(mac)}/log`);
     } else {
       void this.navigate("/mac");
     }
@@ -165,7 +174,7 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     if (mac) {
       const pending = appState.pendingRouteMac.get();
       const target = pending || mac;
-      void this.navigate(`/device/${encodeURIComponent(target)}/log`);
+      void this.navigate(`/device/${serializeMacForRoute(target)}/log`);
     }
   }
 
@@ -173,7 +182,7 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     await appActions.connectDemo();
     const mac = appState.mac.get();
     if (mac) {
-      void this.navigate(`/device/${encodeURIComponent(mac)}/log`);
+      void this.navigate(`/device/${serializeMacForRoute(mac)}/log`);
     }
   }
 

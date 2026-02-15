@@ -364,7 +364,7 @@ class DevicePage extends SignalWatcher(LitElement) {
     macValue: string,
   ) {
     const href = macValue
-      ? `/device/${encodeURIComponent(macValue)}/${tabId}`
+      ? `/device/${macValue.replace(/:/g, "-")}/${tabId}`
       : "/";
     return html`
       <a class="nav-link ${activeTab === tabId ? "active" : ""}" href=${href}
