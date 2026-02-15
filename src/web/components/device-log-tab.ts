@@ -63,7 +63,15 @@ class DeviceLogTab extends SignalWatcher(LitElement) {
           <h2>Log</h2>
           <p class="hint">Notifications and command results appear here.</p>
         </div>
-        <pre class="log" ${ref(this.logRef)}>${logLines.join("\n")}</pre>
+        <pre
+          class="log"
+          ${ref(this.logRef)}
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions text"
+        >
+${logLines.join("\n")}</pre
+        >
       </div>
     `;
   }

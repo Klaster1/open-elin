@@ -167,10 +167,14 @@ class DeviceListTab extends SignalWatcher(LitElement) {
           <p class="hint">Scan the hub for linked devices.</p>
         </div>
         ${entries.length
-          ? html`<div class="device-list">
+          ? html`<div class="device-list" role="list">
               ${entries.map((entry) => this.renderEntry(entry))}
             </div>`
-          : html`<div class="empty-state">No device list loaded yet.</div>`}
+          : html`
+              <div class="empty-state" role="status" aria-live="polite">
+                No device list loaded yet.
+              </div>
+            `}
       </div>
     `;
   }
@@ -199,7 +203,7 @@ class DeviceListTab extends SignalWatcher(LitElement) {
     const rssi = entry.rssi ?? "--";
     const batteryText = this.formatBattery(entry.batteryVoltage);
     return html`
-      <div class="device-card">
+      <div class="device-card" role="listitem">
         <div class="device-header">
           <div>
             <div class="device-name">${name}</div>

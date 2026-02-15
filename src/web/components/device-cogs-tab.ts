@@ -88,14 +88,38 @@ class DeviceCogsTab extends SignalWatcher(LitElement) {
           >
         </div>
         ${rearCogInfo
-          ? html`<pre class="log">${JSON.stringify(rearCogInfo, null, 2)}</pre>`
-          : html`<div class="empty-state">No rear cog info yet.</div>`}
+          ? html`
+              <pre class="log" aria-label="Rear cog info">
+${JSON.stringify(rearCogInfo, null, 2)}</pre
+              >
+            `
+          : html`
+              <div class="empty-state" role="status" aria-live="polite">
+                No rear cog info yet.
+              </div>
+            `}
         ${position
-          ? html`<pre class="log">${JSON.stringify(position, null, 2)}</pre>`
-          : html`<div class="empty-state">No position read yet.</div>`}
+          ? html`
+              <pre class="log" aria-label="Position snapshot">
+${JSON.stringify(position, null, 2)}</pre
+              >
+            `
+          : html`
+              <div class="empty-state" role="status" aria-live="polite">
+                No position read yet.
+              </div>
+            `}
         ${frontCog
-          ? html`<pre class="log">${JSON.stringify(frontCog, null, 2)}</pre>`
-          : html`<div class="empty-state">No front cog notification yet.</div>`}
+          ? html`
+              <pre class="log" aria-label="Front cog notification">
+${JSON.stringify(frontCog, null, 2)}</pre
+              >
+            `
+          : html`
+              <div class="empty-state" role="status" aria-live="polite">
+                No front cog notification yet.
+              </div>
+            `}
       </div>
     `;
   }

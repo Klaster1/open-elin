@@ -26,6 +26,7 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 - Build tooling: Vite.
 - Prefer colocating component-specific styles inside component TS files.
 - Keep shared styles minimal and only for truly global tokens or base rules.
+- Always make sure any edits in UI are accessible, use "accessibility-auditor" skill for that.
 
 ## Testing and Validation
 

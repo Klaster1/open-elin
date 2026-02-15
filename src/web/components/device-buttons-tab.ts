@@ -151,12 +151,16 @@ class DeviceButtonsTab extends SignalWatcher(LitElement) {
           <p class="hint">Current button-to-action mapping per pod.</p>
         </div>
         ${buttonTable?.length
-          ? html`<div class="mapping-list">
+          ? html`<div class="mapping-list" role="list">
               ${buttonTable.map((entry: any, index: number) =>
                 this.renderMapping(entry, index),
               )}
             </div>`
-          : html`<div class="empty-state">No button table loaded yet.</div>`}
+          : html`
+              <div class="empty-state" role="status" aria-live="polite">
+                No button table loaded yet.
+              </div>
+            `}
       </div>
     `;
   }
@@ -181,7 +185,7 @@ class DeviceButtonsTab extends SignalWatcher(LitElement) {
       button2 && button2 !== "-" ? `${button1} + ${button2}` : button1;
 
     return html`
-      <div class="mapping-card">
+      <div class="mapping-card" role="listitem">
         <div class="mapping-head">
           <div>
             <div class="mapping-title">${fnLabel}</div>

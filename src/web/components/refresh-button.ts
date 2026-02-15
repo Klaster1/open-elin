@@ -16,6 +16,11 @@ class RefreshButton extends LitElement {
         stroke-linecap: round;
         stroke-linejoin: round;
       }
+
+      sl-button::part(prefix) {
+        display: inline-flex;
+        align-items: center;
+      }
     `,
   ];
 
@@ -36,7 +41,12 @@ class RefreshButton extends LitElement {
   render() {
     const isDisabled = this.disabled || this.loading;
     return html`
-      <sl-button size="small" ?disabled=${isDisabled} @click=${this.onClick}>
+      <sl-button
+        size="small"
+        ?disabled=${isDisabled}
+        aria-busy=${this.loading ? "true" : "false"}
+        @click=${this.onClick}
+      >
         ${this.loading
           ? html`<inline-spinner slot="prefix"></inline-spinner>`
           : html`

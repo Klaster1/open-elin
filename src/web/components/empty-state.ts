@@ -92,7 +92,7 @@ class EmptyState extends LitElement {
 
   render() {
     return html`
-      <div class="card empty-state stack">
+      <div class="card empty-state stack" role="status" aria-live="polite">
         <div class="empty-icon" aria-hidden="true">
           <svg viewBox="0 0 64 64" fill="none">
             <path

@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 
 import { appActions, appState } from "../store.ts";
@@ -262,7 +262,7 @@ class DevicePage extends SignalWatcher(LitElement) {
     const connected = appState.connected.get();
     if (!connected) {
       return html`
-        <section>
+        <section role="main" aria-label="Reconnect">
           <empty-state
             title="Reconnect required"
             message="You opened the device page without an active Bluetooth session. Chrome requires a user click to open the Bluetooth picker."
@@ -288,7 +288,7 @@ class DevicePage extends SignalWatcher(LitElement) {
     const isDemo = appState.demoMode.get();
 
     return html`
-      <section class="shell">
+      <section class="shell" role="main" aria-label="Device details">
         <aside class="sidebar">
           <div class="card">
             <div class="sidebar-head">
@@ -306,11 +306,16 @@ class DevicePage extends SignalWatcher(LitElement) {
                 </button>
               </div>
               <div class="sidebar-mac">${displayMac}</div>
-              <div class="status ${batteryStatus.kind}">
+              <div
+                class="status ${batteryStatus.kind}"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
                 ${batteryStatus.label}
               </div>
             </div>
-            <nav class="nav-list">
+            <nav class="nav-list" aria-label="Device navigation">
               ${deviceTabs.map((tab) =>
                 this.renderNavLink(tab.id, tab.label, activeTab, displayMac),
               )}
@@ -367,9 +372,13 @@ class DevicePage extends SignalWatcher(LitElement) {
       ? `/device/${macValue.replace(/:/g, "-")}/${tabId}`
       : "/";
     return html`
-      <a class="nav-link ${activeTab === tabId ? "active" : ""}" href=${href}
-        >${label}</a
+      <a
+        class="nav-link ${activeTab === tabId ? "active" : ""}"
+        href=${href}
+        aria-current=${activeTab === tabId ? "page" : nothing}
       >
+        ${label}
+      </a>
     `;
   }
 

@@ -7,7 +7,12 @@ class InlineSpinner extends LitElement {
     sharedStyles,
     css`
       .inline-spinner {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         font-size: 14px;
+        line-height: 1;
+        --size: 14px;
       }
     `,
   ];

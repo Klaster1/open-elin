@@ -122,7 +122,11 @@ class DeviceMotorTab extends SignalWatcher(LitElement) {
                 `,
               )}
             </dl>`
-          : html`<div class="empty-state">No motor params fetched yet.</div>`}
+          : html`
+              <div class="empty-state" role="status" aria-live="polite">
+                No motor params fetched yet.
+              </div>
+            `}
       </div>
     `;
   }

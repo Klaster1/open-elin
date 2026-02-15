@@ -110,7 +110,7 @@ class MacPage extends SignalWatcher(LitElement) {
     const shiftStatusKind = appState.shiftStatusKind.get();
     const shiftStatusText = appState.shiftStatusText.get();
     return html`
-      <section>
+      <section role="main" aria-label="MAC acquisition">
         <div class="card">
           <div class="card-head">
             <h2>2. MAC acquisition</h2>
@@ -125,7 +125,14 @@ class MacPage extends SignalWatcher(LitElement) {
               <p class="hint">
                 We listen for manufacturer data in advertisements.
               </p>
-              <div class="status ${adStatusKind}">${adStatusText}</div>
+              <div
+                class="status ${adStatusKind}"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                ${adStatusText}
+              </div>
               <p class="hint">Keep the hub awake and nearby.</p>
             </div>
             <div class="pane">
@@ -133,13 +140,22 @@ class MacPage extends SignalWatcher(LitElement) {
               <p class="hint">
                 Shift once so we receive a Shift Complete event with the MAC.
               </p>
-              <div class="status ${shiftStatusKind}">${shiftStatusText}</div>
+              <div
+                class="status ${shiftStatusKind}"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                ${shiftStatusText}
+              </div>
               <p class="hint">A single shift up or down is enough.</p>
             </div>
             <div class="pane">
               <h2>Manual entry</h2>
               <sl-input
+                label="Hub MAC address"
                 placeholder="AA:BB:CC:DD:EE:FF"
+                help-text="Format: AA:BB:CC:DD:EE:FF"
                 value=${manualMac}
                 @sl-input=${this.onManualInput}
               ></sl-input>
