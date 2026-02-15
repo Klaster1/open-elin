@@ -11,19 +11,15 @@ class PodMockGui extends SignalWatcher(LitElement) {
     sharedStyles,
     css`
       .pod-mock {
-        position: fixed;
-        right: 32px;
-        bottom: 32px;
-        width: 360px;
-        z-index: 30;
+        width: 100%;
         display: grid;
         place-items: center;
-        pointer-events: auto;
       }
 
       .pod-mock-frame {
         position: relative;
         width: 100%;
+        max-width: 220px;
         padding: 12px;
         border-radius: 22px;
         background: #101922;
@@ -41,6 +37,7 @@ class PodMockGui extends SignalWatcher(LitElement) {
       .pod-power::part(label) {
         color: #cfe3ff;
         font-weight: 600;
+        font-size: 12px;
         letter-spacing: 0.01em;
       }
 
@@ -70,22 +67,22 @@ class PodMockGui extends SignalWatcher(LitElement) {
       }
 
       .pod-button-tune {
-        width: 60px;
-        height: 60px;
+        width: 44px;
+        height: 44px;
         top: 37%;
         left: 52%;
       }
 
       .pod-button-up {
-        width: 60px;
-        height: 60px;
+        width: 44px;
+        height: 44px;
         top: 37%;
         left: 76%;
       }
 
       .pod-button-down {
-        width: 60px;
-        height: 60px;
+        width: 44px;
+        height: 44px;
         top: 75%;
         left: 81%;
       }

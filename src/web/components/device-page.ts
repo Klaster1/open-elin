@@ -289,35 +289,37 @@ class DevicePage extends SignalWatcher(LitElement) {
 
     return html`
       <section class="shell">
-        <aside class="card sidebar">
-          <div class="sidebar-head">
-            <div class="sidebar-name-row">
-              <div class="sidebar-name">${deviceName}</div>
-              <button
-                class="icon-button"
-                type="button"
-                @click=${this.openRename}
-                aria-label="Rename hub"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M4 20h4l10.5-10.5-4-4L4 16v4zM14.5 5.5l4 4"></path>
-                </svg>
-              </button>
+        <aside class="sidebar">
+          <div class="card">
+            <div class="sidebar-head">
+              <div class="sidebar-name-row">
+                <div class="sidebar-name">${deviceName}</div>
+                <button
+                  class="icon-button"
+                  type="button"
+                  @click=${this.openRename}
+                  aria-label="Rename hub"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 20h4l10.5-10.5-4-4L4 16v4zM14.5 5.5l4 4"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="sidebar-mac">${displayMac}</div>
+              <div class="status ${batteryStatus.kind}">
+                ${batteryStatus.label}
+              </div>
             </div>
-            <div class="sidebar-mac">${displayMac}</div>
-            <div class="status ${batteryStatus.kind}">
-              ${batteryStatus.label}
-            </div>
+            <nav class="nav-list">
+              ${deviceTabs.map((tab) =>
+                this.renderNavLink(tab.id, tab.label, activeTab, displayMac),
+              )}
+            </nav>
           </div>
-          <nav class="nav-list">
-            ${deviceTabs.map((tab) =>
-              this.renderNavLink(tab.id, tab.label, activeTab, displayMac),
-            )}
-          </nav>
+          ${isDemo ? html`<pod-mock-gui></pod-mock-gui>` : html``}
         </aside>
         <div class="content">${this.renderDeviceTab(activeTab)}</div>
       </section>
-      ${isDemo ? html`<pod-mock-gui></pod-mock-gui>` : html``}
       <sl-dialog
         label="Rename hub"
         ?open=${this.renameOpen}
