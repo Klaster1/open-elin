@@ -4,14 +4,7 @@ import demoData from "./demo-data.json";
 
 type DemoData = typeof demoData;
 
-type DemoDevice = DemoData["device"];
 type DemoList = DemoData["list"];
-type DemoMotorParams = DemoData["motorParams"];
-type DemoButtonMap = DemoData["buttonMap"];
-type DemoButtonEntry = DemoData["buttonTable"][number];
-type DemoButtonTable = DemoData["buttonTable"];
-type DemoRearCogInfo = DemoData["rearCogInfo"];
-type DemoPosition = DemoData["position"];
 type DemoShiftComplete = DemoData["shiftComplete"];
 type DemoBatterySample = DemoData["batteryNotifications"][number];
 type DemoBatterySamples = DemoData["batteryNotifications"];
@@ -54,7 +47,7 @@ class DemoStateModel {
 
 export const demoState = new DemoStateModel();
 
-export type { DemoButtonEntry, DemoBatterySample, DemoStateModel };
+export type { DemoBatterySample, DemoStateModel };
 
 function millivoltsToHex(millivolts: number) {
   const clamped = Math.max(0, Math.min(0xffff, Math.round(millivolts)));

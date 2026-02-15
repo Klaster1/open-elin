@@ -7,6 +7,8 @@ import type { TransportDevice } from "../protocol.ts";
 import { WebBluetoothTransport } from "./transport-web.ts";
 import { DemoTransport } from "./transport-demo.ts";
 import { demoState } from "./demo-state.ts";
+import hubData from "./hub-mock-data.json";
+import { HubMock } from "./hub-mock.ts";
 import { PodMock } from "./pod-mock.ts";
 import type { PodButtonActionEvent } from "./pod-mock.ts";
 
@@ -83,7 +85,7 @@ if (!globalScope.__demoPodLogAttached) {
     const shift = demoState.state.get().shiftComplete[direction];
     if (!shift) return;
     appendLog("Shift complete", {
-      targetMac: demoState.state.get().device.mac,
+      targetMac: hubData.device.mac,
       payloadValue: parseShiftCompleteValue(shift.rawHex),
       rawHex: shift.rawHex,
     });
@@ -213,7 +215,7 @@ export async function connect() {
 }
 
 export async function connectDemo() {
-  const transport = new DemoTransport(demoPod);
+  const transport = new DemoTransport(demoPod, new HubMock());
   await connectWithTransport(transport, {
     requestLabel: "Starting demo transport...",
     preferStoredMac: false,

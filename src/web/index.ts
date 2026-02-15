@@ -18,7 +18,7 @@ import {
   isValidMac,
   setShiftMacListener,
 } from "./store.ts";
-import { demoState } from "./demo-state.ts";
+import hubData from "./hub-mock-data.json";
 import { sharedStyles } from "./styles.ts";
 import "./components/landing-page.ts";
 import "./components/mac-page.ts";
@@ -130,7 +130,7 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     if (routeMac) {
       const parsedMac = parseMacFromRoute(routeMac);
       const normalized = parsedMac.toUpperCase();
-      const demoHubMac = demoState.state.get().device.mac.toUpperCase();
+      const demoHubMac = hubData.device.mac.toUpperCase();
       if (
         normalized === demoHubMac &&
         !appState.demoMode.get() &&

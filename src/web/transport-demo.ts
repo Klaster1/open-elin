@@ -5,6 +5,7 @@ import type {
 } from "../protocol.ts";
 import { hexToBuffer, reverseMacAddress } from "../protocol.ts";
 import { demoState } from "./demo-state.ts";
+import type { HubMock } from "./hub-mock.ts";
 import type { DemoBatterySample } from "./demo-state.ts";
 import type { PodMock } from "./pod-mock.ts";
 
@@ -51,7 +52,10 @@ export class DemoTransport implements ProtocolTransport {
     }
   };
 
-  constructor(private readonly pod: PodMock) {}
+  constructor(
+    private readonly pod: PodMock,
+    private readonly hub: HubMock,
+  ) {}
 
   private attachPodListeners() {
     if (this.podListenersAttached) return;
@@ -213,12 +217,12 @@ export class DemoTransport implements ProtocolTransport {
   }
 
   private buildButtonMapPayload() {
-    const mapBytes = demoState.state.get().buttonMap.mapBytes;
+    const mapBytes = this.hub.getButtonMapBytes();
     return this.reverseBytes(Uint8Array.from(mapBytes));
   }
 
   private buildButtonTablePayload() {
-    const entries = demoState.state.get().buttonTable;
+    const entries = this.hub.getButtonTable();
     const out = new Uint8Array(entries.length * 16);
     entries.forEach((entry, index) => {
       const offset = index * 16;
@@ -233,16 +237,15 @@ export class DemoTransport implements ProtocolTransport {
   }
 
   private buildRearCogPayload() {
-    const raw = Uint8Array.from(demoState.state.get().rearCogInfo.rawBytes);
-    return this.reverseBytes(raw);
+    return this.hub.getRearCogApproximateBytes();
   }
 
   private buildPositionPayload() {
-    return Uint8Array.from(demoState.state.get().position.rawBytes);
+    return this.hub.getPositionBytes();
   }
 
   private buildMotorParamsPayload() {
-    return Uint8Array.from(demoState.state.get().motorParams.rawBytes);
+    return Uint8Array.from(this.hub.getMotorParamsBytes());
   }
 
   private startBatteryNotifications() {
@@ -278,7 +281,7 @@ export class DemoTransport implements ProtocolTransport {
   }
 
   private buildDemoDevice(): TransportDevice {
-    const device = demoState.state.get().device;
+    const device = this.hub.getDevice();
     return {
       id: device.id || "demo-device",
       address: device.mac,
@@ -297,7 +300,7 @@ export class DemoTransport implements ProtocolTransport {
   }
 
   private getHubMac() {
-    return demoState.state.get().device.mac || "";
+    return this.hub.getDevice().mac || "";
   }
 
   private getPodMac() {
@@ -345,120 +348,11 @@ export class DemoTransport implements ProtocolTransport {
   }
 
   private applyGearShift(direction: "up" | "down") {
-    const positionState = demoState.state.get().position;
-    const rearState = demoState.state.get().rearCogInfo;
-    const { absolutePosition, gearPosition } = this.parsePositionBytes(
-      positionState.rawBytes,
-    );
-    const values = this.decodeRearCogValues(rearState.rawBytes);
-    if (!values.length) return;
-    const currentGear = gearPosition ?? 1;
-    const delta = direction === "up" ? 1 : -1;
-    const nextGear = this.clampGear(currentGear + delta, values.length);
-    const nextAbsolute = values[nextGear - 1] ?? absolutePosition ?? 0;
-    const nextPosition = this.buildPositionBytes(nextAbsolute, nextGear);
-    this.updatePosition(nextPosition);
+    this.hub.applyGearShift(direction);
   }
 
   private applyTuneShift(direction: "up" | "down") {
-    const positionState = demoState.state.get().position;
-    const rearState = demoState.state.get().rearCogInfo;
-    const { absolutePosition, gearPosition } = this.parsePositionBytes(
-      positionState.rawBytes,
-    );
-    const currentGear = gearPosition ?? 1;
-    const delta = direction === "up" ? TUNE_STEP : -TUNE_STEP;
-    const nextAbsolute = (absolutePosition ?? 0) + delta;
-    const nextPosition = this.buildPositionBytes(nextAbsolute, currentGear);
-    this.updatePosition(nextPosition);
-    const nextRear = this.updateRearCogValue(
-      rearState.rawBytes,
-      currentGear,
-      delta,
-    );
-    this.updateRearCogInfo(nextRear);
-  }
-
-  private parsePositionBytes(rawBytes: number[]) {
-    const payload = Uint8Array.from(rawBytes);
-    const view = new DataView(
-      payload.buffer,
-      payload.byteOffset,
-      payload.byteLength,
-    );
-    const absolutePosition =
-      payload.length >= 2 ? view.getUint16(0, true) / 10 : undefined;
-    const gearHex = payload.length > 2 ? this.bytesToHex(payload.slice(2)) : "";
-    const gearPosition = gearHex ? parseInt(gearHex, 16) + 1 : undefined;
-    return { absolutePosition, gearPosition };
-  }
-
-  private buildPositionBytes(absolutePosition: number, gearPosition: number) {
-    const scaled = Math.max(0, Math.round(absolutePosition * 10));
-    const gear = Math.max(1, Math.round(gearPosition));
-    return new Uint8Array([
-      scaled & 0xff,
-      (scaled >> 8) & 0xff,
-      (gear - 1) & 0xff,
-    ]);
-  }
-
-  private decodeRearCogValues(rawBytes: number[]) {
-    const rawHex = this.bytesToHex(Uint8Array.from(rawBytes));
-    const values: number[] = [];
-    if (rawHex.length % 6 === 0 && rawHex.length > 0) {
-      const chunks: string[] = [];
-      for (let i = 0; i < rawHex.length; i += 6) {
-        chunks.push(rawHex.substring(i, i + 6));
-      }
-      for (const chunk of chunks.reverse()) {
-        if (chunk.length !== 6) continue;
-        const valueHex = chunk.substring(2, 6);
-        const value = parseInt(valueHex, 16) / 10;
-        if (!Number.isNaN(value)) values.push(value);
-      }
-    }
-    return values;
-  }
-
-  private updateRearCogValue(
-    rawBytes: number[],
-    gearPosition: number,
-    delta: number,
-  ) {
-    const out = Uint8Array.from(rawBytes);
-    const chunkCount = Math.floor(out.length / 3);
-    if (!chunkCount) return out;
-    const clampedGear = this.clampGear(gearPosition, chunkCount);
-    const chunkIndex = chunkCount - clampedGear;
-    const offset = chunkIndex * 3;
-    const currentValue = ((out[offset + 1] << 8) | out[offset + 2]) / 10;
-    const nextValue = Math.max(0, currentValue + delta);
-    const scaled = Math.round(nextValue * 10);
-    out[offset + 1] = (scaled >> 8) & 0xff;
-    out[offset + 2] = scaled & 0xff;
-    return out;
-  }
-
-  private updatePosition(bytes: Uint8Array) {
-    const current = demoState.state.get();
-    const nextPosition = { ...current.position };
-    nextPosition.rawBytes = Array.from(bytes.values());
-    nextPosition.rawHex = this.bytesToHex(bytes);
-    demoState.state.set({ ...current, position: nextPosition });
-  }
-
-  private updateRearCogInfo(bytes: Uint8Array) {
-    const current = demoState.state.get();
-    const nextRear = { ...current.rearCogInfo };
-    nextRear.rawBytes = Array.from(bytes.values());
-    nextRear.rawHex = this.bytesToHex(bytes);
-    demoState.state.set({ ...current, rearCogInfo: nextRear });
-  }
-
-  private clampGear(value: number, max: number) {
-    if (Number.isNaN(value)) return 1;
-    return Math.min(Math.max(value, 1), max);
+    this.hub.applyTuneShift(direction, TUNE_STEP);
   }
 
   private macToBytes(mac: string) {
