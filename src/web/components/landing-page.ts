@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, css, html } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 
 import { appState } from "../store.ts";
@@ -6,7 +6,29 @@ import { sharedStyles } from "../styles.ts";
 import "./empty-state.ts";
 
 class LandingPage extends SignalWatcher(LitElement) {
-  static styles = [sharedStyles];
+  static styles = [
+    sharedStyles,
+    css`
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .demo-button::part(base) {
+        background: transparent;
+        border-color: #2b3a4b;
+        color: var(--muted, #98a6b5);
+        opacity: 0.7;
+      }
+
+      .demo-button::part(base):hover {
+        opacity: 1;
+        border-color: #3a4a5c;
+        color: var(--text, #e7edf5);
+      }
+    `,
+  ];
 
   render() {
     const connectEmpty = appState.connectEmpty.get();

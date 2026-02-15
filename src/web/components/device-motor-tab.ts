@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, css, html } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 
 import { appActions, appState } from "../store.ts";
@@ -6,7 +6,75 @@ import { sharedStyles } from "../styles.ts";
 import "./refresh-button.ts";
 
 class DeviceMotorTab extends SignalWatcher(LitElement) {
-  static styles = [sharedStyles];
+  static styles = [
+    sharedStyles,
+    css`
+      .card {
+        background: var(--panel, #141c24);
+        border-radius: 16px;
+        padding: 18px 20px;
+        border: 1px solid var(--panel-border, #223142);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      .card-head {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+
+      .card-head-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .hint {
+        color: var(--muted, #98a6b5);
+        font-size: 13px;
+        margin: 0;
+      }
+
+      .param-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin: 0;
+      }
+
+      .param-grid div {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .param-grid dt {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted, #98a6b5);
+      }
+
+      .param-grid dd {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .empty-state {
+        margin-top: 16px;
+        padding: 18px;
+        border-radius: 12px;
+        border: 1px dashed #3a4a5c;
+        background: rgba(20, 30, 40, 0.6);
+        min-height: 140px;
+        display: flex;
+        align-items: center;
+        color: var(--muted, #98a6b5);
+      }
+    `,
+  ];
 
   static properties = {
     loading: { type: Boolean, attribute: false },

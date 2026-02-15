@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, css, html } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 import { Router } from "@lit-labs/router";
 import "@shoelace-style/shoelace/dist/themes/dark.css";
@@ -31,7 +31,26 @@ type RouteParams = {
 };
 
 class BikeNetApp extends SignalWatcher(LitElement) {
-  static styles = [sharedStyles];
+  static styles = [
+    sharedStyles,
+    css`
+      .app {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 28px 60px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+
+      .hero {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+      }
+    `,
+  ];
 
   private router = new Router(this, [
     { path: "/", render: () => this.renderLandingRoute() },

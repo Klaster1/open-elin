@@ -1,11 +1,48 @@
-import { LitElement, html } from "lit";
+import { LitElement, css, html } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 
 import { appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
 class DeviceLogTab extends SignalWatcher(LitElement) {
-  static styles = [sharedStyles];
+  static styles = [
+    sharedStyles,
+    css`
+      .card {
+        background: var(--panel, #141c24);
+        border-radius: 16px;
+        padding: 18px 20px;
+        border: 1px solid var(--panel-border, #223142);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      .card-head {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+
+      .hint {
+        color: var(--muted, #98a6b5);
+        font-size: 13px;
+        margin: 0;
+      }
+
+      .log {
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.5;
+        padding: 14px;
+        border-radius: 12px;
+        border: 1px solid #233143;
+        background: #0f1620;
+        font-family: Consolas, monospace;
+      }
+    `,
+  ];
 
   render() {
     const logLines = appState.logLines.get();

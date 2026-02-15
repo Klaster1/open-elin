@@ -1,10 +1,23 @@
-import { LitElement, html } from "lit";
+import { LitElement, css, html } from "lit";
 
 import { sharedStyles } from "../styles.ts";
 import "./inline-spinner.ts";
 
 class RefreshButton extends LitElement {
-  static styles = [sharedStyles];
+  static styles = [
+    sharedStyles,
+    css`
+      .button-icon {
+        width: 14px;
+        height: 14px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+    `,
+  ];
 
   static properties = {
     disabled: { type: Boolean, reflect: true },

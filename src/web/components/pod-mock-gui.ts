@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, css, html } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 
 import { demoPod } from "../store.ts";
@@ -7,7 +7,77 @@ import { sharedStyles } from "../styles.ts";
 const podImageUrl = new URL("../images/pod.png", import.meta.url).href;
 
 class PodMockGui extends SignalWatcher(LitElement) {
-  static styles = [sharedStyles];
+  static styles = [
+    sharedStyles,
+    css`
+      .pod-mock {
+        position: fixed;
+        right: 32px;
+        bottom: 32px;
+        width: 360px;
+        z-index: 30;
+        display: grid;
+        place-items: center;
+        pointer-events: auto;
+      }
+
+      .pod-mock-frame {
+        position: relative;
+        width: 100%;
+        padding: 12px;
+        border-radius: 22px;
+        background: #101922;
+        border: 1px solid #253245;
+        box-shadow: 0 22px 55px rgba(0, 0, 0, 0.55);
+      }
+
+      .pod-mock img {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 18px;
+      }
+
+      .pod-button {
+        position: absolute;
+        border-radius: 999px;
+        border: 2px solid rgba(76, 255, 196, 0.7);
+        background: rgba(76, 255, 196, 0.18);
+        box-shadow: 0 0 12px rgba(76, 255, 196, 0.25);
+        cursor: pointer;
+        transform: translate(-50%, -50%);
+      }
+
+      .pod-button:hover {
+        background: rgba(76, 255, 196, 0.28);
+      }
+
+      .pod-button:active {
+        transform: translate(-50%, -50%) scale(0.96);
+      }
+
+      .pod-button-tune {
+        width: 60px;
+        height: 60px;
+        top: 37%;
+        left: 52%;
+      }
+
+      .pod-button-up {
+        width: 60px;
+        height: 60px;
+        top: 37%;
+        left: 76%;
+      }
+
+      .pod-button-down {
+        width: 60px;
+        height: 60px;
+        top: 75%;
+        left: 81%;
+      }
+    `,
+  ];
   private pressedButtons = new Set<"A" | "B" | "C">();
 
   render() {

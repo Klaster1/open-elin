@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, css, html } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 
 import { appActions, appState } from "../store.ts";
@@ -6,7 +6,115 @@ import { sharedStyles } from "../styles.ts";
 import "./refresh-button.ts";
 
 class DeviceButtonsTab extends SignalWatcher(LitElement) {
-  static styles = [sharedStyles];
+  static styles = [
+    sharedStyles,
+    css`
+      .card {
+        background: var(--panel, #141c24);
+        border-radius: 16px;
+        padding: 18px 20px;
+        border: 1px solid var(--panel-border, #223142);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      .card-head {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+
+      .card-head-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .hint {
+        color: var(--muted, #98a6b5);
+        font-size: 13px;
+        margin: 0;
+      }
+
+      .mapping-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .mapping-card {
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: #101822;
+        border: 1px solid #233143;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .mapping-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .mapping-title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .mapping-subtitle {
+        font-size: 12px;
+        color: var(--muted, #98a6b5);
+      }
+
+      .mapping-badge {
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+        background: rgba(88, 110, 134, 0.2);
+        color: #c0cad6;
+      }
+
+      .mapping-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin: 0;
+      }
+
+      .mapping-grid div {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .mapping-grid dt {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted, #98a6b5);
+      }
+
+      .mapping-grid dd {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .empty-state {
+        margin-top: 16px;
+        padding: 18px;
+        border-radius: 12px;
+        border: 1px dashed #3a4a5c;
+        background: rgba(20, 30, 40, 0.6);
+        min-height: 140px;
+        display: flex;
+        align-items: center;
+        color: var(--muted, #98a6b5);
+      }
+    `,
+  ];
 
   static properties = {
     loading: { type: Boolean, attribute: false },

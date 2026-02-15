@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, css, html } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 
 import { appActions, appState } from "../store.ts";
@@ -14,7 +14,223 @@ import "./inline-spinner.ts";
 import "./pod-mock-gui.ts";
 
 class DevicePage extends SignalWatcher(LitElement) {
-  static styles = [sharedStyles];
+  static styles = [
+    sharedStyles,
+    css`
+      .card {
+        background: var(--panel, #141c24);
+        border-radius: 16px;
+        padding: 18px 20px;
+        border: 1px solid var(--panel-border, #223142);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        position: sticky;
+        top: 20px;
+      }
+
+      .sidebar-head {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .sidebar-name {
+        font-size: 13px;
+        color: var(--muted, #98a6b5);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .sidebar-name-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .icon-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: 1px solid #233143;
+        background: #0f1620;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      .icon-button:hover {
+        border-color: #2b3a4b;
+        background: #18222f;
+      }
+
+      .icon-button svg {
+        width: 14px;
+        height: 14px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .sidebar-mac {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text, #e7edf5);
+      }
+
+      .nav-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: #0f1620;
+        border: 1px solid transparent;
+        color: inherit;
+        text-decoration: none;
+        font-weight: 600;
+        transition:
+          border-color 0.2s ease,
+          background 0.2s ease;
+      }
+
+      .nav-link:hover {
+        border-color: #2b3a4b;
+        background: #18222f;
+      }
+
+      .nav-link.active {
+        border-color: #3a4a5c;
+        background: #1c2836;
+        color: #e7edf5;
+      }
+
+      .content {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #243243;
+        color: var(--muted, #98a6b5);
+      }
+
+      .status.ok {
+        background: rgba(53, 194, 139, 0.18);
+        color: #7ef0c3;
+      }
+
+      .status.warn {
+        background: rgba(255, 180, 84, 0.15);
+        color: var(--warn, #ffb454);
+      }
+
+      .status.crit {
+        background: rgba(255, 102, 102, 0.16);
+        color: #ff8a8a;
+      }
+
+      .status.wait {
+        background: rgba(88, 110, 134, 0.2);
+        color: #c0cad6;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .dialog-cancel {
+        margin-right: auto;
+      }
+
+      sl-dialog::part(header) {
+        padding: 6px 10px 0;
+      }
+
+      sl-dialog::part(body) {
+        padding: 4px 10px 0;
+      }
+
+      sl-dialog::part(footer) {
+        padding: 4px 10px 8px;
+      }
+
+      sl-dialog::part(close-button) {
+        display: none;
+      }
+
+      sl-input::part(base) {
+        border-radius: 10px;
+        border-color: #2b3b4c;
+        background: #0e141b;
+        color: inherit;
+      }
+
+      sl-input::part(form-control) {
+        gap: 6px;
+      }
+
+      .demo-button::part(base) {
+        background: transparent;
+        border-color: #2b3a4b;
+        color: var(--muted, #98a6b5);
+        opacity: 0.7;
+      }
+
+      .demo-button::part(base):hover {
+        opacity: 1;
+        border-color: #3a4a5c;
+        color: var(--text, #e7edf5);
+      }
+
+      @media (max-width: 900px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+        }
+      }
+    `,
+  ];
 
   static properties = {
     macValue: { type: String, attribute: "mac-value" },
