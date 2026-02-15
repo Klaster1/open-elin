@@ -20,6 +20,7 @@ class RefreshButton extends LitElement {
       sl-button::part(prefix) {
         display: inline-flex;
         align-items: center;
+        line-height: 0;
       }
     `,
   ];
