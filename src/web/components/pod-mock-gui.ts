@@ -31,6 +31,19 @@ class PodMockGui extends SignalWatcher(LitElement) {
         box-shadow: 0 22px 55px rgba(0, 0, 0, 0.55);
       }
 
+      .pod-power {
+        position: absolute;
+        left: 14px;
+        bottom: 12px;
+        z-index: 2;
+      }
+
+      .pod-power::part(label) {
+        color: #cfe3ff;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
       .pod-mock img {
         width: 100%;
         height: auto;
@@ -81,9 +94,17 @@ class PodMockGui extends SignalWatcher(LitElement) {
   private pressedButtons = new Set<"A" | "B" | "C">();
 
   render() {
+    const isOnline = demoPod.state.get().online;
     return html`
       <div class="pod-mock" role="group" aria-label="Pod controls">
         <div class="pod-mock-frame">
+          <sl-switch
+            class="pod-power"
+            ?checked=${isOnline}
+            @sl-change=${this.onPowerToggle}
+          >
+            Power
+          </sl-switch>
           <img src=${podImageUrl} alt="Pod controls" />
           <button
             class="pod-button pod-button-tune"
@@ -128,6 +149,11 @@ class PodMockGui extends SignalWatcher(LitElement) {
 
   private onIgnoreClick(event: MouseEvent) {
     event.preventDefault();
+  }
+
+  private onPowerToggle(event: Event) {
+    const target = event.target as HTMLInputElement | null;
+    demoPod.setOnline(Boolean(target?.checked));
   }
 
   private onShiftUpPointerDown(event: PointerEvent) {

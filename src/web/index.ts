@@ -9,6 +9,7 @@ import "@shoelace-style/shoelace/dist/components/input/input.js";
 import "@shoelace-style/shoelace/dist/components/alert/alert.js";
 import "@shoelace-style/shoelace/dist/components/tag/tag.js";
 import "@shoelace-style/shoelace/dist/components/spinner/spinner.js";
+import "@shoelace-style/shoelace/dist/components/switch/switch.js";
 import { setBasePath } from "@shoelace-style/shoelace/dist/utilities/base-path.js";
 
 import {
