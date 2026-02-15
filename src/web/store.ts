@@ -1,4 +1,4 @@
-import { signal } from "@lit-labs/signals";
+import { Signal, computed, signal } from "@lit-labs/signals";
 
 import { BikeNetCommands } from "../commands.ts";
 import { BikeNetProtocol } from "../protocol.ts";
@@ -6,6 +6,8 @@ import type { ProtocolTransport } from "../protocol.ts";
 import type { TransportDevice } from "../protocol.ts";
 import { WebBluetoothTransport } from "./transport-web.ts";
 import { DemoTransport } from "./transport-demo.ts";
+import { demoState } from "./demo-state.ts";
+import { PodMock } from "./pod-mock.ts";
 
 export type StatusKind = "wait" | "warn" | "ok";
 
@@ -33,6 +35,18 @@ const commands = signal<BikeNetCommands | null>(null);
 const connectedDevice = signal<TransportDevice | null>(null);
 const pendingRouteMac = signal("");
 const demoMode = signal(false);
+
+export const demoPod = new PodMock({
+  batteryLevel: demoState.state.get().list.entries[0]?.batteryVoltage ?? 3000,
+  podMac: demoState.state.get().list.entries[0]?.mac ?? "",
+});
+
+const demoPodBatteryLevel = computed(() => demoPod.state.get().batteryLevel);
+const demoPodBatteryWatcher = new Signal.subtle.Watcher(() => {
+  demoState.updatePodBatteryLevel(demoPodBatteryLevel.get());
+});
+demoPodBatteryWatcher.watch(demoPodBatteryLevel);
+demoState.updatePodBatteryLevel(demoPodBatteryLevel.get());
 
 const macStorageKey = "bikenetHubMac";
 let macLockedByUser = false;
@@ -145,7 +159,7 @@ export async function connect() {
 }
 
 export async function connectDemo() {
-  const transport = new DemoTransport();
+  const transport = new DemoTransport(demoPod);
   await connectWithTransport(transport, {
     requestLabel: "Starting demo transport...",
     preferStoredMac: false,
