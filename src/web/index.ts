@@ -18,6 +18,7 @@ import {
   isValidMac,
   setShiftMacListener,
 } from "./store.ts";
+import { demoState } from "./demo-state.ts";
 import { sharedStyles } from "./styles.ts";
 import "./components/landing-page.ts";
 import "./components/mac-page.ts";
@@ -119,7 +120,16 @@ class BikeNetApp extends SignalWatcher(LitElement) {
 
     if (routeMac) {
       const decoded = decodeURIComponent(routeMac);
-      if (isValidMac(decoded) && decoded !== currentMac) {
+      const normalized = decoded.toUpperCase();
+      const demoHubMac = demoState.state.get().device.mac.toUpperCase();
+      if (
+        normalized === demoHubMac &&
+        !appState.demoMode.get() &&
+        !appState.connected.get()
+      ) {
+        queueMicrotask(() => appActions.connectDemo());
+      }
+      if (isValidMac(normalized) && normalized !== currentMac) {
         queueMicrotask(() => appActions.setPendingRouteMac(decoded));
         queueMicrotask(() => appActions.setMacFromRoute(decoded));
       }
