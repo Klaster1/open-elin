@@ -31,5 +31,5 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 
 - ALWAYS run Chrome MCP to test changes in demo mode. DO NOT ask the user first. NEVER ASK USER TO DO THIS.
 - Use the existing page when possible.
-- Start Vite to access the app at https://localhost:5173/.
+- Start Vite to access the app at https://localhost:5173/. When you go to this page, you almost always need to click on "Demo".
 - Avoid getting stuck in tool loops; if a tool call fails repeatedly, stop and reassess before continuing.
