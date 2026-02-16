@@ -212,6 +212,34 @@ function encodeSetName(mac: string, name: string) {
   return out;
 }
 
+function buildRearCogParamsHex(cablePositions: number[]) {
+  if (!cablePositions.length) {
+    throw new Error("cablePositions must include at least one value");
+  }
+
+  const chunks: string[] = [];
+  for (let i = 0; i < cablePositions.length; i++) {
+    const raw = cablePositions[i] ?? 0;
+    const cable = Math.trunc(raw * 10);
+    const cableHex = cable.toString(16).padStart(4, "0");
+    const cableLE = reverseCommand(cableHex);
+    chunks.push((cableLE + "00").toUpperCase());
+  }
+  return chunks.join("");
+}
+
+function encodeSetRearCogInfo(mac: string, cablePositions: number[]) {
+  const cmd = reverseCommand("0x001D");
+  const revMac = reverseMacAddress(mac);
+  const header = hexToBuffer(cmd + revMac);
+  const paramsHex = buildRearCogParamsHex(cablePositions);
+  const params = hexToBuffer(paramsHex);
+  const out = new Uint8Array(header.length + params.length);
+  out.set(header, 0);
+  out.set(params, header.length);
+  return out;
+}
+
 function parseGetListPayload(payload: Uint8Array): GetListEntry[] | null {
   if (!payload.length || payload.length % 27 !== 0) return null;
   const count = payload.length / 27;
@@ -578,6 +606,12 @@ export class BikeNetCommands {
     const payload = encodeGetRearCogInfo(this.device.address);
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseRearCogInfoResponse(response);
+  }
+
+  async setRearCogInfo(cablePositions: number[]): Promise<BasicResponse> {
+    const payload = encodeSetRearCogInfo(this.device.address, cablePositions);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
   }
 
   async getPosition(): Promise<GetPositionResponse> {
