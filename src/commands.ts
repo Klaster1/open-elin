@@ -142,6 +142,51 @@ export interface ButtonMapEntry {
 const textDecoder = new TextDecoder("utf-8");
 const textEncoder = new TextEncoder();
 
+const enum AppCommand {
+  GetList = "0x0000",
+  AddDevice = "0x0001",
+  RemoveDevice = "0x0002",
+  SetPin = "0x0003",
+  BlinkLed = "0x0004",
+  SetBikeNet = "0x0005",
+  ResetBikeNet = "0x0006",
+  DisconnectDevice = "0x0007",
+  ReconnectDevice = "0x0008",
+  SetName = "0x0009",
+  Calibrate = "0x000B",
+  CreateShiftTable = "0x000C",
+  IncrementMove = "0x000D",
+  AbsoluteMove = "0x000E",
+  UpdatePosition = "0x000F",
+  ShiftUp = "0x0010",
+  ShiftDown = "0x0011",
+  MoveToCog = "0x0012",
+  GetPosition = "0x0013",
+  WriteButtonMap = "0x0014",
+  ReadButtonMap = "0x0015",
+  SetMotorParams = "0x0016",
+  GetMotorParams = "0x0017",
+  MotorHome = "0x0019",
+  SetRearCogInfo = "0x001D",
+  GetRearCogInfo = "0x001F",
+  SetTuningButtonLevel = "0x0022",
+  ReadTuningButton = "0x0023",
+  GetLastV = "0x0024",
+  AppAction = "0xFFFF",
+}
+
+const enum PeripheralCommand {
+  BatteryVoltage = 0x4000,
+  ButtonAction = 0x4001,
+  ButtonTable = 0x4002,
+  ShiftComplete = 0x4003,
+  FrontCog = 0x4004,
+}
+
+const enum ResponseCode {
+  Success = 0x8000,
+}
+
 function bytesToHex(bytes: Uint8Array) {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -196,13 +241,13 @@ function encodeNameBytes(name: string) {
 }
 
 function encodeGetList(mac: string) {
-  const cmd = reverseCommand("0x0000");
+  const cmd = reverseCommand(AppCommand.GetList);
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
 
 function encodeSetName(mac: string, name: string) {
-  const cmd = reverseCommand("0x0009");
+  const cmd = reverseCommand(AppCommand.SetName);
   const revMac = reverseMacAddress(mac);
   const header = hexToBuffer(cmd + revMac);
   const nameBytes = encodeNameBytes(name);
@@ -229,7 +274,7 @@ function buildRearCogParamsHex(cablePositions: number[]) {
 }
 
 function encodeSetRearCogInfo(mac: string, cablePositions: number[]) {
-  const cmd = reverseCommand("0x001D");
+  const cmd = reverseCommand(AppCommand.SetRearCogInfo);
   const revMac = reverseMacAddress(mac);
   const header = hexToBuffer(cmd + revMac);
   const paramsHex = buildRearCogParamsHex(cablePositions);
@@ -271,7 +316,7 @@ function parseGetListResponse(data: Uint8Array): GetListResponse {
   const targetMac =
     data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
-  if (code === 0x8000) {
+  if (code === ResponseCode.Success) {
     const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const entries = parseGetListPayload(payload) || undefined;
     return { status: "success", code, targetMac, entries };
@@ -285,7 +330,7 @@ function parseReadButtonMapResponse(data: Uint8Array): ReadButtonMapResponse {
   const targetMac =
     data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
-  if (code === 0x8000) {
+  if (code === ResponseCode.Success) {
     const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const reversed = reverseBytes(payload);
     const mapHex = bytesToHexUpper(reversed);
@@ -333,7 +378,7 @@ function parseRearCogInfoResponse(data: Uint8Array): RearCogInfoResponse {
   const targetMac =
     data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
-  if (code === 0x8000) {
+  if (code === ResponseCode.Success) {
     const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const reversed = reverseBytes(payload);
     const rawHex = bytesToHexUpper(reversed);
@@ -364,7 +409,7 @@ function parseGetPositionResponse(data: Uint8Array): GetPositionResponse {
   const targetMac =
     data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
-  if (code === 0x8000) {
+  if (code === ResponseCode.Success) {
     const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const rawHex = bytesToHexUpper(payload);
     const rawBytes = Array.from(payload.values());
@@ -398,7 +443,11 @@ function parseBasicResponse(data: Uint8Array): BasicResponse {
   const code = leInt(data, 2) & 0xffff;
   const targetMac =
     data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
-  return { status: code === 0x8000 ? "success" : "error", code, targetMac };
+  return {
+    status: code === ResponseCode.Success ? "success" : "error",
+    code,
+    targetMac,
+  };
 }
 
 function parseMotorParamsResponse(data: Uint8Array): MotorParamsResponse {
@@ -406,7 +455,7 @@ function parseMotorParamsResponse(data: Uint8Array): MotorParamsResponse {
   const targetMac =
     data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
-  if (code === 0x8000) {
+  if (code === ResponseCode.Success) {
     const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const rawHex = bytesToHexUpper(payload);
     const rawBytes = Array.from(payload.values());
@@ -457,7 +506,7 @@ export function parseBatteryVoltageNotify(
   const targetMac =
     data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
-  if (code === 0x4000) {
+  if (code === PeripheralCommand.BatteryVoltage) {
     const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const rawHex = bytesToHexUpper(payload);
     const rawBytes = Array.from(payload.values());
@@ -488,7 +537,7 @@ export function parseButtonActionNotify(data: Uint8Array): ButtonActionNotify {
   const targetMac =
     data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
-  if (code === 0x4001) {
+  if (code === PeripheralCommand.ButtonAction) {
     const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const rawHex = bytesToHexUpper(payload);
     const rawBytes = Array.from(payload.values());
@@ -529,7 +578,7 @@ export function parseShiftCompleteNotify(
   const targetMac =
     data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
-  if (code === 0x4003) {
+  if (code === PeripheralCommand.ShiftComplete) {
     const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const rawHex = bytesToHexUpper(payload);
     const rawBytes = Array.from(payload.values());
@@ -554,7 +603,7 @@ export function parseFrontCogNotify(data: Uint8Array): FrontCogNotify {
   const targetMac =
     data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
-  if (code === 0x4004) {
+  if (code === PeripheralCommand.FrontCog) {
     const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const rawHex = bytesToHexUpper(payload);
     const rawBytes = Array.from(payload.values());
@@ -596,7 +645,7 @@ export class BikeNetCommands {
     await this.protocol.sendCommand(this.device, payload);
     const notify = await this.protocol.waitForPeripheralMessage(
       this.device,
-      0x4002,
+      PeripheralCommand.ButtonTable,
       8000,
     );
     return parseButtonTableNotify(notify);
@@ -659,7 +708,7 @@ export class BikeNetCommands {
   ) {
     return this.protocol.subscribeToPeripheralMessage(
       this.device,
-      0x4000,
+      PeripheralCommand.BatteryVoltage,
       (data) => handler(parseBatteryVoltageNotify(data, this.device.address)),
     );
   }
@@ -667,7 +716,7 @@ export class BikeNetCommands {
   async subscribeToButtonAction(handler: (notify: ButtonActionNotify) => void) {
     return this.protocol.subscribeToPeripheralMessage(
       this.device,
-      0x4001,
+      PeripheralCommand.ButtonAction,
       (data) => handler(parseButtonActionNotify(data)),
     );
   }
@@ -677,7 +726,7 @@ export class BikeNetCommands {
   ) {
     return this.protocol.subscribeToPeripheralMessage(
       this.device,
-      0x4003,
+      PeripheralCommand.ShiftComplete,
       (data) => handler(parseShiftCompleteNotify(data)),
     );
   }
@@ -685,7 +734,7 @@ export class BikeNetCommands {
   async subscribeToButtonTable(handler: (notify: ButtonTableResponse) => void) {
     return this.protocol.subscribeToPeripheralMessage(
       this.device,
-      0x4002,
+      PeripheralCommand.ButtonTable,
       (data) => handler(parseButtonTableNotify(data)),
     );
   }
@@ -693,50 +742,50 @@ export class BikeNetCommands {
   async subscribeToFrontCog(handler: (notify: FrontCogNotify) => void) {
     return this.protocol.subscribeToPeripheralMessage(
       this.device,
-      0x4004,
+      PeripheralCommand.FrontCog,
       (data) => handler(parseFrontCogNotify(data)),
     );
   }
 }
 
 function encodeReadButtonMap(mac: string) {
-  const cmd = reverseCommand("0x0015");
+  const cmd = reverseCommand(AppCommand.ReadButtonMap);
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
 
 function encodeGetRearCogInfo(mac: string) {
-  const cmd = reverseCommand("0x001F");
+  const cmd = reverseCommand(AppCommand.GetRearCogInfo);
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
 
 function encodeGetPosition(mac: string) {
-  const cmd = reverseCommand("0x0013");
+  const cmd = reverseCommand(AppCommand.GetPosition);
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
 
 function encodeBlinkLed(mac: string) {
-  const cmd = reverseCommand("0x0004");
+  const cmd = reverseCommand(AppCommand.BlinkLed);
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
 
 function encodeShiftUp(mac: string) {
-  const cmd = reverseCommand("0x0010");
+  const cmd = reverseCommand(AppCommand.ShiftUp);
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
 
 function encodeShiftDown(mac: string) {
-  const cmd = reverseCommand("0x0011");
+  const cmd = reverseCommand(AppCommand.ShiftDown);
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
 
 function encodeGetMotorParams(mac: string) {
-  const cmd = reverseCommand("0x0017");
+  const cmd = reverseCommand(AppCommand.GetMotorParams);
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
@@ -746,7 +795,7 @@ function parseButtonTableNotify(data: Uint8Array): ButtonTableResponse {
   const targetMac =
     data.length >= 8 ? macFromBytes(data.slice(2, 8)) : undefined;
 
-  if (code === 0x4002) {
+  if (code === PeripheralCommand.ButtonTable) {
     const payload = data.length > 8 ? data.slice(8) : new Uint8Array();
     const entries = payload.length >= 16 ? parseButtonMapEntries(payload) : [];
     return { status: "success", code, targetMac, entries };
