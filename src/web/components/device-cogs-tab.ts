@@ -62,6 +62,19 @@ class DeviceCogsTab extends SignalWatcher(LitElement) {
         align-items: flex-end;
       }
 
+      .gear-teeth {
+        font-size: 11px;
+        font-weight: 600;
+        color: #7ef0c3;
+        min-height: 14px;
+        display: flex;
+        align-items: flex-end;
+      }
+
+      .gear-teeth.missing {
+        color: var(--muted, #98a6b5);
+      }
+
       .gear-line {
         width: 6px;
         height: var(--gear-height, 18px);
@@ -184,6 +197,7 @@ class DeviceCogsTab extends SignalWatcher(LitElement) {
       offsetApproximate: number;
       offsetPrecise: number | null;
       current: boolean;
+      teeth: number | null;
     }>,
   ) {
     const sorted = [...gears].sort((a, b) => a.gearNumber - b.gearNumber);
@@ -202,6 +216,7 @@ class DeviceCogsTab extends SignalWatcher(LitElement) {
       offsetApproximate: number;
       offsetPrecise: number | null;
       current: boolean;
+      teeth: number | null;
     },
     minGear: number,
     maxGear: number,
@@ -217,9 +232,12 @@ class DeviceCogsTab extends SignalWatcher(LitElement) {
       ? offsetValue.toFixed(2)
       : "--";
     const offsetClass = precise !== null ? "precise" : "approx";
+    const hasTeeth = Number.isFinite(gear.teeth);
+    const teethLabel = hasTeeth ? `${gear.teeth}T` : "--";
     return html`
       <div class="gear-card" role="listitem">
         <div class="gear-number">${gear.gearNumber}</div>
+        <div class="gear-teeth ${hasTeeth ? "" : "missing"}">${teethLabel}</div>
         <div class="gear-line" style="--gear-height: ${height}px"></div>
         <div class="gear-offset ${offsetClass}">${offsetLabel}</div>
         <div class="gear-current" aria-hidden=${!gear.current}>

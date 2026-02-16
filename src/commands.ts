@@ -45,6 +45,7 @@ export interface RearCogInfoResponse {
   code: number;
   targetMac?: string;
   values?: number[];
+  teeth?: number[];
   rawHex?: string;
   rawBytes?: number[];
 }
@@ -240,9 +241,13 @@ function encodeNameBytes(name: string) {
   return out;
 }
 
-function buildRearCogParamsHex(cablePositions: number[]) {
+function buildRearCogParamsHex(cablePositions: number[], teeth?: number[]) {
   if (!cablePositions.length) {
     throw new Error("cablePositions must include at least one value");
+  }
+
+  if (teeth && teeth.length && teeth.length !== cablePositions.length) {
+    throw new Error("teeth length must match cablePositions length");
   }
 
   const chunks: string[] = [];
@@ -251,7 +256,9 @@ function buildRearCogParamsHex(cablePositions: number[]) {
     const cable = Math.trunc(raw * 10);
     const cableHex = cable.toString(16).padStart(4, "0");
     const cableLE = reverseCommand(cableHex);
-    chunks.push((cableLE + "00").toUpperCase());
+    const toothValue = teeth?.[i] ?? 0;
+    const toothHex = toothValue.toString(16).padStart(2, "0");
+    chunks.push((cableLE + toothHex).toUpperCase());
   }
   return chunks.join("");
 }
@@ -355,21 +362,23 @@ function parseRearCogInfoResponse(data: Uint8Array): RearCogInfoResponse {
     const rawHex = bytesToHexUpper(reversed);
     const rawBytes = Array.from(reversed.values());
     const values: number[] = [];
+    const teethValues: number[] = [];
 
-    if (rawHex.length % 6 === 0 && rawHex.length > 0) {
-      const chunks: string[] = [];
-      for (let i = 0; i < rawHex.length; i += 6) {
-        chunks.push(rawHex.substring(i, i + 6));
-      }
-      for (const chunk of chunks.reverse()) {
-        if (chunk.length !== 6) continue;
-        const valueHex = chunk.substring(2, 6);
-        const value = parseInt(valueHex, 16) / 10;
-        if (!Number.isNaN(value)) values.push(value);
-      }
+    for (let i = 0; i + 2 < payload.length; i += 3) {
+      const cableValue = leInt(payload.slice(i, i + 2), 2) / 10;
+      if (!Number.isNaN(cableValue)) values.push(cableValue);
+      teethValues.push(payload[i + 2] & 0xff);
     }
 
-    return { status: "success", code, targetMac, values, rawHex, rawBytes };
+    return {
+      status: "success",
+      code,
+      targetMac,
+      values,
+      teeth: teethValues.length ? teethValues : undefined,
+      rawHex,
+      rawBytes,
+    };
   }
 
   return { status: "error", code, targetMac };
@@ -640,12 +649,15 @@ export class BikeNetCommands {
     return parseRearCogInfoResponse(response);
   }
 
-  async setRearCogInfo(cablePositions: number[]): Promise<BasicResponse> {
+  async setRearCogInfo(
+    cablePositions: number[],
+    teeth?: number[],
+  ): Promise<BasicResponse> {
     const header = encodeCommandWithMac(
       AppCommand.SetRearCogInfo,
       this.device.address,
     );
-    const paramsHex = buildRearCogParamsHex(cablePositions);
+    const paramsHex = buildRearCogParamsHex(cablePositions, teeth);
     const params = hexToBuffer(paramsHex);
     const payload = new Uint8Array(header.length + params.length);
     payload.set(header, 0);

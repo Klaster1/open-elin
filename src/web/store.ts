@@ -18,6 +18,7 @@ export type Gear = {
   offsetApproximate: number;
   offsetPrecise: number | null;
   current: boolean;
+  teeth: number | null;
 };
 export type Gears = Gear[];
 type GearMap = Record<string, Gears>;
@@ -485,11 +486,13 @@ function normalizeGear(gear: unknown): Gear | null {
   if (typeof value.offsetApproximate !== "number") return null;
   const offsetPrecise =
     typeof value.offsetPrecise === "number" ? value.offsetPrecise : null;
+  const teeth = typeof value.teeth === "number" ? value.teeth : null;
   return {
     gearNumber: value.gearNumber,
     offsetApproximate: value.offsetApproximate,
     offsetPrecise,
     current: Boolean(value.current),
+    teeth,
   };
 }
 
@@ -507,12 +510,13 @@ function getActiveMacKey() {
   return (mac.get() || connectedDevice.get()?.address || "").toUpperCase();
 }
 
-function buildApproximateGears(values: number[]) {
+function buildApproximateGears(values: number[], teeth?: number[]) {
   return values.map((value, index) => ({
     gearNumber: index + 1,
     offsetApproximate: value,
     offsetPrecise: null,
     current: false,
+    teeth: typeof teeth?.[index] === "number" ? teeth[index] : null,
   }));
 }
 
@@ -524,22 +528,28 @@ function setGearsForMac(macKey: string, nextGears: Gears) {
   storeGears(next);
 }
 
-function updateApproximateGears(macKey: string, values?: number[]) {
+function updateApproximateGears(
+  macKey: string,
+  values?: number[],
+  teeth?: number[],
+) {
   if (!macKey || !values?.length) return;
   const normalized = macKey.toUpperCase();
   const existing = gears.get()[normalized] ?? [];
   const existingByNumber = new Map(
     existing.map((gear) => [gear.gearNumber, gear]),
   );
-  const updated = buildApproximateGears(values).map((gear) => {
+  const updated = buildApproximateGears(values, teeth).map((gear) => {
     const prior = existingByNumber.get(gear.gearNumber);
+    const mergedTeeth = teeth ? gear.teeth : (prior?.teeth ?? gear.teeth);
     return prior
       ? {
           ...gear,
           offsetPrecise: prior.offsetPrecise,
           current: prior.current,
+          teeth: mergedTeeth,
         }
-      : gear;
+      : { ...gear, teeth: mergedTeeth };
   });
   setGearsForMac(normalized, updated);
 }
@@ -748,7 +758,11 @@ export async function getRearCogInfo() {
     const response = await deviceCommands.getRearCogInfo();
     rearCogInfo.set(response ?? null);
     if (response?.status === "success") {
-      updateApproximateGears(getActiveMacKey(), response.values);
+      updateApproximateGears(
+        getActiveMacKey(),
+        response.values,
+        response.teeth,
+      );
     }
     appendLog("Get rear cog info result", response ?? {});
     return response;
