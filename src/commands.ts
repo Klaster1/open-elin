@@ -240,23 +240,6 @@ function encodeNameBytes(name: string) {
   return out;
 }
 
-function encodeGetList(mac: string) {
-  const cmd = reverseCommand(AppCommand.GetList);
-  const revMac = reverseMacAddress(mac);
-  return hexToBuffer(cmd + revMac);
-}
-
-function encodeSetName(mac: string, name: string) {
-  const cmd = reverseCommand(AppCommand.SetName);
-  const revMac = reverseMacAddress(mac);
-  const header = hexToBuffer(cmd + revMac);
-  const nameBytes = encodeNameBytes(name);
-  const out = new Uint8Array(header.length + nameBytes.length);
-  out.set(header, 0);
-  out.set(nameBytes, header.length);
-  return out;
-}
-
 function buildRearCogParamsHex(cablePositions: number[]) {
   if (!cablePositions.length) {
     throw new Error("cablePositions must include at least one value");
@@ -271,18 +254,6 @@ function buildRearCogParamsHex(cablePositions: number[]) {
     chunks.push((cableLE + "00").toUpperCase());
   }
   return chunks.join("");
-}
-
-function encodeSetRearCogInfo(mac: string, cablePositions: number[]) {
-  const cmd = reverseCommand(AppCommand.SetRearCogInfo);
-  const revMac = reverseMacAddress(mac);
-  const header = hexToBuffer(cmd + revMac);
-  const paramsHex = buildRearCogParamsHex(cablePositions);
-  const params = hexToBuffer(paramsHex);
-  const out = new Uint8Array(header.length + params.length);
-  out.set(header, 0);
-  out.set(params, header.length);
-  return out;
 }
 
 function parseGetListPayload(payload: Uint8Array): GetListEntry[] | null {
@@ -629,19 +600,28 @@ export class BikeNetCommands {
   }
 
   async getList(): Promise<GetListResponse> {
-    const payload = encodeGetList(this.device.address);
+    const payload = encodeCommandWithMac(
+      AppCommand.GetList,
+      this.device.address,
+    );
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseGetListResponse(response);
   }
 
   async readButtonMap(): Promise<ReadButtonMapResponse> {
-    const payload = encodeReadButtonMap(this.device.address);
+    const payload = encodeCommandWithMac(
+      AppCommand.ReadButtonMap,
+      this.device.address,
+    );
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseReadButtonMapResponse(response);
   }
 
   async readButtonTable(): Promise<ButtonTableResponse> {
-    const payload = encodeReadButtonMap(this.device.address);
+    const payload = encodeCommandWithMac(
+      AppCommand.ReadButtonMap,
+      this.device.address,
+    );
     await this.protocol.sendCommand(this.device, payload);
     const notify = await this.protocol.waitForPeripheralMessage(
       this.device,
@@ -652,25 +632,42 @@ export class BikeNetCommands {
   }
 
   async getRearCogInfo(): Promise<RearCogInfoResponse> {
-    const payload = encodeGetRearCogInfo(this.device.address);
+    const payload = encodeCommandWithMac(
+      AppCommand.GetRearCogInfo,
+      this.device.address,
+    );
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseRearCogInfoResponse(response);
   }
 
   async setRearCogInfo(cablePositions: number[]): Promise<BasicResponse> {
-    const payload = encodeSetRearCogInfo(this.device.address, cablePositions);
+    const header = encodeCommandWithMac(
+      AppCommand.SetRearCogInfo,
+      this.device.address,
+    );
+    const paramsHex = buildRearCogParamsHex(cablePositions);
+    const params = hexToBuffer(paramsHex);
+    const payload = new Uint8Array(header.length + params.length);
+    payload.set(header, 0);
+    payload.set(params, header.length);
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseBasicResponse(response);
   }
 
   async getPosition(): Promise<GetPositionResponse> {
-    const payload = encodeGetPosition(this.device.address);
+    const payload = encodeCommandWithMac(
+      AppCommand.GetPosition,
+      this.device.address,
+    );
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseGetPositionResponse(response);
   }
 
   async blinkLed(): Promise<BasicResponse> {
-    const payload = encodeBlinkLed(this.device.address);
+    const payload = encodeCommandWithMac(
+      AppCommand.BlinkLed,
+      this.device.address,
+    );
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseBasicResponse(response);
   }
@@ -680,25 +677,38 @@ export class BikeNetCommands {
     targetMac?: string,
   ): Promise<BasicResponse> {
     const mac = targetMac ?? this.device.address;
-    const payload = encodeSetName(mac, name);
+    const header = encodeCommandWithMac(AppCommand.SetName, mac);
+    const nameBytes = encodeNameBytes(name);
+    const payload = new Uint8Array(header.length + nameBytes.length);
+    payload.set(header, 0);
+    payload.set(nameBytes, header.length);
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseBasicResponse(response);
   }
 
   async shiftUp(): Promise<BasicResponse> {
-    const payload = encodeShiftUp(this.device.address);
+    const payload = encodeCommandWithMac(
+      AppCommand.ShiftUp,
+      this.device.address,
+    );
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseBasicResponse(response);
   }
 
   async shiftDown(): Promise<BasicResponse> {
-    const payload = encodeShiftDown(this.device.address);
+    const payload = encodeCommandWithMac(
+      AppCommand.ShiftDown,
+      this.device.address,
+    );
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseBasicResponse(response);
   }
 
   async getMotorParams(): Promise<MotorParamsResponse> {
-    const payload = encodeGetMotorParams(this.device.address);
+    const payload = encodeCommandWithMac(
+      AppCommand.GetMotorParams,
+      this.device.address,
+    );
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseMotorParamsResponse(response);
   }
@@ -748,44 +758,8 @@ export class BikeNetCommands {
   }
 }
 
-function encodeReadButtonMap(mac: string) {
-  const cmd = reverseCommand(AppCommand.ReadButtonMap);
-  const revMac = reverseMacAddress(mac);
-  return hexToBuffer(cmd + revMac);
-}
-
-function encodeGetRearCogInfo(mac: string) {
-  const cmd = reverseCommand(AppCommand.GetRearCogInfo);
-  const revMac = reverseMacAddress(mac);
-  return hexToBuffer(cmd + revMac);
-}
-
-function encodeGetPosition(mac: string) {
-  const cmd = reverseCommand(AppCommand.GetPosition);
-  const revMac = reverseMacAddress(mac);
-  return hexToBuffer(cmd + revMac);
-}
-
-function encodeBlinkLed(mac: string) {
-  const cmd = reverseCommand(AppCommand.BlinkLed);
-  const revMac = reverseMacAddress(mac);
-  return hexToBuffer(cmd + revMac);
-}
-
-function encodeShiftUp(mac: string) {
-  const cmd = reverseCommand(AppCommand.ShiftUp);
-  const revMac = reverseMacAddress(mac);
-  return hexToBuffer(cmd + revMac);
-}
-
-function encodeShiftDown(mac: string) {
-  const cmd = reverseCommand(AppCommand.ShiftDown);
-  const revMac = reverseMacAddress(mac);
-  return hexToBuffer(cmd + revMac);
-}
-
-function encodeGetMotorParams(mac: string) {
-  const cmd = reverseCommand(AppCommand.GetMotorParams);
+function encodeCommandWithMac(command: AppCommand, mac: string) {
+  const cmd = reverseCommand(command);
   const revMac = reverseMacAddress(mac);
   return hexToBuffer(cmd + revMac);
 }
