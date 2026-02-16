@@ -5,7 +5,7 @@ import { SignalWatcher } from "@lit-labs/signals";
 import { appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
-class DeviceLogTab extends SignalWatcher(LitElement) {
+export class DeviceLogTab extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -98,6 +98,8 @@ ${logLines.join("\n")}</pre
   }
 }
 
-customElements.define("device-log-tab", DeviceLogTab);
+if (!customElements.get("device-log-tab")) {
+  customElements.define("device-log-tab", DeviceLogTab);
+}
 
 export {};

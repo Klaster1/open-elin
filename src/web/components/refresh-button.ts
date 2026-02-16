@@ -3,7 +3,7 @@ import { LitElement, css, html } from "lit";
 import { sharedStyles } from "../styles.ts";
 import "./inline-spinner.ts";
 
-class RefreshButton extends LitElement {
+export class RefreshButton extends LitElement {
   static styles = [
     sharedStyles,
     css`
@@ -75,6 +75,8 @@ class RefreshButton extends LitElement {
   }
 }
 
-customElements.define("refresh-button", RefreshButton);
+if (!customElements.get("refresh-button")) {
+  customElements.define("refresh-button", RefreshButton);
+}
 
 export {};

@@ -4,7 +4,7 @@ import { SignalWatcher } from "@lit-labs/signals";
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
-class DeviceCogsTab extends SignalWatcher(LitElement) {
+export class DeviceCogsTab extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -271,6 +271,8 @@ class DeviceCogsTab extends SignalWatcher(LitElement) {
   }
 }
 
-customElements.define("device-cogs-tab", DeviceCogsTab);
+if (!customElements.get("device-cogs-tab")) {
+  customElements.define("device-cogs-tab", DeviceCogsTab);
+}
 
 export {};

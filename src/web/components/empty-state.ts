@@ -2,7 +2,7 @@ import { LitElement, css, html } from "lit";
 
 import { sharedStyles } from "../styles.ts";
 
-class EmptyState extends LitElement {
+export class EmptyState extends LitElement {
   static styles = [
     sharedStyles,
     css`
@@ -138,6 +138,8 @@ class EmptyState extends LitElement {
   }
 }
 
-customElements.define("empty-state", EmptyState);
+if (!customElements.get("empty-state")) {
+  customElements.define("empty-state", EmptyState);
+}
 
 export {};

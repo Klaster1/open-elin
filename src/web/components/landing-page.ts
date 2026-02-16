@@ -5,7 +5,7 @@ import { appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import "./empty-state.ts";
 
-class LandingPage extends SignalWatcher(LitElement) {
+export class LandingPage extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -69,6 +69,8 @@ class LandingPage extends SignalWatcher(LitElement) {
   }
 }
 
-customElements.define("landing-page", LandingPage);
+if (!customElements.get("landing-page")) {
+  customElements.define("landing-page", LandingPage);
+}
 
 export {};

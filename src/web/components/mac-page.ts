@@ -4,7 +4,7 @@ import { SignalWatcher } from "@lit-labs/signals";
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
-class MacPage extends SignalWatcher(LitElement) {
+export class MacPage extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -184,6 +184,8 @@ class MacPage extends SignalWatcher(LitElement) {
   }
 }
 
-customElements.define("mac-page", MacPage);
+if (!customElements.get("mac-page")) {
+  customElements.define("mac-page", MacPage);
+}
 
 export {};

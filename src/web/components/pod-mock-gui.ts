@@ -6,7 +6,7 @@ import { sharedStyles } from "../styles.ts";
 
 const podImageUrl = new URL("../images/pod.png", import.meta.url).href;
 
-class PodMockGui extends SignalWatcher(LitElement) {
+export class PodMockGui extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -267,6 +267,8 @@ class PodMockGui extends SignalWatcher(LitElement) {
   }
 }
 
-customElements.define("pod-mock-gui", PodMockGui);
+if (!customElements.get("pod-mock-gui")) {
+  customElements.define("pod-mock-gui", PodMockGui);
+}
 
 export {};

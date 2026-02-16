@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { hmrPlugin, presets } from "vite-plugin-web-components-hmr";
 import mkcert from "vite-plugin-mkcert";
 
 export default defineConfig({
@@ -18,5 +19,11 @@ export default defineConfig({
   define: {
     global: "globalThis",
   },
-  plugins: [mkcert()],
+  plugins: [
+    hmrPlugin({
+      include: ["./**/*.ts"],
+      presets: [presets.lit],
+    }),
+    mkcert(),
+  ],
 });

@@ -2,7 +2,7 @@ import { LitElement, css, html } from "lit";
 
 import { sharedStyles } from "../styles.ts";
 
-class InlineSpinner extends LitElement {
+export class InlineSpinner extends LitElement {
   static styles = [
     sharedStyles,
     css`
@@ -33,6 +33,8 @@ class InlineSpinner extends LitElement {
   }
 }
 
-customElements.define("inline-spinner", InlineSpinner);
+if (!customElements.get("inline-spinner")) {
+  customElements.define("inline-spinner", InlineSpinner);
+}
 
 export {};

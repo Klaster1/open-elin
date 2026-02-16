@@ -27,6 +27,7 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 - Prefer colocating component-specific styles inside component TS files.
 - Keep shared styles minimal and only for truly global tokens or base rules.
 - Always make sure any edits in UI are accessible, use "accessibility-auditor" skill for that.
+- Keep HMR wiring in sync with component changes: the Vite `vite-plugin-web-components-hmr` plugin should stay enabled in [vite.config.ts](vite.config.ts) and components should guard `customElements.define(...)` to avoid re-define errors on hot updates.
 
 ## Testing and Validation
 
