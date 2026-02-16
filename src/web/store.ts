@@ -139,6 +139,7 @@ export const appActions = {
   setMacFromRoute,
   setManualMac,
   applyManualMac,
+  clearStoredMac,
   connect,
   connectDemo,
   renameHub,
@@ -182,6 +183,21 @@ export function setMacFromRoute(value: string) {
 
 export function setManualMac(value: string) {
   manualMac.set(value.trim().toUpperCase());
+}
+
+export function clearStoredMac() {
+  try {
+    localStorage.removeItem(macStorageKey);
+  } catch {
+    // Ignore storage failures.
+  }
+  macLockedByUser = false;
+  manualMac.set("");
+  mac.set("");
+  pendingRouteMac.set("");
+  connected.set(false);
+  connectedDevice.set(null);
+  commands.set(null);
 }
 
 export function applyManualMac() {

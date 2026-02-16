@@ -60,6 +60,12 @@ class DevicePage extends SignalWatcher(LitElement) {
         gap: 10px;
       }
 
+      .sidebar-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
       .icon-button {
         display: inline-flex;
         align-items: center;
@@ -294,16 +300,32 @@ class DevicePage extends SignalWatcher(LitElement) {
             <div class="sidebar-head">
               <div class="sidebar-name-row">
                 <div class="sidebar-name">${deviceName}</div>
-                <button
-                  class="icon-button"
-                  type="button"
-                  @click=${this.openRename}
-                  aria-label="Rename hub"
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 20h4l10.5-10.5-4-4L4 16v4zM14.5 5.5l4 4"></path>
-                  </svg>
-                </button>
+                <div class="sidebar-actions">
+                  <button
+                    class="icon-button"
+                    type="button"
+                    @click=${this.openRename}
+                    aria-label="Rename hub"
+                    title="Rename hub"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M4 20h4l10.5-10.5-4-4L4 16v4zM14.5 5.5l4 4"
+                      ></path>
+                    </svg>
+                  </button>
+                  <button
+                    class="icon-button"
+                    type="button"
+                    @click=${this.onDisconnect}
+                    aria-label="Disconnect"
+                    title="Disconnect"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M18 6L6 18M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
               </div>
               <div class="sidebar-mac">${displayMac}</div>
               <div
@@ -407,6 +429,15 @@ class DevicePage extends SignalWatcher(LitElement) {
   private onDemo() {
     this.dispatchEvent(
       new CustomEvent("demo-requested", { bubbles: true, composed: true }),
+    );
+  }
+
+  private onDisconnect() {
+    this.dispatchEvent(
+      new CustomEvent("disconnect-requested", {
+        bubbles: true,
+        composed: true,
+      }),
     );
   }
 

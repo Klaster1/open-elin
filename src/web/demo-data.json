@@ -16,7 +16,7 @@
     "down": { "rawHex": "D4000A" }
   },
   "batteryNotifications": [
-    { "targetMac": "D7:BA:AB:52:A0:E5", "rawHex": "1D10" },
+    { "targetMac": "02:11:22:33:44:55", "rawHex": "1D10" },
     { "targetMac": "D5:89:B2:13:FA:04", "rawHex": "070C" },
     { "targetMac": "D5:89:B2:13:FA:04", "rawHex": "0B0C" }
   ]

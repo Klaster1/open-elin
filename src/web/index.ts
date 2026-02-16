@@ -153,6 +153,7 @@ class BikeNetApp extends SignalWatcher(LitElement) {
         .macValue=${targetMac}
         .activeTab=${activeTab}
         @reconnect-requested=${this.handleReconnect}
+        @disconnect-requested=${this.handleDisconnect}
         @demo-requested=${this.handleDemo}
       ></device-page>
     `;
@@ -184,6 +185,11 @@ class BikeNetApp extends SignalWatcher(LitElement) {
     if (mac) {
       void this.navigate(`/device/${serializeMacForRoute(mac)}/log`);
     }
+  }
+
+  private async handleDisconnect() {
+    appActions.clearStoredMac();
+    await this.navigate("/");
   }
 
   private async navigate(path: string, options: { replace?: boolean } = {}) {
