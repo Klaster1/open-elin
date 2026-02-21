@@ -31,6 +31,9 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 ## Technology Guidelines
 
 - Frontend: Lit + @lit-labs/signals for reactive UI.
+- Page component file names and custom element names must use the `page-` prefix (for example: `page-landing.ts` + `page-landing`, `page-mac.ts` + `page-mac`, `page-device.ts` + `page-device`).
+- Page component class names must use `Page*` (for example: `PageLanding`, `PageMac`, `PageDevice`).
+- Root app component class/file naming should be `App` in `app.ts`.
 - Always use Lit signals for component state (including local UI state) instead of plain mutable fields and manual `requestUpdate()`.
 - UI components: Shoelace for buttons, dialogs, inputs, and tags.
 - Build tooling: Vite.

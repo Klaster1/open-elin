@@ -24,7 +24,7 @@ type RouteParams = {
   tab?: string;
 };
 
-export class OpenElinApp extends SignalWatcher(LitElement) {
+export class App extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -97,14 +97,14 @@ export class OpenElinApp extends SignalWatcher(LitElement) {
   }
 
   private renderLandingRoute() {
-    return html`<landing-page
+    return html`<page-landing
       @connect-requested=${this.handleConnect}
       @demo-requested=${this.handleDemo}
-    ></landing-page>`;
+    ></page-landing>`;
   }
 
   private renderMacRoute() {
-    return html`<mac-page @mac-acquired=${this.handleMacAcquired}></mac-page>`;
+    return html`<page-mac @mac-acquired=${this.handleMacAcquired}></page-mac>`;
   }
 
   private renderDeviceRoute(macParam?: string, tabParam?: string) {
@@ -133,13 +133,13 @@ export class OpenElinApp extends SignalWatcher(LitElement) {
     const activeTab = tabParam || "log";
 
     return html`
-      <device-page
+      <page-device
         .macValue=${targetMac}
         .activeTab=${activeTab}
         @reconnect-requested=${this.handleReconnect}
         @disconnect-requested=${this.handleDisconnect}
         @demo-requested=${this.handleDemo}
-      ></device-page>
+      ></page-device>
     `;
   }
 
@@ -201,7 +201,7 @@ export class OpenElinApp extends SignalWatcher(LitElement) {
 if (!customElements.get("openelin-app")) {
   customElements.define(
     "openelin-app",
-    OpenElinApp as unknown as CustomElementConstructor,
+    App as unknown as CustomElementConstructor,
   );
 }
 

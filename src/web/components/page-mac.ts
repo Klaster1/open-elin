@@ -5,7 +5,7 @@ import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import "../demo/pod-mock-gui.ts";
 
-export class MacPage extends SignalWatcher(LitElement) {
+export class PageMac extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -202,8 +202,8 @@ export class MacPage extends SignalWatcher(LitElement) {
   }
 }
 
-if (!customElements.get("mac-page")) {
-  customElements.define("mac-page", MacPage);
+if (!customElements.get("page-mac")) {
+  customElements.define("page-mac", PageMac);
 }
 
 export {};

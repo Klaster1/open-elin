@@ -5,7 +5,7 @@ import { appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import "./connection-empty-state.ts";
 
-export class LandingPage extends SignalWatcher(LitElement) {
+export class PageLanding extends SignalWatcher(LitElement) {
   static styles = [sharedStyles];
 
   render() {
@@ -38,8 +38,8 @@ export class LandingPage extends SignalWatcher(LitElement) {
   }
 }
 
-if (!customElements.get("landing-page")) {
-  customElements.define("landing-page", LandingPage);
+if (!customElements.get("page-landing")) {
+  customElements.define("page-landing", PageLanding);
 }
 
 export {};
