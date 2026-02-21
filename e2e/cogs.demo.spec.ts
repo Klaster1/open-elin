@@ -152,6 +152,9 @@ test.describe("Cogs in demo mode", () => {
     updateDemoHubState,
     updateDemoDataState,
   }) => {
+    const initialProfileName = "Race";
+    const renamedProfileName = "Race Day";
+
     // Go to app
     const landing = new LandingPageModel(page);
     const device = new DevicePageModel(page);
@@ -196,17 +199,17 @@ test.describe("Cogs in demo mode", () => {
 
     await cogs.saveProfileButtonInEmptyState().click();
     await expect(cogs.profileDialog()).toBeVisible();
-    await cogs.fillProfileDialogInput("Race");
+    await cogs.fillProfileDialogInput(initialProfileName);
     await cogs.profileDialogConfirmButton().click();
 
     await expect(cogs.profilesList()).toBeVisible();
-    await expect(cogs.profileRowByName("Race")).toBeVisible();
-    await expect(cogs.profileOffsets("Race")).toContainText([
+    await expect(cogs.profileRowByName(initialProfileName)).toBeVisible();
+    await expect(cogs.profileOffsets(initialProfileName)).toContainText([
       "1.20",
       "3.10",
       "4.80",
     ]);
-    await expect(cogs.profileTeeth("Race")).toContainText([
+    await expect(cogs.profileTeeth(initialProfileName)).toContainText([
       "11T",
       "13T",
       "15T",
@@ -215,19 +218,27 @@ test.describe("Cogs in demo mode", () => {
     // Assert duplicate profile name shows validation error in save dialog
     await cogs.saveProfileButton().click();
     await expect(cogs.profileDialog()).toBeVisible();
-    await cogs.fillProfileDialogInput("Race");
+    await cogs.fillProfileDialogInput(initialProfileName);
     await cogs.profileDialogConfirmButton().click();
     await expect(cogs.profileDialog()).toContainText(
       "Profile name must be unique",
     );
     await cogs.profileDialogCancelButton().click();
 
+    // Assert profile rename icon opens dialog and rename applies to row name
+    await cogs.profileRenameButton(initialProfileName).click();
+    await expect(cogs.profileRenameDialog()).toBeVisible();
+    await cogs.fillProfileRenameDialogInput(renamedProfileName);
+    await cogs.profileRenameDialogConfirmButton().click();
+    await expect(cogs.profileRowByName(initialProfileName)).toHaveCount(0);
+    await expect(cogs.profileRowByName(renamedProfileName)).toBeVisible();
+
     // Reload page and assert saved profile row is restored from storage
     await page.goto("/");
     await expect(landing.root()).toBeVisible();
     await landing.startDemo();
     await device.goToCogsTab();
-    await expect(cogs.profileRowByName("Race")).toBeVisible();
+    await expect(cogs.profileRowByName(renamedProfileName)).toBeVisible();
 
     // Seed a different hub cog dataset and assert it is reflected after refresh
     await updateDemoHubState((draft) => {
@@ -248,7 +259,7 @@ test.describe("Cogs in demo mode", () => {
       draft.transportDelays.commandExecutionMs = 180;
     });
 
-    const applyPromise = cogs.profileApplyButton("Race").click();
+    const applyPromise = cogs.profileApplyButton(renamedProfileName).click();
     await expect(cogs.profileApplyingStatus()).toBeVisible();
 
     await expect(cogs.getRearCogInfoButton()).toHaveAttribute("disabled", "");
@@ -258,11 +269,15 @@ test.describe("Cogs in demo mode", () => {
     await expect(cogs.tuneDecrease10Button()).toHaveAttribute("disabled", "");
     await expect(cogs.tuneIncrease10Button()).toHaveAttribute("disabled", "");
     await expect(cogs.saveProfileButton()).toHaveAttribute("disabled", "");
-    await expect(cogs.profileApplyButton("Race")).toHaveAttribute(
+    await expect(cogs.profileApplyButton(renamedProfileName)).toHaveAttribute(
       "disabled",
       "",
     );
-    await expect(cogs.profileRemoveButton("Race")).toHaveAttribute(
+    await expect(cogs.profileRemoveButton(renamedProfileName)).toHaveAttribute(
+      "disabled",
+      "",
+    );
+    await expect(cogs.profileRenameButton(renamedProfileName)).toHaveAttribute(
       "disabled",
       "",
     );
@@ -276,7 +291,7 @@ test.describe("Cogs in demo mode", () => {
     await expect(cogs.gearTeethInCard(2)).toHaveText("15T");
 
     // Assert removed profile row no longer exists
-    await cogs.profileRemoveButton("Race").click();
-    await expect(cogs.profileRowByName("Race")).toHaveCount(0);
+    await cogs.profileRemoveButton(renamedProfileName).click();
+    await expect(cogs.profileRowByName(renamedProfileName)).toHaveCount(0);
   });
 });

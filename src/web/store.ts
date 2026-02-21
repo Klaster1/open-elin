@@ -193,6 +193,7 @@ export const appActions = {
   refreshCurrentGear,
   reloadCogProfiles,
   saveCurrentCogProfile,
+  renameCogProfile,
   removeCogProfile,
   applyCogProfile,
 };
@@ -990,6 +991,58 @@ export function removeCogProfile(name: string) {
   const existingProfiles = cogProfiles.get();
   const next = existingProfiles.filter((profile) => profile.name !== name);
   setCogProfiles(next);
+}
+
+export function renameCogProfile(currentName: string, nextName: string) {
+  const normalizedCurrentName = currentName.trim();
+  if (!normalizedCurrentName) {
+    return { ok: false as const, message: "Profile not found." };
+  }
+
+  const normalizedNextName = nextName.trim();
+  if (!normalizedNextName) {
+    return { ok: false as const, message: "Profile name is required." };
+  }
+
+  const existingProfiles = cogProfiles.get();
+  const profileIndex = existingProfiles.findIndex(
+    (profile) => profile.name === normalizedCurrentName,
+  );
+  if (profileIndex < 0) {
+    return { ok: false as const, message: "Profile not found." };
+  }
+
+  const duplicateExists = existingProfiles.some((profile, index) => {
+    if (index === profileIndex) return false;
+    return (
+      profile.name.localeCompare(normalizedNextName, undefined, {
+        sensitivity: "accent",
+      }) === 0
+    );
+  });
+  if (duplicateExists) {
+    return { ok: false as const, message: "Profile name must be unique." };
+  }
+
+  if (
+    existingProfiles[profileIndex].name.localeCompare(
+      normalizedNextName,
+      undefined,
+      {
+        sensitivity: "accent",
+      },
+    ) === 0
+  ) {
+    return { ok: true as const };
+  }
+
+  const nextProfiles = [...existingProfiles];
+  nextProfiles[profileIndex] = {
+    ...nextProfiles[profileIndex],
+    name: normalizedNextName,
+  };
+  setCogProfiles(nextProfiles);
+  return { ok: true as const };
 }
 
 export async function applyCogProfile(name: string) {

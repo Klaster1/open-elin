@@ -11,6 +11,10 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
   private profileDialogOpen = signal(false);
   private profileDialogValue = signal("");
   private profileDialogError = signal("");
+  private profileRenameDialogOpen = signal(false);
+  private profileRenameDialogValue = signal("");
+  private profileRenameDialogError = signal("");
+  private profileRenameTarget = signal("");
 
   static styles = [
     sharedStyles,
@@ -322,6 +326,45 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
         font-size: 13px;
       }
 
+      .profile-name-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .icon-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: 1px solid #233143;
+        background: #0f1620;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      .icon-button:hover {
+        border-color: #2b3a4b;
+        background: #18222f;
+      }
+
+      .icon-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .icon-button svg {
+        width: 14px;
+        height: 14px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
       .profile-meta {
         margin-top: 4px;
         color: var(--muted, #98a6b5);
@@ -508,6 +551,41 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
             @click=${this.confirmSaveProfile}
           >
             Save
+          </sl-button>
+        </div>
+      </sl-dialog>
+      <sl-dialog
+        data-test-id="cogs-profile-rename-dialog"
+        label="Rename profile"
+        ?open=${this.profileRenameDialogOpen.get()}
+        @sl-request-close=${this.onProfileRenameDialogRequestClose}
+      >
+        <sl-input
+          data-test-id="cogs-profile-rename-dialog-input"
+          label="Profile name"
+          placeholder="Enter profile name"
+          .value=${this.profileRenameDialogValue.get()}
+          ?invalid=${Boolean(this.profileRenameDialogError.get())}
+          help-text=${this.profileRenameDialogError.get()}
+          @sl-input=${this.onProfileRenameDialogInput}
+          ?disabled=${writeLocked}
+        ></sl-input>
+        <div slot="footer" class="dialog-actions">
+          <sl-button
+            data-test-id="cogs-profile-rename-dialog-cancel"
+            class="dialog-cancel"
+            ?disabled=${writeLocked}
+            @click=${this.closeProfileRenameDialog}
+          >
+            Cancel
+          </sl-button>
+          <sl-button
+            data-test-id="cogs-profile-rename-dialog-confirm"
+            variant="primary"
+            ?disabled=${writeLocked}
+            @click=${this.confirmRenameProfile}
+          >
+            Rename
           </sl-button>
         </div>
       </sl-dialog>
@@ -762,8 +840,23 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
         data-profile-name=${profile.name}
       >
         <div>
-          <div class="profile-name" data-test-id="cogs-profile-name">
-            ${profile.name}
+          <div class="profile-name-row">
+            <div class="profile-name" data-test-id="cogs-profile-name">
+              ${profile.name}
+            </div>
+            <button
+              class="icon-button"
+              type="button"
+              data-test-id="cogs-profile-rename"
+              ?disabled=${disabled}
+              @click=${() => this.openProfileRenameDialog(profile.name)}
+              aria-label=${`Rename profile ${profile.name}`}
+              title="Rename profile"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 20h4l10.5-10.5-4-4L4 16v4zM14.5 5.5l4 4"></path>
+              </svg>
+            </button>
           </div>
           <div class="profile-meta">
             <table class="profile-meta-table">
@@ -980,6 +1073,20 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
     this.profileDialogError.set("");
   };
 
+  private openProfileRenameDialog(name: string) {
+    if (appState.cogsProfileWriteInProgress.get()) return;
+    this.profileRenameTarget.set(name);
+    this.profileRenameDialogValue.set(name);
+    this.profileRenameDialogError.set("");
+    this.profileRenameDialogOpen.set(true);
+  }
+
+  private closeProfileRenameDialog = () => {
+    this.profileRenameDialogOpen.set(false);
+    this.profileRenameDialogError.set("");
+    this.profileRenameTarget.set("");
+  };
+
   private onProfileDialogRequestClose(event: Event) {
     if (appState.cogsProfileWriteInProgress.get()) {
       event.preventDefault();
@@ -995,6 +1102,36 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
       this.profileDialogError.set("");
     }
   }
+
+  private onProfileRenameDialogRequestClose(event: Event) {
+    if (appState.cogsProfileWriteInProgress.get()) {
+      event.preventDefault();
+      return;
+    }
+    this.closeProfileRenameDialog();
+  }
+
+  private onProfileRenameDialogInput(event: Event) {
+    const target = event.target as HTMLInputElement | null;
+    this.profileRenameDialogValue.set(target?.value ?? "");
+    if (this.profileRenameDialogError.get()) {
+      this.profileRenameDialogError.set("");
+    }
+  }
+
+  private confirmRenameProfile = () => {
+    if (appState.cogsProfileWriteInProgress.get()) return;
+    const result = appActions.renameCogProfile(
+      this.profileRenameTarget.get(),
+      this.profileRenameDialogValue.get(),
+    );
+    if (!result.ok) {
+      this.profileRenameDialogError.set(result.message);
+      return;
+    }
+    this.closeProfileRenameDialog();
+    this.setProfileStatus("");
+  };
 
   private confirmSaveProfile = () => {
     if (appState.cogsProfileWriteInProgress.get()) return;

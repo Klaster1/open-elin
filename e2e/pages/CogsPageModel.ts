@@ -172,6 +172,10 @@ export class CogsPageModel {
     return this.profileRowByName(name).getByTestId("cogs-profile-apply");
   }
 
+  profileRenameButton(name: string): Locator {
+    return this.profileRowByName(name).getByTestId("cogs-profile-rename");
+  }
+
   profileRemoveButton(name: string): Locator {
     return this.profileRowByName(name).getByTestId("cogs-profile-remove");
   }
@@ -198,6 +202,28 @@ export class CogsPageModel {
 
   profileDialogCancelButton(): Locator {
     return this.page.getByTestId("cogs-profile-dialog-cancel");
+  }
+
+  profileRenameDialog(): Locator {
+    return this.page.getByTestId("cogs-profile-rename-dialog");
+  }
+
+  profileRenameDialogInput(): Locator {
+    return this.page.getByTestId("cogs-profile-rename-dialog-input");
+  }
+
+  profileRenameDialogConfirmButton(): Locator {
+    return this.page.getByTestId("cogs-profile-rename-dialog-confirm");
+  }
+
+  profileRenameDialogCancelButton(): Locator {
+    return this.page.getByTestId("cogs-profile-rename-dialog-cancel");
+  }
+
+  async fillProfileRenameDialogInput(value: string) {
+    await this.profileRenameDialogInput().click();
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.type(value);
   }
 
   async fillProfileDialogInput(value: string) {
