@@ -20,3 +20,7 @@ Open:
 There is also a Node BLE scanner entrypoint (`npm start`, `noble`-based).
 
 For current development work, **ignore it completely**. The active product surface is the web app.
+
+## License
+
+MIT
