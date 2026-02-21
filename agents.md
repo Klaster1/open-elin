@@ -33,12 +33,16 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 
 ### E2E Testing Principles
 
+- Always start by writing a comment-structured test plan in the spec (step comments first), then implement assertions/actions under those comments.
 - Keep tests deterministic: seed demo state up front via custom fixture mutators in [e2e/fixtures.ts](e2e/fixtures.ts).
+- Prefer asserting behavior through UI contracts (active nav state, visible data, busy/loading state, and final rendered outcome).
 - Assert in specs, not in page models: page models should only expose interactions and reads.
 - Prefer `data-test-id` selectors over brittle structure/style selectors.
 - Use absolute assertions when seed is controlled (exact gear/offset expectations, not relative drift).
+- Make async behavior testable by design: expose mock timing controls in store/demo state so tests can induce long-running requests.
 - Keep test scope tight: validate requested behavior only (demo mode + cogs flow), avoid extra UX/test complexity.
 - Prefer fixture ergonomics over plumbing: expose test-specific helpers through `test.extend`.
+- Keep tests self-contained: do not add cross-test cleanup/reset logic in a test body.
 
 ### Running Tests
 

@@ -154,11 +154,12 @@ export class DeviceListTab extends SignalWatcher(LitElement) {
     const canList = appState.connected.get();
     const entries = appState.listEntries.get();
     return html`
-      <div class="card">
+      <div class="card" data-test-id="device-list-tab">
         <div class="card-head">
           <div class="card-head-row">
             <h2>Device list</h2>
             <refresh-button
+              data-test-id="device-list-refresh"
               ?disabled=${!canList}
               .loading=${this.loading}
               @refresh-requested=${this.onGetList}
@@ -167,11 +168,20 @@ export class DeviceListTab extends SignalWatcher(LitElement) {
           <p class="hint">Scan the hub for linked devices.</p>
         </div>
         ${entries.length
-          ? html`<div class="device-list" role="list">
+          ? html`<div
+              class="device-list"
+              role="list"
+              data-test-id="device-list-entries"
+            >
               ${entries.map((entry) => this.renderEntry(entry))}
             </div>`
           : html`
-              <div class="empty-state" role="status" aria-live="polite">
+              <div
+                class="empty-state"
+                role="status"
+                aria-live="polite"
+                data-test-id="device-list-empty"
+              >
                 No device list loaded yet.
               </div>
             `}
@@ -203,28 +213,33 @@ export class DeviceListTab extends SignalWatcher(LitElement) {
     const rssi = entry.rssi ?? "--";
     const batteryText = this.formatBattery(entry.batteryVoltage);
     return html`
-      <div class="device-card" role="listitem">
+      <div class="device-card" role="listitem" data-test-id="device-list-row">
         <div class="device-header">
           <div>
-            <div class="device-name">${name}</div>
-            <div class="device-mac">${mac}</div>
+            <div class="device-name" data-test-id="device-list-name">
+              ${name}
+            </div>
+            <div class="device-mac" data-test-id="device-list-mac">${mac}</div>
           </div>
-          <div class="device-pill ${entry.isConnected ? "ok" : "warn"}">
+          <div
+            class="device-pill ${entry.isConnected ? "ok" : "warn"}"
+            data-test-id="device-list-status"
+          >
             ${entry.isConnected ? "Connected" : "Offline"}
           </div>
         </div>
         <dl class="device-meta">
           <div>
             <dt>Device ID</dt>
-            <dd>${deviceId}</dd>
+            <dd data-test-id="device-list-device-id">${deviceId}</dd>
           </div>
           <div>
             <dt>Battery</dt>
-            <dd>${batteryText}</dd>
+            <dd data-test-id="device-list-battery">${batteryText}</dd>
           </div>
           <div>
             <dt>RSSI</dt>
-            <dd>${rssi}</dd>
+            <dd data-test-id="device-list-rssi">${rssi}</dd>
           </div>
         </dl>
       </div>

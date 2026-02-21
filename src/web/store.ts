@@ -7,6 +7,7 @@ import type { TransportDevice } from "../protocol.ts";
 import { WebBluetoothTransport } from "./transport-web.ts";
 import { DemoTransport } from "./transport-demo.ts";
 import { demoState } from "./demo-state.ts";
+import type { DemoState } from "./demo-state.ts";
 import hubData from "./hub-mock-data.json";
 import { HubMock } from "./hub-mock.ts";
 import { PodMock } from "./pod-mock.ts";
@@ -52,6 +53,12 @@ const gears = signal<GearMap>(readStoredGears());
 type DemoGlobals = {
   pod: PodMock;
   hub: HubMock;
+  data: {
+    state: {
+      get: () => DemoState;
+      set: (next: DemoState) => void;
+    };
+  };
 };
 
 const globalScope = globalThis as typeof globalThis & {
@@ -63,6 +70,7 @@ function publishGlobalDemo(next: { pod: PodMock; hub: HubMock }) {
   globalScope.__demo = {
     pod: next.pod,
     hub: next.hub,
+    data: demoState,
   };
 }
 

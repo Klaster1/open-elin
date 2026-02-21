@@ -19,10 +19,6 @@ const DEMO_BUTTON_ACTION_CODE = 0x4001;
 const DEMO_BUTTON_TABLE_CODE = 0x4002;
 const DEMO_SHIFT_COMPLETE_CODE = 0x4003;
 
-const DEMO_RESPONSE_DELAY_MS = 0;
-const DEMO_NOTIFY_DELAY_MS = 0;
-const DEMO_SHIFT_DELAY_MS = 0;
-const DEMO_BATTERY_INTERVAL_MS = 5000;
 const TUNE_STEP = 0.2;
 
 const BUTTON_SHIFT_MAP: Record<number, "up" | "down"> = {
@@ -162,7 +158,9 @@ export class DemoTransport implements ProtocolTransport {
   private queueResponse(
     targetMac: string,
     payload?: Uint8Array,
-    delayMs = DEMO_RESPONSE_DELAY_MS,
+    delayMs = this.getDelayMs(
+      demoState.state.get().transportDelays.commandExecutionMs,
+    ),
   ) {
     setTimeout(() => {
       this.emitFrame(DEMO_RESPONSE_CODE, targetMac, payload);
@@ -173,7 +171,7 @@ export class DemoTransport implements ProtocolTransport {
     code: number,
     targetMac: string,
     payload?: Uint8Array,
-    delayMs = DEMO_NOTIFY_DELAY_MS,
+    delayMs = 0,
   ) {
     setTimeout(() => {
       this.emitFrame(code, targetMac, payload);
@@ -182,12 +180,12 @@ export class DemoTransport implements ProtocolTransport {
 
   private queueShiftComplete(targetMac: string, shift: DemoShiftComplete) {
     const payload = this.hexToBytes(shift.rawHex);
-    this.queueNotify(
-      DEMO_SHIFT_COMPLETE_CODE,
-      targetMac,
-      payload,
-      DEMO_SHIFT_DELAY_MS,
-    );
+    this.queueNotify(DEMO_SHIFT_COMPLETE_CODE, targetMac, payload, 0);
+  }
+
+  private getDelayMs(value: number) {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.round(value));
   }
 
   private emitFrame(code: number, targetMac: string, payload?: Uint8Array) {
@@ -259,7 +257,7 @@ export class DemoTransport implements ProtocolTransport {
     this.emitBatterySample();
     this.batteryTimer = setInterval(() => {
       this.emitBatterySample();
-    }, DEMO_BATTERY_INTERVAL_MS);
+    }, this.getDelayMs(demoState.state.get().transportDelays.batteryIntervalMs));
   }
 
   private stopBatteryNotifications() {

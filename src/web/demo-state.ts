@@ -9,10 +9,25 @@ type DemoShiftComplete = DemoData["shiftComplete"];
 type DemoBatterySample = DemoData["batteryNotifications"][number];
 type DemoBatterySamples = DemoData["batteryNotifications"];
 
-type DemoState = DemoData;
+type DemoTransportDelays = {
+  commandExecutionMs: number;
+  batteryIntervalMs: number;
+};
+
+type DemoStateShape = DemoData & {
+  transportDelays: DemoTransportDelays;
+};
+
+const DEFAULT_TRANSPORT_DELAYS: DemoTransportDelays = {
+  commandExecutionMs: 0,
+  batteryIntervalMs: 5000,
+};
 
 class DemoStateModel {
-  readonly state = signal<DemoState>(structuredClone(demoData));
+  readonly state = signal<DemoStateShape>({
+    ...structuredClone(demoData),
+    transportDelays: { ...DEFAULT_TRANSPORT_DELAYS },
+  });
 
   getPodMac() {
     const entries = this.state.get().list.entries;
@@ -47,6 +62,7 @@ class DemoStateModel {
 
 export const demoState = new DemoStateModel();
 
+export type DemoState = ReturnType<DemoStateModel["state"]["get"]>;
 export type { DemoBatterySample, DemoStateModel };
 
 function millivoltsToHex(millivolts: number) {
