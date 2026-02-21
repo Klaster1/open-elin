@@ -71,6 +71,10 @@ export class DevicePageModel {
     return this.page.getByTestId("device-rename-confirm");
   }
 
+  disconnectButton(): Locator {
+    return this.page.getByRole("button", { name: "Disconnect" });
+  }
+
   sidebarShiftUpButton(): Locator {
     return this.page.locator("pod-mock-gui").getByRole("button", {
       name: "Shift up",
@@ -101,5 +105,9 @@ export class DevicePageModel {
 
   async openRenameDialog() {
     await this.renameButton().click();
+  }
+
+  async disconnect() {
+    await this.disconnectButton().click();
   }
 }
