@@ -29,7 +29,6 @@ export class EmptyState extends LitElement {
       .empty-state.stack {
         margin-top: 0;
         padding: 28px;
-        min-height: 280px;
         flex-direction: column;
         text-align: center;
         gap: 14px;
