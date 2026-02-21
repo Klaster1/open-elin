@@ -3,13 +3,13 @@ import { SignalWatcher } from "@lit-labs/signals";
 
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
-import { deviceTabs } from "../device-tabs.ts";
+import { devicePages } from "../device-pages.ts";
 import "./connection-empty-state.ts";
-import "./device-list.ts";
-import "./device-motor.ts";
-import "./device-buttons.ts";
-import "./device-cogs.ts";
-import "./device-log.ts";
+import "./page-device-list.ts";
+import "./page-device-motor.ts";
+import "./page-device-buttons.ts";
+import "./page-device-cogs.ts";
+import "./page-device-log.ts";
 import "./inline-spinner.ts";
 import "../demo/pod-mock-gui.ts";
 
@@ -221,7 +221,7 @@ export class PageDevice extends SignalWatcher(LitElement) {
 
   static properties = {
     macValue: { type: String, attribute: "mac-value" },
-    activeTab: { type: String, attribute: "active-tab" },
+    activePage: { type: String, attribute: "active-page" },
     renameOpen: { type: Boolean, attribute: false },
     renameValue: { type: String, attribute: false },
     renameError: { type: String, attribute: false },
@@ -229,7 +229,7 @@ export class PageDevice extends SignalWatcher(LitElement) {
   };
 
   declare macValue: string;
-  declare activeTab: string;
+  declare activePage: string;
   declare renameOpen: boolean;
   declare renameValue: string;
   declare renameError: string;
@@ -238,7 +238,7 @@ export class PageDevice extends SignalWatcher(LitElement) {
   constructor() {
     super();
     this.macValue = "";
-    this.activeTab = "log";
+    this.activePage = "log";
     this.renameOpen = false;
     this.renameValue = "";
     this.renameError = "";
@@ -258,7 +258,7 @@ export class PageDevice extends SignalWatcher(LitElement) {
 
     const deviceName = appState.connectedDevice.get()?.name || "Unknown";
     const displayMac = this.macValue || "Unknown";
-    const activeTab = this.activeTab || "log";
+    const activePage = this.activePage || "log";
     const battery = appState.hubBatteryVoltage.get();
     const batteryStatus = this.formatBatteryStatus(battery);
     const isDemo = appState.demoMode.get();
@@ -315,14 +315,14 @@ export class PageDevice extends SignalWatcher(LitElement) {
               </div>
             </div>
             <nav class="nav-list" aria-label="Device navigation">
-              ${deviceTabs.map((tab) =>
-                this.renderNavLink(tab.id, tab.label, activeTab, displayMac),
+              ${devicePages.map((page) =>
+                this.renderNavLink(page.id, page.label, activePage, displayMac),
               )}
             </nav>
           </div>
           ${isDemo ? html`<pod-mock-gui></pod-mock-gui>` : html``}
         </aside>
-        <div class="content">${this.renderDeviceTab(activeTab)}</div>
+        <div class="content">${this.renderDevicePage(activePage)}</div>
       </section>
       <sl-dialog
         data-test-id="device-rename-dialog"
@@ -366,39 +366,39 @@ export class PageDevice extends SignalWatcher(LitElement) {
   }
 
   private renderNavLink(
-    tabId: string,
+    pageId: string,
     label: string,
-    activeTab: string,
+    activePage: string,
     macValue: string,
   ) {
     const href = macValue
-      ? `/device/${macValue.replace(/:/g, "-")}/${tabId}`
+      ? `/device/${macValue.replace(/:/g, "-")}/${pageId}`
       : "/";
     return html`
       <a
-        class="nav-link ${activeTab === tabId ? "active" : ""}"
-        data-test-id=${`device-nav-${tabId}`}
+        class="nav-link ${activePage === pageId ? "active" : ""}"
+        data-test-id=${`device-nav-${pageId}`}
         href=${href}
-        aria-current=${activeTab === tabId ? "page" : nothing}
+        aria-current=${activePage === pageId ? "page" : nothing}
       >
         ${label}
       </a>
     `;
   }
 
-  private renderDeviceTab(activeTab: string) {
-    switch (activeTab) {
+  private renderDevicePage(activePage: string) {
+    switch (activePage) {
       case "list":
-        return html`<device-list></device-list>`;
+        return html`<page-device-list></page-device-list>`;
       case "motor":
-        return html`<device-motor></device-motor>`;
+        return html`<page-device-motor></page-device-motor>`;
       case "buttons":
-        return html`<device-buttons></device-buttons>`;
+        return html`<page-device-buttons></page-device-buttons>`;
       case "cogs":
-        return html`<device-cogs></device-cogs>`;
+        return html`<page-device-cogs></page-device-cogs>`;
       case "log":
       default:
-        return html`<device-log></device-log>`;
+        return html`<page-device-log></page-device-log>`;
     }
   }
 
@@ -435,7 +435,7 @@ export class PageDevice extends SignalWatcher(LitElement) {
     this.renameError = "";
   }
 
-  private onRenameRequestClose() {
+  private onRenameRequestClose(event: Event) {
     if (this.renameBusy) {
       event.preventDefault();
       return;

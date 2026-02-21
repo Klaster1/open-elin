@@ -15,7 +15,7 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 
 ## App Architecture (High Level)
 
-- Web UI: Lit components render pages and tabs for device data, logs, and actions.
+- Web UI: Lit components render pages for device data, logs, and actions.
 - State and actions: A central store manages app state, log lines, and command actions.
 - Protocol and commands: the protocol layer encodes/decodes messages and exposes command APIs.
 - Transports:
@@ -33,7 +33,8 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 - Frontend: Lit + @lit-labs/signals for reactive UI.
 - Page component file names and custom element names must use the `page-` prefix (for example: `page-landing.ts` + `page-landing`, `page-mac.ts` + `page-mac`, `page-device.ts` + `page-device`).
 - Page component class names must use `Page*` (for example: `PageLanding`, `PageMac`, `PageDevice`).
-- Device section component names must not use the `Tab` suffix (for example: `device-list.ts` + `DeviceList` + `device-list`).
+- Device subpage component file names and custom element names must use the `page-device-` prefix (for example: `page-device-list.ts` + `page-device-list`).
+- Device subpage component class names must use `PageDevice*` (for example: `PageDeviceList`).
 - Root app component class/file naming should be `App` in `app.ts`.
 - Always use Lit signals for component state (including local UI state) instead of plain mutable fields and manual `requestUpdate()`.
 - UI components: Shoelace for buttons, dialogs, inputs, and tags.

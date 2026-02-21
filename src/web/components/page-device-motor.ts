@@ -5,7 +5,7 @@ import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import "./refresh-button.ts";
 
-export class DeviceMotor extends SignalWatcher(LitElement) {
+export class PageDeviceMotor extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -209,8 +209,8 @@ export class DeviceMotor extends SignalWatcher(LitElement) {
   }
 }
 
-if (!customElements.get("device-motor")) {
-  customElements.define("device-motor", DeviceMotor);
+if (!customElements.get("page-device-motor")) {
+  customElements.define("page-device-motor", PageDeviceMotor);
 }
 
 export {};

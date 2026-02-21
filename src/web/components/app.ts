@@ -21,7 +21,7 @@ function parseMacFromRoute(value: string) {
 
 type RouteParams = {
   mac?: string;
-  tab?: string;
+  page?: string;
 };
 
 export class App extends SignalWatcher(LitElement) {
@@ -61,9 +61,9 @@ export class App extends SignalWatcher(LitElement) {
       render: () => html``,
     },
     {
-      path: "/device/:mac/:tab",
+      path: "/device/:mac/:page",
       render: (params: RouteParams) =>
-        this.renderDeviceRoute(params.mac, params.tab),
+        this.renderDeviceRoute(params.mac, params.page),
     },
   ]);
 
@@ -107,7 +107,7 @@ export class App extends SignalWatcher(LitElement) {
     return html`<page-mac @mac-acquired=${this.handleMacAcquired}></page-mac>`;
   }
 
-  private renderDeviceRoute(macParam?: string, tabParam?: string) {
+  private renderDeviceRoute(macParam?: string, pageParam?: string) {
     const currentMac = appState.mac.get();
     const routeMac = macParam;
 
@@ -130,12 +130,12 @@ export class App extends SignalWatcher(LitElement) {
 
     const targetMac =
       currentMac || (routeMac ? parseMacFromRoute(routeMac) : "");
-    const activeTab = tabParam || "log";
+    const activePage = pageParam || "log";
 
     return html`
       <page-device
         .macValue=${targetMac}
-        .activeTab=${activeTab}
+        .activePage=${activePage}
         @reconnect-requested=${this.handleReconnect}
         @disconnect-requested=${this.handleDisconnect}
         @demo-requested=${this.handleDemo}

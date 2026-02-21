@@ -1,4 +1,4 @@
-export const deviceTabs = [
+export const devicePages = [
   { id: "list", label: "Device list" },
   { id: "motor", label: "Motor params" },
   { id: "buttons", label: "Buttons" },

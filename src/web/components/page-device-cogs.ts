@@ -5,7 +5,7 @@ import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import "./empty-state.ts";
 
-export class DeviceCogs extends SignalWatcher(LitElement) {
+export class PageDeviceCogs extends SignalWatcher(LitElement) {
   private readonly absoluteSteps = [10, 5, 1, 0.1] as const;
   private profileDialogOpen = signal(false);
   private profileDialogValue = signal("");
@@ -1125,8 +1125,8 @@ export class DeviceCogs extends SignalWatcher(LitElement) {
   }
 }
 
-if (!customElements.get("device-cogs")) {
-  customElements.define("device-cogs", DeviceCogs);
+if (!customElements.get("page-device-cogs")) {
+  customElements.define("page-device-cogs", PageDeviceCogs);
 }
 
 export {};
