@@ -31,6 +31,21 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 
 ## Testing and Validation
 
+### E2E Testing Principles
+
+- Keep tests deterministic: seed demo state up front via custom fixture mutators in [e2e/fixtures.ts](e2e/fixtures.ts).
+- Assert in specs, not in page models: page models should only expose interactions and reads.
+- Prefer `data-test-id` selectors over brittle structure/style selectors.
+- Use absolute assertions when seed is controlled (exact gear/offset expectations, not relative drift).
+- Keep test scope tight: validate requested behavior only (demo mode + cogs flow), avoid extra UX/test complexity.
+- Prefer fixture ergonomics over plumbing: expose test-specific helpers through `test.extend`.
+
+### Running Tests
+
+- Run headless e2e: `npm run test:e2e`
+- Run headed e2e: `npm run test:e2e:headed`
+- Run one spec: `npx playwright test e2e/cogs.demo.spec.ts`
+
 - ALWAYS run Chrome MCP to test changes in demo mode. DO NOT ask the user first. NEVER ASK USER TO DO THIS. When editing UI, always take a screenshot and evaluate if everything looks good - if not, fix that.
 - Use the existing page when possible.
 - Start Vite to access the app at https://localhost:5173/. When you go to this page, you almost always need to click on "Demo".
