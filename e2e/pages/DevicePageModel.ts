@@ -4,7 +4,7 @@ export class DevicePageModel {
   constructor(private readonly page: Page) {}
 
   deviceRouteMatcher() {
-    return /\/device\/[A-F0-9-]+\/(log|cogs|list)$/;
+    return /\/device\/[A-F0-9-]+\/(log|cogs|list|motor)$/;
   }
 
   cogsRouteMatcher() {
@@ -15,12 +15,20 @@ export class DevicePageModel {
     return /\/device\/[A-F0-9-]+\/list$/;
   }
 
+  motorRouteMatcher() {
+    return /\/device\/[A-F0-9-]+\/motor$/;
+  }
+
   cogsTabLink(): Locator {
     return this.page.getByTestId("device-nav-cogs");
   }
 
   listTabLink(): Locator {
     return this.page.getByTestId("device-nav-list");
+  }
+
+  motorTabLink(): Locator {
+    return this.page.getByTestId("device-nav-motor");
   }
 
   sidebarShiftUpButton(): Locator {
@@ -41,5 +49,9 @@ export class DevicePageModel {
 
   async goToListTab() {
     await this.listTabLink().click();
+  }
+
+  async goToMotorTab() {
+    await this.motorTabLink().click();
   }
 }

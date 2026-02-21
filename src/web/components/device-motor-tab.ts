@@ -99,11 +99,12 @@ export class DeviceMotorTab extends SignalWatcher(LitElement) {
     const motorParams = appState.motorParams.get();
     const entries = motorParams ? this.buildMotorEntries(motorParams) : [];
     return html`
-      <div class="card">
+      <div class="card" data-test-id="motor-tab">
         <div class="card-head">
           <div class="card-head-row">
             <h2>Motor params</h2>
             <refresh-button
+              data-test-id="motor-refresh"
               ?disabled=${!canSend}
               .loading=${this.loading}
               @refresh-requested=${this.onGetMotorParams}
@@ -112,18 +113,23 @@ export class DeviceMotorTab extends SignalWatcher(LitElement) {
           <p class="hint">Latest motor configuration snapshot.</p>
         </div>
         ${entries.length
-          ? html`<dl class="param-grid">
+          ? html`<dl class="param-grid" data-test-id="motor-param-grid">
               ${entries.map(
                 (entry) => html`
-                  <div>
-                    <dt>${entry.label}</dt>
-                    <dd>${entry.value}</dd>
+                  <div data-test-id="motor-param-row">
+                    <dt data-test-id="motor-param-label">${entry.label}</dt>
+                    <dd data-test-id="motor-param-value">${entry.value}</dd>
                   </div>
                 `,
               )}
             </dl>`
           : html`
-              <div class="empty-state" role="status" aria-live="polite">
+              <div
+                class="empty-state"
+                role="status"
+                aria-live="polite"
+                data-test-id="motor-empty"
+              >
                 No motor params fetched yet.
               </div>
             `}
