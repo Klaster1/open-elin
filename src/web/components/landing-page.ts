@@ -41,13 +41,19 @@ export class LandingPage extends SignalWatcher(LitElement) {
       ? "No hub was selected. If the picker did not appear, make sure Web Bluetooth is enabled and try again."
       : "No hub connected yet. Click Connect to choose an eLink hub.";
     return html`
-      <section role="main" aria-label="Connection">
+      <section role="main" aria-label="Connection" data-test-id="landing-page">
         <empty-state .title=${emptyTitle} .message=${emptyMessage}>
           <div slot="actions" class="actions">
-            <sl-button variant="primary" @click=${this.onConnect}
+            <sl-button
+              variant="primary"
+              data-test-id="landing-connect-button"
+              @click=${this.onConnect}
               >Connect</sl-button
             >
-            <sl-button class="demo-button" @click=${this.onDemo}
+            <sl-button
+              class="demo-button"
+              data-test-id="landing-demo-button"
+              @click=${this.onDemo}
               >Demo</sl-button
             >
           </div>

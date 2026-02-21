@@ -290,20 +290,26 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
     const gearMap = appState.gears.get();
     const gearList = mac ? gearMap[mac] : undefined;
     return html`
-      <div class="card">
+      <div class="card" data-test-id="cogs-tab">
         <div class="card-head">
           <h2>Cogs</h2>
           <p class="hint">Rear cog diagnostics and live position snapshots.</p>
         </div>
         <div class="actions">
-          <sl-button ?disabled=${!canSend} @click=${this.onGetRearCogInfo}
+          <sl-button
+            data-test-id="cogs-get-rear-cog-info"
+            ?disabled=${!canSend}
+            @click=${this.onGetRearCogInfo}
             >Get rear cog info</sl-button
           >
-          <sl-button ?disabled=${!canSend} @click=${this.onGetPosition}
+          <sl-button
+            data-test-id="cogs-get-position"
+            ?disabled=${!canSend}
+            @click=${this.onGetPosition}
             >Get position</sl-button
           >
         </div>
-        <div class="absolute-controls">
+        <div class="absolute-controls" data-test-id="cogs-absolute-controls">
           ${this.renderAbsoluteControls(canSend, gearList)}
         </div>
         ${this.renderCogControls(canSend, gearList)}
@@ -328,6 +334,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
         <div class="shift-side shift-side-left">
           <sl-button
             class="shift-side-button"
+            data-test-id="cogs-shift-down"
             size="large"
             ?disabled=${!canSend}
             @click=${this.onShiftDown}
@@ -354,6 +361,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
         <div class="shift-side shift-side-right">
           <sl-button
             class="shift-side-button"
+            data-test-id="cogs-shift-up"
             size="large"
             ?disabled=${!canSend}
             @click=${this.onShiftUp}
@@ -392,6 +400,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
           (step) => html`
             <sl-button
               class="absolute-step"
+              data-test-id=${`cogs-tune-decrease-${this.getStepToken(step)}`}
               size="small"
               ?disabled=${disabled}
               @click=${() => this.onAbsoluteNudge(-step, currentOffset)}
@@ -414,6 +423,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
           (step) => html`
             <sl-button
               class="absolute-step"
+              data-test-id=${`cogs-tune-increase-${this.getStepToken(step)}`}
               size="small"
               ?disabled=${disabled}
               @click=${() => this.onAbsoluteNudge(step, currentOffset)}
@@ -444,7 +454,12 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
     const minGear = sorted[0]?.gearNumber ?? 1;
     const maxGear = sorted[sorted.length - 1]?.gearNumber ?? minGear;
     return html`
-      <div class="gear-strip" role="list" aria-label="Rear cassette gears">
+      <div
+        class="gear-strip"
+        role="list"
+        aria-label="Rear cassette gears"
+        data-test-id="cogs-gear-strip"
+      >
         ${sorted.map((gear) => this.renderGear(gear, minGear, maxGear))}
       </div>
     `;
@@ -475,12 +490,31 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
     const hasTeeth = Number.isFinite(gear.teeth);
     const teethLabel = hasTeeth ? `${gear.teeth}T` : "--";
     return html`
-      <div class="gear-card" role="listitem">
-        <div class="gear-number">${gear.gearNumber}</div>
+      <div
+        class="gear-card"
+        role="listitem"
+        data-test-id="cogs-gear-card"
+        data-gear-number=${gear.gearNumber}
+        data-current=${gear.current ? "true" : "false"}
+      >
+        <div class="gear-number" data-test-id="cogs-gear-number">
+          ${gear.gearNumber}
+        </div>
         <div class="gear-teeth ${hasTeeth ? "" : "missing"}">${teethLabel}</div>
         <div class="gear-line" style="--gear-height: ${height}px"></div>
-        <div class="gear-offset ${offsetClass}">${offsetLabel}</div>
-        <div class="gear-current" aria-hidden=${!gear.current}>
+        <div
+          class="gear-offset ${offsetClass}"
+          data-test-id="cogs-gear-offset"
+          data-offset-mode=${offsetClass}
+        >
+          ${offsetLabel}
+        </div>
+        <div
+          class="gear-current"
+          data-test-id="cogs-gear-current"
+          data-current=${gear.current ? "true" : "false"}
+          aria-hidden=${!gear.current}
+        >
           ${gear.current
             ? html`
                 <svg viewBox="0 0 10 18" aria-hidden="true">
@@ -508,6 +542,10 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
 
   private async onShiftDown() {
     await appActions.shiftDown();
+  }
+
+  private getStepToken(step: number) {
+    return step.toString().replace(".", "-");
   }
 
   private getCurrentAbsoluteOffset(

@@ -396,6 +396,7 @@ export class DevicePage extends SignalWatcher(LitElement) {
     return html`
       <a
         class="nav-link ${activeTab === tabId ? "active" : ""}"
+        data-test-id=${`device-nav-${tabId}`}
         href=${href}
         aria-current=${activeTab === tabId ? "page" : nothing}
       >

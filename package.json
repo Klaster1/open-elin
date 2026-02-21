@@ -9,7 +9,9 @@
     "build": "tsc",
     "dev": "vite",
     "build:web": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@abandonware/noble": "^1.9.2-26",
@@ -19,6 +21,7 @@
     "lit": "^3.3.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.1",
     "@types/node": "^25.2.3",
     "@types/web-bluetooth": "^0.0.21",
     "typescript": "^5.9.3",
