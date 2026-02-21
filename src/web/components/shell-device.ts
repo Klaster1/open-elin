@@ -13,7 +13,7 @@ import "./page-device-log.ts";
 import "./inline-spinner.ts";
 import "../demo/pod-mock-gui.ts";
 
-export class PageDevice extends SignalWatcher(LitElement) {
+export class ShellDevice extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -494,8 +494,8 @@ export class PageDevice extends SignalWatcher(LitElement) {
   }
 }
 
-if (!customElements.get("page-device")) {
-  customElements.define("page-device", PageDevice);
+if (!customElements.get("shell-device")) {
+  customElements.define("shell-device", ShellDevice);
 }
 
 export {};

@@ -133,13 +133,13 @@ export class App extends SignalWatcher(LitElement) {
     const activePage = pageParam || "log";
 
     return html`
-      <page-device
+      <shell-device
         .macValue=${targetMac}
         .activePage=${activePage}
         @reconnect-requested=${this.handleReconnect}
         @disconnect-requested=${this.handleDisconnect}
         @demo-requested=${this.handleDemo}
-      ></page-device>
+      ></shell-device>
     `;
   }
 

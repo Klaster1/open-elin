@@ -31,8 +31,8 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 ## Technology Guidelines
 
 - Frontend: Lit + @lit-labs/signals for reactive UI.
-- Page component file names and custom element names must use the `page-` prefix (for example: `page-landing.ts` + `page-landing`, `page-mac.ts` + `page-mac`, `page-device.ts` + `page-device`).
-- Page component class names must use `Page*` (for example: `PageLanding`, `PageMac`, `PageDevice`).
+- Top-level route view components should use the `page-` prefix (for example: `page-landing.ts` + `page-landing`, `page-mac.ts` + `page-mac`).
+- The device container is a shell and must be named `shell-device.ts` + `shell-device` + `ShellDevice`.
 - Device subpage component file names and custom element names must use the `page-device-` prefix (for example: `page-device-list.ts` + `page-device-list`).
 - Device subpage component class names must use `PageDevice*` (for example: `PageDeviceList`).
 - Root app component class/file naming should be `App` in `app.ts`.
