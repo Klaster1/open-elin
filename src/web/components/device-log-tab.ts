@@ -58,13 +58,14 @@ export class DeviceLogTab extends SignalWatcher(LitElement) {
   render() {
     const logLines = appState.logLines.get();
     return html`
-      <div class="card">
+      <div class="card" data-test-id="log-tab">
         <div class="card-head">
           <h2>Log</h2>
           <p class="hint">Notifications and command results appear here.</p>
         </div>
         <pre
           class="log"
+          data-test-id="log-output"
           ${ref(this.logRef)}
           role="log"
           aria-live="polite"

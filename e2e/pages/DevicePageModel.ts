@@ -19,6 +19,10 @@ export class DevicePageModel {
     return /\/device\/[A-F0-9-]+\/motor$/;
   }
 
+  logRouteMatcher() {
+    return /\/device\/[A-F0-9-]+\/log$/;
+  }
+
   cogsTabLink(): Locator {
     return this.page.getByTestId("device-nav-cogs");
   }
@@ -29,6 +33,10 @@ export class DevicePageModel {
 
   motorTabLink(): Locator {
     return this.page.getByTestId("device-nav-motor");
+  }
+
+  logTabLink(): Locator {
+    return this.page.getByTestId("device-nav-log");
   }
 
   sidebarName(): Locator {
@@ -77,6 +85,10 @@ export class DevicePageModel {
 
   async goToMotorTab() {
     await this.motorTabLink().click();
+  }
+
+  async goToLogTab() {
+    await this.logTabLink().click();
   }
 
   async openRenameDialog() {
