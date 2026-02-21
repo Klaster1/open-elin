@@ -1,17 +1,13 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test } from "./fixtures";
 import { CogsPageModel } from "./pages/CogsPageModel";
 import { DevicePageModel } from "./pages/DevicePageModel";
 import { LandingPageModel } from "./pages/LandingPageModel";
 
 test.describe("Cogs in demo mode", () => {
-  test.beforeEach(async ({ context }) => {
-    await context.addInitScript(() => {
-      window.localStorage.clear();
-    });
-  });
-
-  test("covers demo entry and cogs interactions", async ({ page }) => {
+  test("covers demo entry and cogs interactions", async ({
+    page,
+    updateDemoHubState,
+  }) => {
     const landing = new LandingPageModel(page);
     const device = new DevicePageModel(page);
     const cogs = new CogsPageModel(page);
@@ -19,6 +15,16 @@ test.describe("Cogs in demo mode", () => {
     // Go to app
     await landing.open();
     await expect(landing.root()).toBeVisible();
+
+    await updateDemoHubState((draft) => {
+      draft.rearCogs.approximate = [1, 3, 5, 7, 9, 30, 33, 36, 39, 42, 45];
+      draft.rearCogs.precise = [
+        1.1, 3.1, 5.1, 7.1, 9.5, 30, 33.2, 36.2, 39.2, 42.2, 45.2,
+      ];
+      draft.rearCogs.teeth = [11, 12, 13, 14, 15, 17, 19, 21, 24, 27, 30];
+      draft.current.gear = 5;
+      draft.current.offset = 9.5;
+    });
 
     // Start demo mode
     await landing.startDemo();
@@ -35,12 +41,14 @@ test.describe("Cogs in demo mode", () => {
     await cogs.getRearCogInfo();
     await cogs.getPosition();
 
-    // Assert device displays 12 cogs
+    // Assert device displays 11 cogs
     await expect(cogs.gearStrip()).toBeVisible();
-    await expect.poll(async () => cogs.gearCount()).toBe(12);
+    await expect.poll(async () => cogs.gearCount()).toBe(11);
+
+    await expect.poll(async () => cogs.currentGearNumber()).toBe(5);
 
     // Assert each cog displays index, teeth count
-    for (let index = 0; index < 12; index += 1) {
+    for (let index = 0; index < 11; index += 1) {
       await expect(cogs.gearNumberInCard(index)).toHaveText(`${index + 1}`);
       await expect(cogs.gearTeethInCard(index)).toHaveText(/\d+T/);
     }
@@ -55,77 +63,71 @@ test.describe("Cogs in demo mode", () => {
       await expect(await cogs.nonCurrentGearOffsetMode(index)).toBe("approx");
     }
 
-    const gearBeforeShiftDown = await cogs.currentGearNumber();
-    const expectedGearAfterShiftDown = gearBeforeShiftDown - 1;
-
     // Shift down
     await cogs.shiftDown();
 
     // Assert gear shifted and new current gear has precise offset shown
     await expect
       .poll(async () => cogs.currentGearNumber(), {
-        message: `Expected gear ${expectedGearAfterShiftDown} after shift down`,
+        message: "Expected gear 4 after shift down",
       })
-      .toBe(expectedGearAfterShiftDown);
+      .toBe(4);
     await expect(await cogs.currentGearOffsetMode()).toBe("precise");
-
-    const gearBeforeShiftUpTwice = await cogs.currentGearNumber();
-    const expectedGearAfterShiftUpTwice = gearBeforeShiftUpTwice + 2;
 
     // Shift up twice, assert that gear now shows precise offset too
     await cogs.shiftUp();
     await cogs.shiftUp();
     await expect
       .poll(async () => cogs.currentGearNumber(), {
-        message: `Expected gear ${expectedGearAfterShiftUpTwice} after shifting up twice`,
+        message: "Expected gear 6 after shifting up twice",
       })
-      .toBe(expectedGearAfterShiftUpTwice);
+      .toBe(6);
     await expect(await cogs.currentGearOffsetMode()).toBe("precise");
 
     // Check that each tune button adjusts position in correct direction
     await expect
       .poll(async () => cogs.currentGearOffsetValue())
-      .toBeCloseTo(23, 3);
+      .toBeCloseTo(30, 3);
 
     await cogs.tuneDecrease10Button().click();
     await expect
       .poll(async () => cogs.currentGearOffsetValue())
-      .toBeCloseTo(13, 3);
+      .toBeCloseTo(20, 3);
 
     await cogs.tuneDecrease5Button().click();
     await expect
       .poll(async () => cogs.currentGearOffsetValue())
-      .toBeCloseTo(8, 3);
+      .toBeCloseTo(15, 3);
 
     await cogs.tuneDecrease1Button().click();
     await expect
       .poll(async () => cogs.currentGearOffsetValue())
-      .toBeCloseTo(7, 3);
+      .toBeCloseTo(14, 3);
 
     await cogs.tuneDecreaseSmallButton().click();
     await expect
       .poll(async () => cogs.currentGearOffsetValue())
-      .toBeCloseTo(6.9, 3);
+      .toBeCloseTo(13.9, 3);
 
     await cogs.tuneIncrease01Button().click();
     await expect
       .poll(async () => cogs.currentGearOffsetValue())
-      .toBeCloseTo(7, 3);
+      .toBeCloseTo(14, 3);
 
     await cogs.tuneIncrease1Button().click();
     await expect
       .poll(async () => cogs.currentGearOffsetValue())
-      .toBeCloseTo(8, 3);
+      .toBeCloseTo(15, 3);
 
     await cogs.tuneIncrease5Button().click();
     await expect
       .poll(async () => cogs.currentGearOffsetValue())
-      .toBeCloseTo(13, 3);
+      .toBeCloseTo(20, 3);
 
     await cogs.tuneIncrease10Button().click();
     await expect
       .poll(async () => cogs.currentGearOffsetValue())
-      .toBeCloseTo(23, 3);
+      .toBeCloseTo(30, 3);
 
     // In sidebar shift all the way up and then all the way down
     const totalGears = await cogs.gearCount();

@@ -10,7 +10,7 @@ type PodMockOptions = {
   podMac?: string;
 };
 
-type PodState = {
+type PodStateShape = {
   online: boolean;
   mode: PodMode;
   batteryLevel: number;
@@ -21,7 +21,7 @@ type PodButtonActionEvent = ButtonActionNotify;
 type PodButton = "A" | "B" | "C";
 
 export class PodMock extends EventTarget {
-  readonly state = signal<PodState>({
+  readonly state = signal<PodStateShape>({
     online: true,
     mode: "shift",
     batteryLevel: 3000,
@@ -128,7 +128,7 @@ export class PodMock extends EventTarget {
     this.emitButtonAction(buttonId, 1);
   }
 
-  private updateState(next: Partial<PodState>) {
+  private updateState(next: Partial<PodStateShape>) {
     const current = this.state.get();
     this.state.set({ ...current, ...next });
   }
@@ -176,4 +176,5 @@ function toHexByte(value: number) {
   return value.toString(16).padStart(2, "0").toUpperCase();
 }
 
+export type PodState = ReturnType<PodMock["state"]["get"]>;
 export type { PodMode, PodMockOptions, PodButtonActionEvent };

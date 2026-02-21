@@ -49,19 +49,33 @@ const pendingRouteMac = signal("");
 const demoMode = signal(false);
 const gears = signal<GearMap>(readStoredGears());
 
+type DemoGlobals = {
+  pod: PodMock;
+  hub: HubMock;
+};
+
 const globalScope = globalThis as typeof globalThis & {
-  __demoPod?: PodMock;
+  __demo?: DemoGlobals;
   __demoPodLogAttached?: boolean;
 };
 
+function publishGlobalDemo(next: { pod: PodMock; hub: HubMock }) {
+  globalScope.__demo = {
+    pod: next.pod,
+    hub: next.hub,
+  };
+}
+
 export const demoPod =
-  globalScope.__demoPod ??
+  globalScope.__demo?.pod ??
   new PodMock({
     batteryLevel: demoState.state.get().list.entries[0]?.batteryVoltage ?? 3000,
     podMac: demoState.state.get().list.entries[0]?.mac ?? "",
   });
 
-globalScope.__demoPod = demoPod;
+export const demoHub = globalScope.__demo?.hub ?? new HubMock();
+
+publishGlobalDemo({ pod: demoPod, hub: demoHub });
 
 if (!globalScope.__demoPodLogAttached) {
   demoPod.addEventListener("pod-button-action", (event) => {
@@ -233,7 +247,10 @@ export async function connect() {
 }
 
 export async function connectDemo() {
-  const transport = new DemoTransport(demoPod, new HubMock());
+  const pod = globalScope.__demo?.pod ?? demoPod;
+  const hub = globalScope.__demo?.hub ?? new HubMock();
+  publishGlobalDemo({ pod, hub });
+  const transport = new DemoTransport(pod, hub);
   await connectWithTransport(transport, {
     requestLabel: "Starting demo transport...",
     preferStoredMac: false,

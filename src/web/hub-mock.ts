@@ -4,16 +4,16 @@ import hubData from "./hub-mock-data.json";
 
 type HubData = typeof hubData;
 
-type HubState = HubData;
+type HubStateShape = HubData;
 
 type ShiftDirection = "up" | "down";
 
-type RearCogs = HubState["rearCogs"];
+type RearCogs = HubStateShape["rearCogs"];
 
-type CurrentPosition = HubState["current"];
+type CurrentPosition = HubStateShape["current"];
 
 export class HubMock {
-  readonly state = signal<HubState>(structuredClone(hubData));
+  readonly state = signal<HubStateShape>(structuredClone(hubData));
   private readonly minOffset = 0;
   private readonly maxOffset = 250;
 
@@ -110,7 +110,7 @@ export class HubMock {
     this.state.set({ ...current, current: next });
   }
 
-  private updateState(next: Partial<HubState>) {
+  private updateState(next: Partial<HubStateShape>) {
     const current = this.state.get();
     this.state.set({ ...current, ...next });
   }
@@ -143,4 +143,5 @@ function clampGear(value: number, max: number) {
   return Math.min(Math.max(value, 1), Math.max(1, max));
 }
 
+export type HubState = ReturnType<HubMock["state"]["get"]>;
 export type { RearCogs, CurrentPosition };
