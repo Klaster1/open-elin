@@ -11,7 +11,7 @@ import "./device-buttons-tab.ts";
 import "./device-cogs-tab.ts";
 import "./device-log-tab.ts";
 import "./inline-spinner.ts";
-import "./pod-mock-gui.ts";
+import "../demo/pod-mock-gui.ts";
 
 export class DevicePage extends SignalWatcher(LitElement) {
   static styles = [

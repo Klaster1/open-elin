@@ -8,7 +8,7 @@ import {
   isValidMac,
   setShiftMacListener,
 } from "../store.ts";
-import hubData from "../hub-mock-data.json";
+import hubData from "../demo/hub-mock-data.json";
 import { sharedStyles } from "../styles.ts";
 
 function serializeMacForRoute(value: string) {

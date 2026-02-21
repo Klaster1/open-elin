@@ -5,13 +5,13 @@ import { Protocol } from "../protocol.ts";
 import type { ProtocolTransport } from "../protocol.ts";
 import type { TransportDevice } from "../protocol.ts";
 import { WebBluetoothTransport } from "./transport-web.ts";
-import { DemoTransport } from "./transport-demo.ts";
-import { demoState } from "./demo-state.ts";
-import type { DemoState } from "./demo-state.ts";
-import hubData from "./hub-mock-data.json";
-import { HubMock } from "./hub-mock.ts";
-import { PodMock } from "./pod-mock.ts";
-import type { PodButtonActionEvent } from "./pod-mock.ts";
+import { DemoTransport } from "./demo/transport-demo.ts";
+import { demoState } from "./demo/demo-state.ts";
+import type { DemoState } from "./demo/demo-state.ts";
+import hubData from "./demo/hub-mock-data.json";
+import { HubMock } from "./demo/hub-mock.ts";
+import { PodMock } from "./demo/pod-mock.ts";
+import type { PodButtonActionEvent } from "./demo/pod-mock.ts";
 
 export type StatusKind = "wait" | "warn" | "ok";
 export type Gear = {

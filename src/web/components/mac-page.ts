@@ -3,7 +3,7 @@ import { SignalWatcher } from "@lit-labs/signals";
 
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
-import "./pod-mock-gui.ts";
+import "../demo/pod-mock-gui.ts";
 
 export class MacPage extends SignalWatcher(LitElement) {
   static styles = [

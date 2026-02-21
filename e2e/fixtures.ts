@@ -1,7 +1,7 @@
 import { expect, test as base } from "@playwright/test";
-import type { DemoState } from "../src/web/demo-state.ts";
-import type { HubState } from "../src/web/hub-mock.ts";
-import type { PodState } from "../src/web/pod-mock.ts";
+import type { DemoState } from "../src/web/demo/demo-state.ts";
+import type { HubState } from "../src/web/demo/hub-mock.ts";
+import type { PodState } from "../src/web/demo/pod-mock.ts";
 
 type DemoStateMutator<TState> = (draft: TState) => void;
 

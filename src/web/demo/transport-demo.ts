@@ -2,8 +2,8 @@ import type {
   ProtocolTransport,
   TransportConnection,
   TransportDevice,
-} from "../protocol.ts";
-import { hexToBuffer, reverseMacAddress } from "../protocol.ts";
+} from "../../protocol.ts";
+import { hexToBuffer, reverseMacAddress } from "../../protocol.ts";
 import { demoState } from "./demo-state.ts";
 import type { HubMock } from "./hub-mock.ts";
 import type { DemoBatterySample } from "./demo-state.ts";
