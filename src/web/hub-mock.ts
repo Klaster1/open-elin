@@ -53,6 +53,31 @@ export class HubMock {
     return buildRearCogBytes(rearCogs.approximate, rearCogs.teeth);
   }
 
+  setRearCogs(offsets: number[], teeth: number[]) {
+    if (!offsets.length || offsets.length !== teeth.length) return false;
+    const sanitizedOffsets = offsets.map((value) => this.boundOffset(value));
+    const sanitizedTeeth = teeth.map((value) =>
+      Math.max(0, Math.min(255, Math.round(value))),
+    );
+    const current = this.state.get().current;
+    const maxGear = sanitizedOffsets.length;
+    const nextGear = clampGear(current.gear, maxGear);
+    const nextOffset =
+      sanitizedOffsets[nextGear - 1] ?? sanitizedOffsets[0] ?? 0;
+    this.updateState({
+      rearCogs: {
+        approximate: sanitizedOffsets,
+        precise: [...sanitizedOffsets],
+        teeth: sanitizedTeeth,
+      },
+      current: {
+        gear: nextGear,
+        offset: nextOffset,
+      },
+    });
+    return true;
+  }
+
   getPositionBytes() {
     const current = this.state.get().current;
     return buildPositionBytes(current.offset, current.gear);

@@ -130,6 +130,82 @@ export class CogsPageModel {
     return this.gearCards().nth(index).locator(".gear-teeth");
   }
 
+  profilesSection(): Locator {
+    return this.page.getByTestId("cogs-profiles-section");
+  }
+
+  profilesEmptyState(): Locator {
+    return this.page.getByTestId("cogs-profiles-empty");
+  }
+
+  profilesList(): Locator {
+    return this.page.getByTestId("cogs-profiles-list");
+  }
+
+  profileRows(): Locator {
+    return this.page.locator('[data-test-id="cogs-profile-row"]');
+  }
+
+  saveProfileButtonInEmptyState(): Locator {
+    return this.page.getByTestId("cogs-profile-save-empty");
+  }
+
+  saveProfileButton(): Locator {
+    return this.page.getByTestId("cogs-profile-save-current");
+  }
+
+  profileApplyingStatus(): Locator {
+    return this.page.getByTestId("cogs-profile-applying");
+  }
+
+  profileStatus(): Locator {
+    return this.page.getByTestId("cogs-profile-status");
+  }
+
+  profileRowByName(name: string): Locator {
+    return this.page.locator(
+      `[data-test-id="cogs-profile-row"][data-profile-name="${name}"]`,
+    );
+  }
+
+  profileApplyButton(name: string): Locator {
+    return this.profileRowByName(name).getByTestId("cogs-profile-apply");
+  }
+
+  profileRemoveButton(name: string): Locator {
+    return this.profileRowByName(name).getByTestId("cogs-profile-remove");
+  }
+
+  profileOffsets(name: string): Locator {
+    return this.profileRowByName(name).getByTestId("cogs-profile-offsets");
+  }
+
+  profileTeeth(name: string): Locator {
+    return this.profileRowByName(name).getByTestId("cogs-profile-teeth");
+  }
+
+  profileDialog(): Locator {
+    return this.page.getByTestId("cogs-profile-dialog");
+  }
+
+  profileDialogInput(): Locator {
+    return this.page.getByTestId("cogs-profile-dialog-input");
+  }
+
+  profileDialogConfirmButton(): Locator {
+    return this.page.getByTestId("cogs-profile-dialog-confirm");
+  }
+
+  profileDialogCancelButton(): Locator {
+    return this.page.getByTestId("cogs-profile-dialog-cancel");
+  }
+
+  async fillProfileDialogInput(value: string) {
+    await this.profileDialogInput().click();
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.type(value);
+  }
+
   async getRearCogInfo() {
     await this.getRearCogInfoButton().click();
   }

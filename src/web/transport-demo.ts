@@ -124,6 +124,27 @@ export class DemoTransport implements ProtocolTransport {
           this.pod.state.get().online ? this.buildRearCogPayload() : undefined,
         );
         return;
+      case 0x001d:
+        if (!this.pod.state.get().online) {
+          this.queueResponse(
+            device.address,
+            undefined,
+            undefined,
+            DEMO_STATUS_INVALID_PARAM,
+          );
+          return;
+        }
+        if (this.applyRearCogInfo(payload)) {
+          this.queueResponse(device.address);
+        } else {
+          this.queueResponse(
+            device.address,
+            undefined,
+            undefined,
+            DEMO_STATUS_INVALID_PARAM,
+          );
+        }
+        return;
       case 0x0013:
         this.queueResponse(
           device.address,
@@ -261,6 +282,20 @@ export class DemoTransport implements ProtocolTransport {
 
   private buildRearCogPayload() {
     return this.hub.getRearCogApproximateBytes();
+  }
+
+  private applyRearCogInfo(payload: Uint8Array) {
+    const params = payload.slice(8);
+    if (!params.length || params.length % 3 !== 0) return false;
+    const offsets: number[] = [];
+    const teeth: number[] = [];
+    for (let index = 0; index < params.length; index += 3) {
+      const offsetRaw =
+        (params[index] & 0xff) | ((params[index + 1] & 0xff) << 8);
+      offsets.push(offsetRaw / 10);
+      teeth.push(params[index + 2] & 0xff);
+    }
+    return this.hub.setRearCogs(offsets, teeth);
   }
 
   private buildPositionPayload() {

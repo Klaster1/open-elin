@@ -23,6 +23,14 @@ export type Gear = {
 };
 export type Gears = Gear[];
 type GearMap = Record<string, Gears>;
+export type CogProfileEntry = {
+  offset: number;
+  toothCount: number;
+};
+export type CogProfile = {
+  name: string;
+  cogs: CogProfileEntry[];
+};
 
 const connected = signal(false);
 const connectEmpty = signal(false);
@@ -49,6 +57,8 @@ const connectedDevice = signal<TransportDevice | null>(null);
 const pendingRouteMac = signal("");
 const demoMode = signal(false);
 const gears = signal<GearMap>(readStoredGears());
+const cogProfiles = signal<CogProfile[]>(readStoredCogProfiles());
+const cogsProfileWriteInProgress = signal(false);
 
 type DemoGlobals = {
   pod: PodMock;
@@ -125,6 +135,7 @@ demoState.updatePodBatteryLevel(demoPodBatteryLevel.get());
 
 const macStorageKey = "bikenetHubMac";
 const gearsStorageKey = "bikenetGears";
+const cogProfilesStorageKey = "bikenetCogProfiles";
 let macLockedByUser = false;
 let pendingAdvertMac: string | null = null;
 let adTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -153,6 +164,8 @@ export const appState = {
   pendingRouteMac,
   demoMode,
   gears,
+  cogProfiles,
+  cogsProfileWriteInProgress,
 };
 
 export const appActions = {
@@ -175,8 +188,13 @@ export const appActions = {
   readButtonMap,
   readButtonTable,
   getRearCogInfo,
+  refreshCogsData,
   ensureGearsForMac,
   refreshCurrentGear,
+  reloadCogProfiles,
+  saveCurrentCogProfile,
+  removeCogProfile,
+  applyCogProfile,
 };
 
 export function setShiftMacListener(
@@ -251,6 +269,7 @@ export async function connect() {
     requestLabel: "Requesting device...",
     preferStoredMac: true,
     demo: false,
+    autoMacFromDevice: false,
   });
 }
 
@@ -492,6 +511,20 @@ function readStoredGears(): GearMap {
   }
 }
 
+function readStoredCogProfiles(): CogProfile[] {
+  try {
+    const raw = localStorage.getItem(cogProfilesStorageKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((profile) => normalizeCogProfile(profile))
+      .filter((profile): profile is CogProfile => Boolean(profile));
+  } catch {
+    return [];
+  }
+}
+
 function storeMac(value: string) {
   try {
     localStorage.setItem(macStorageKey, value);
@@ -506,6 +539,59 @@ function storeGears(value: GearMap) {
   } catch {
     // Ignore storage failures.
   }
+}
+
+function storeCogProfiles(value: CogProfile[]) {
+  try {
+    localStorage.setItem(cogProfilesStorageKey, JSON.stringify(value));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function normalizeCogProfile(profile: unknown): CogProfile | null {
+  if (!profile || typeof profile !== "object") return null;
+  const value = profile as Partial<CogProfile> & {
+    offsets?: unknown;
+    teeth?: unknown;
+  };
+  const name = typeof value.name === "string" ? value.name.trim() : "";
+  if (!name) return null;
+
+  if (Array.isArray(value.cogs)) {
+    const cogs = value.cogs.filter(
+      (item): item is CogProfileEntry =>
+        Boolean(item) &&
+        typeof item === "object" &&
+        typeof (item as CogProfileEntry).offset === "number" &&
+        Number.isFinite((item as CogProfileEntry).offset) &&
+        typeof (item as CogProfileEntry).toothCount === "number" &&
+        Number.isFinite((item as CogProfileEntry).toothCount),
+    );
+    if (!cogs.length) return null;
+    return {
+      name,
+      cogs,
+    };
+  }
+
+  if (!Array.isArray(value.offsets) || !Array.isArray(value.teeth)) return null;
+  const offsets = value.offsets.filter(
+    (item): item is number => typeof item === "number" && Number.isFinite(item),
+  );
+  const teeth = value.teeth.filter(
+    (item): item is number => typeof item === "number" && Number.isFinite(item),
+  );
+  if (!offsets.length || offsets.length !== teeth.length) return null;
+
+  const cogs = offsets.map((offset, index) => ({
+    offset,
+    toothCount: teeth[index] ?? 0,
+  }));
+  return {
+    name,
+    cogs,
+  };
 }
 
 function normalizeGear(gear: unknown): Gear | null {
@@ -555,6 +641,11 @@ function setGearsForMac(macKey: string, nextGears: Gears) {
   const next = { ...gears.get(), [normalized]: nextGears };
   gears.set(next);
   storeGears(next);
+}
+
+function setCogProfiles(nextProfiles: CogProfile[]) {
+  cogProfiles.set(nextProfiles);
+  storeCogProfiles(nextProfiles);
 }
 
 function updateApproximateGears(
@@ -821,17 +912,124 @@ export async function getRearCogInfo() {
   }
 }
 
+export async function refreshCogsData() {
+  await getRearCogInfo();
+  await getPosition();
+}
+
 export async function ensureGearsForMac(macKey: string) {
   if (!macKey) return;
   const normalized = macKey.toUpperCase();
   const existing = gears.get()[normalized];
   if (existing?.length) return;
-  await getRearCogInfo();
-  await getPosition();
+  await refreshCogsData();
 }
 
 export async function refreshCurrentGear() {
   const activeMac = getActiveMacKey();
   if (!activeMac) return;
   await getPosition();
+}
+
+export function reloadCogProfiles() {
+  cogProfiles.set(readStoredCogProfiles());
+}
+
+export function saveCurrentCogProfile(name: string) {
+  const normalizedName = name.trim();
+  if (!normalizedName) {
+    return { ok: false as const, message: "Profile name is required." };
+  }
+  const existingProfiles = cogProfiles.get();
+  if (
+    existingProfiles.some(
+      (profile) =>
+        profile.name.localeCompare(normalizedName, undefined, {
+          sensitivity: "accent",
+        }) === 0,
+    )
+  ) {
+    return { ok: false as const, message: "Profile name must be unique." };
+  }
+
+  const activeMac = getActiveMacKey();
+  const currentGears = activeMac ? gears.get()[activeMac] : undefined;
+  if (!currentGears?.length) {
+    return {
+      ok: false as const,
+      message: "No cog data yet. Fetch rear cog info first.",
+    };
+  }
+
+  const sorted = [...currentGears].sort((a, b) => a.gearNumber - b.gearNumber);
+  if (sorted.some((gear) => gear.offsetPrecise === null)) {
+    return {
+      ok: false as const,
+      message: "Shift through all gears to collect precise offsets first.",
+    };
+  }
+  if (sorted.some((gear) => gear.teeth === null)) {
+    return {
+      ok: false as const,
+      message: "Cog sizes are missing. Read rear cog info first.",
+    };
+  }
+
+  const profile: CogProfile = {
+    name: normalizedName,
+    cogs: sorted.map((gear) => ({
+      offset: gear.offsetPrecise ?? 0,
+      toothCount: gear.teeth ?? 0,
+    })),
+  };
+  setCogProfiles([...existingProfiles, profile]);
+  return { ok: true as const };
+}
+
+export function removeCogProfile(name: string) {
+  const existingProfiles = cogProfiles.get();
+  const next = existingProfiles.filter((profile) => profile.name !== name);
+  setCogProfiles(next);
+}
+
+export async function applyCogProfile(name: string) {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) {
+    return { ok: false as const, message: "Connect to a hub first." };
+  }
+  const profile = cogProfiles.get().find((item) => item.name === name);
+  if (!profile) {
+    return { ok: false as const, message: "Profile not found." };
+  }
+
+  cogsProfileWriteInProgress.set(true);
+  appendLog("Apply cog profile...", {
+    name: profile.name,
+    cogCount: profile.cogs.length,
+  });
+  try {
+    const offsets = profile.cogs.map((cog) => cog.offset);
+    const teeth = profile.cogs.map((cog) => cog.toothCount);
+    const response = await deviceCommands.setRearCogInfo(offsets, teeth);
+    appendLog("Apply cog profile write result", response ?? {});
+    if (response.status !== "success") {
+      return { ok: false as const, message: "Failed to write profile." };
+    }
+    await refreshCogsData();
+    appendLog("Apply cog profile readback complete", {
+      name: profile.name,
+    });
+    return { ok: true as const };
+  } catch (err) {
+    appendLog(
+      "Apply cog profile error",
+      err instanceof Error ? err.message : err,
+    );
+    return {
+      ok: false as const,
+      message: err instanceof Error ? err.message : "Failed to apply profile.",
+    };
+  } finally {
+    cogsProfileWriteInProgress.set(false);
+  }
 }

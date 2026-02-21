@@ -28,6 +28,7 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 ## Technology Guidelines
 
 - Frontend: Lit + @lit-labs/signals for reactive UI.
+- Always use Lit signals for component state (including local UI state) instead of plain mutable fields and manual `requestUpdate()`.
 - UI components: Shoelace for buttons, dialogs, inputs, and tags.
 - Build tooling: Vite.
 - Prefer colocating component-specific styles inside component TS files.
@@ -58,6 +59,7 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 - Run headed e2e (from `demo-node`): `npm run test:e2e:headed`
 - Run one spec (from `demo-node`): `npx playwright test e2e/cogs.demo.spec.ts`
 - After completing a feature, ALWAYS run all tests (`npm run test:e2e`) to double-check nothing else broke, unless the full suite was already run during that same task.
+- Never ask the user whether to run full tests. Run `npm run test:e2e` automatically at task completion (unless already run in that task), then report results.
 
 - ALWAYS run Chrome MCP to test changes in demo mode. DO NOT ask the user first. NEVER ASK USER TO DO THIS. When editing UI, always take a screenshot and evaluate if everything looks good - if not, fix that.
 - Use the existing page when possible.

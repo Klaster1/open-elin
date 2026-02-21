@@ -1,11 +1,16 @@
 import { LitElement, css, html } from "lit";
-import { SignalWatcher } from "@lit-labs/signals";
+import { SignalWatcher, signal } from "@lit-labs/signals";
 
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
+import "./empty-state.ts";
 
 export class DeviceCogsTab extends SignalWatcher(LitElement) {
   private readonly absoluteSteps = [10, 5, 1, 0.1] as const;
+  private profileStatus = signal("");
+  private profileDialogOpen = signal(false);
+  private profileDialogValue = signal("");
+  private profileDialogError = signal("");
 
   static styles = [
     sharedStyles,
@@ -23,6 +28,11 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
         flex-direction: column;
         gap: 6px;
         margin-bottom: 16px;
+      }
+
+      .card-head h2,
+      .profiles-head h2 {
+        margin: 0;
       }
 
       .hint {
@@ -273,11 +283,143 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
         background: #0f1620;
         font-family: Consolas, monospace;
       }
+
+      .profiles {
+        margin-top: 18px;
+      }
+
+      .profiles-divider {
+        margin: 0 0 16px;
+        --color: var(--panel-border, #223142);
+      }
+
+      .profiles-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .profiles-list {
+        margin-top: 12px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .profile-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        border: 1px solid #233143;
+        border-radius: 10px;
+        padding: 10px;
+        background: #0f1620;
+      }
+
+      .profile-name {
+        font-weight: 700;
+        font-size: 13px;
+      }
+
+      .profile-meta {
+        margin-top: 4px;
+        color: var(--muted, #98a6b5);
+        font-size: 12px;
+      }
+
+      .profile-meta-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .profile-meta-table td {
+        border-top: 1px solid #233143;
+        padding: 4px 6px;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .profile-meta-table tr:first-child td {
+        border-top: 0;
+      }
+
+      .profile-meta-table td:first-child {
+        text-align: left;
+        font-weight: 600;
+        color: var(--muted, #98a6b5);
+      }
+
+      .profile-actions {
+        display: flex;
+        gap: 8px;
+        align-items: start;
+      }
+
+      .profiles-empty {
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px dashed #3a4a5c;
+        display: grid;
+        gap: 10px;
+      }
+
+      .profile-status {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--warn, #ffb454);
+      }
+
+      .profile-status.busy {
+        color: #7ef0c3;
+      }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .dialog-cancel::part(base) {
+        border-color: #2b3b4c;
+        background: #0e141b;
+        color: inherit;
+      }
+
+      sl-dialog::part(header) {
+        border-bottom: 1px solid #243241;
+      }
+
+      sl-dialog::part(body) {
+        padding-top: 12px;
+      }
+
+      sl-dialog::part(footer) {
+        border-top: 1px solid #243241;
+      }
+
+      sl-dialog::part(close-button) {
+        color: #98a6b5;
+      }
+
+      sl-input::part(base) {
+        border-radius: 10px;
+        border-color: #2b3b4c;
+        background: #0e141b;
+        color: inherit;
+      }
+
+      sl-input::part(form-control) {
+        gap: 6px;
+      }
     `,
   ];
 
   connectedCallback() {
     super.connectedCallback();
+    appActions.reloadCogProfiles();
     const mac = appState.mac.get();
     if (appState.connected.get() && mac) {
       void appActions.ensureGearsForMac(mac);
@@ -286,9 +428,12 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
 
   render() {
     const canSend = appState.connected.get() && Boolean(appState.mac.get());
+    const writeLocked = appState.cogsProfileWriteInProgress.get();
+    const controlsDisabled = !canSend || writeLocked;
     const mac = appState.mac.get();
     const gearMap = appState.gears.get();
     const gearList = mac ? gearMap[mac] : undefined;
+    const profiles = appState.cogProfiles.get();
     return html`
       <div class="card" data-test-id="cogs-tab">
         <div class="card-head">
@@ -298,27 +443,79 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
         <div class="actions">
           <sl-button
             data-test-id="cogs-get-rear-cog-info"
-            ?disabled=${!canSend}
+            ?disabled=${controlsDisabled}
             @click=${this.onGetRearCogInfo}
             >Get rear cog info</sl-button
           >
           <sl-button
             data-test-id="cogs-get-position"
-            ?disabled=${!canSend}
+            ?disabled=${controlsDisabled}
             @click=${this.onGetPosition}
             >Get position</sl-button
           >
         </div>
         <div class="absolute-controls" data-test-id="cogs-absolute-controls">
-          ${this.renderAbsoluteControls(canSend, gearList)}
+          ${this.renderAbsoluteControls(controlsDisabled, gearList)}
         </div>
-        ${this.renderCogControls(canSend, gearList)}
+        ${this.renderCogControls(controlsDisabled, gearList)}
+        ${this.renderProfilesSection(controlsDisabled, gearList, profiles)}
+        ${writeLocked
+          ? html`
+              <div
+                class="profile-status busy"
+                data-test-id="cogs-profile-applying"
+                role="status"
+              >
+                Applying profile...
+              </div>
+            `
+          : ""}
+        ${this.profileStatus.get() && !writeLocked
+          ? html`<div class="profile-status" data-test-id="cogs-profile-status">
+              ${this.profileStatus.get()}
+            </div>`
+          : ""}
       </div>
+      <sl-dialog
+        data-test-id="cogs-profile-dialog"
+        label="Save profile"
+        ?open=${this.profileDialogOpen.get()}
+        @sl-request-close=${this.onProfileDialogRequestClose}
+      >
+        <sl-input
+          data-test-id="cogs-profile-dialog-input"
+          label="Profile name"
+          placeholder="Enter profile name"
+          .value=${this.profileDialogValue.get()}
+          ?invalid=${Boolean(this.profileDialogError.get())}
+          help-text=${this.profileDialogError.get()}
+          @sl-input=${this.onProfileDialogInput}
+          ?disabled=${writeLocked}
+        ></sl-input>
+        <div slot="footer" class="dialog-actions">
+          <sl-button
+            data-test-id="cogs-profile-dialog-cancel"
+            class="dialog-cancel"
+            ?disabled=${writeLocked}
+            @click=${this.closeProfileDialog}
+          >
+            Cancel
+          </sl-button>
+          <sl-button
+            data-test-id="cogs-profile-dialog-confirm"
+            variant="primary"
+            ?disabled=${writeLocked}
+            @click=${this.confirmSaveProfile}
+          >
+            Save
+          </sl-button>
+        </div>
+      </sl-dialog>
     `;
   }
 
   private renderCogControls(
-    canSend: boolean,
+    controlsDisabled: boolean,
     gearList:
       | Array<{
           gearNumber: number;
@@ -336,7 +533,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
             class="shift-side-button"
             data-test-id="cogs-shift-down"
             size="large"
-            ?disabled=${!canSend}
+            ?disabled=${controlsDisabled}
             @click=${this.onShiftDown}
           >
             <span class="shift-side-content"
@@ -363,7 +560,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
             class="shift-side-button"
             data-test-id="cogs-shift-up"
             size="large"
-            ?disabled=${!canSend}
+            ?disabled=${controlsDisabled}
             @click=${this.onShiftUp}
           >
             <span class="shift-side-content"
@@ -381,7 +578,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
   }
 
   private renderAbsoluteControls(
-    canSend: boolean,
+    controlsDisabled: boolean,
     gearList:
       | Array<{
           gearNumber: number;
@@ -393,7 +590,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
       | undefined,
   ) {
     const currentOffset = this.getCurrentAbsoluteOffset(gearList);
-    const disabled = !canSend || currentOffset === null;
+    const disabled = controlsDisabled || currentOffset === null;
     return html`
       <div class="absolute-group" role="group" aria-label="Decrease absolute">
         ${this.absoluteSteps.map(
@@ -441,6 +638,194 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
     `;
   }
 
+  private renderProfilesSection(
+    controlsDisabled: boolean,
+    gearList:
+      | Array<{
+          gearNumber: number;
+          offsetApproximate: number;
+          offsetPrecise: number | null;
+          current: boolean;
+          teeth: number | null;
+        }>
+      | undefined,
+    profiles: Array<{
+      name: string;
+      cogs: Array<{
+        offset: number;
+        toothCount: number;
+      }>;
+    }>,
+  ) {
+    const canSave = this.canSaveProfileFromGears(gearList);
+    const disableSave = controlsDisabled || !canSave;
+    const disableProfileAction = controlsDisabled;
+    return html`
+      <section class="profiles" data-test-id="cogs-profiles-section">
+        <sl-divider class="profiles-divider"></sl-divider>
+        <div class="profiles-head">
+          <h2>Profiles</h2>
+          ${profiles.length
+            ? html`
+                <sl-button
+                  size="small"
+                  data-test-id="cogs-profile-save-current"
+                  ?disabled=${disableSave}
+                  @click=${this.openProfileDialog}
+                >
+                  Save current as profile
+                </sl-button>
+              `
+            : ""}
+        </div>
+        ${profiles.length
+          ? html`
+              <div class="profiles-list" data-test-id="cogs-profiles-list">
+                ${profiles.map((profile) =>
+                  this.renderProfileRow(profile, disableProfileAction),
+                )}
+              </div>
+            `
+          : html`
+              <empty-state
+                data-test-id="cogs-profiles-empty"
+                title="No profiles yet"
+                message="Shift through all gears first to collect precise offsets, then save a profile."
+              >
+                <svg
+                  slot="icon"
+                  viewBox="0 0 64 64"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <rect
+                    x="12"
+                    y="10"
+                    width="40"
+                    height="44"
+                    rx="8"
+                    stroke="#7ef0c3"
+                    stroke-width="4"
+                  />
+                  <path
+                    d="M22 22h20"
+                    stroke="#7ef0c3"
+                    stroke-width="4"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M22 32h14"
+                    stroke="#7ef0c3"
+                    stroke-width="4"
+                    stroke-linecap="round"
+                  />
+                  <circle
+                    cx="42"
+                    cy="40"
+                    r="6"
+                    stroke="#ffb454"
+                    stroke-width="4"
+                  />
+                </svg>
+                <div slot="actions">
+                  <sl-button
+                    size="small"
+                    data-test-id="cogs-profile-save-empty"
+                    ?disabled=${disableSave}
+                    @click=${this.openProfileDialog}
+                  >
+                    Save current as profile
+                  </sl-button>
+                </div>
+              </empty-state>
+            `}
+      </section>
+    `;
+  }
+
+  private renderProfileRow(
+    profile: {
+      name: string;
+      cogs: Array<{
+        offset: number;
+        toothCount: number;
+      }>;
+    },
+    disabled: boolean,
+  ) {
+    const teethValues = profile.cogs.map((cog) => `${cog.toothCount}T`);
+    const offsetValues = profile.cogs.map((cog) => cog.offset.toFixed(2));
+    return html`
+      <div
+        class="profile-row"
+        data-test-id="cogs-profile-row"
+        data-profile-name=${profile.name}
+      >
+        <div>
+          <div class="profile-name" data-test-id="cogs-profile-name">
+            ${profile.name}
+          </div>
+          <div class="profile-meta">
+            <table class="profile-meta-table">
+              <tr>
+                <td data-test-id="cogs-profile-count">
+                  Cogs: ${profile.cogs.length}
+                </td>
+                ${teethValues.map(
+                  (value) =>
+                    html`<td data-test-id="cogs-profile-teeth">${value}</td>`,
+                )}
+              </tr>
+              <tr>
+                <td>Offsets</td>
+                ${offsetValues.map(
+                  (value) =>
+                    html`<td data-test-id="cogs-profile-offsets">${value}</td>`,
+                )}
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="profile-actions">
+          <sl-button
+            size="small"
+            data-test-id="cogs-profile-apply"
+            ?disabled=${disabled}
+            @click=${() => this.onApplyProfile(profile.name)}
+          >
+            Apply
+          </sl-button>
+          <sl-button
+            size="small"
+            variant="danger"
+            data-test-id="cogs-profile-remove"
+            ?disabled=${disabled}
+            @click=${() => this.onRemoveProfile(profile.name)}
+          >
+            Remove
+          </sl-button>
+        </div>
+      </div>
+    `;
+  }
+
+  private canSaveProfileFromGears(
+    gearList:
+      | Array<{
+          gearNumber: number;
+          offsetApproximate: number;
+          offsetPrecise: number | null;
+          current: boolean;
+          teeth: number | null;
+        }>
+      | undefined,
+  ) {
+    if (!gearList?.length) return false;
+    if (gearList.some((gear) => gear.offsetPrecise === null)) return false;
+    if (gearList.some((gear) => gear.teeth === null)) return false;
+    return true;
+  }
+
   private renderGearStrip(
     gears: Array<{
       gearNumber: number;
@@ -454,12 +839,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
     const minGear = sorted[0]?.gearNumber ?? 1;
     const maxGear = sorted[sorted.length - 1]?.gearNumber ?? minGear;
     return html`
-      <div
-        class="gear-strip"
-        role="list"
-        aria-label="Rear cassette gears"
-        data-test-id="cogs-gear-strip"
-      >
+      <div class="gear-strip" role="list" data-test-id="cogs-gear-strip">
         ${sorted.map((gear) => this.renderGear(gear, minGear, maxGear))}
       </div>
     `;
@@ -579,8 +959,71 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
 
   private async onAbsoluteNudge(delta: number, baseOffset: number | null) {
     if (baseOffset === null) return;
+    if (appState.cogsProfileWriteInProgress.get()) return;
     const target = Math.round((baseOffset + delta) * 10) / 10;
     await appActions.absoluteMove(target);
+  }
+
+  private setProfileStatus(value: string) {
+    this.profileStatus.set(value);
+  }
+
+  private openProfileDialog = () => {
+    if (appState.cogsProfileWriteInProgress.get()) return;
+    this.profileDialogValue.set("");
+    this.profileDialogError.set("");
+    this.profileDialogOpen.set(true);
+  };
+
+  private closeProfileDialog = () => {
+    this.profileDialogOpen.set(false);
+    this.profileDialogError.set("");
+  };
+
+  private onProfileDialogRequestClose(event: Event) {
+    if (appState.cogsProfileWriteInProgress.get()) {
+      event.preventDefault();
+      return;
+    }
+    this.closeProfileDialog();
+  }
+
+  private onProfileDialogInput(event: Event) {
+    const target = event.target as HTMLInputElement | null;
+    this.profileDialogValue.set(target?.value ?? "");
+    if (this.profileDialogError.get()) {
+      this.profileDialogError.set("");
+    }
+  }
+
+  private confirmSaveProfile = () => {
+    if (appState.cogsProfileWriteInProgress.get()) return;
+    const result = appActions.saveCurrentCogProfile(
+      this.profileDialogValue.get(),
+    );
+    if (!result.ok) {
+      this.profileDialogError.set(result.message);
+      return;
+    }
+    this.profileDialogOpen.set(false);
+    this.profileDialogError.set("");
+    this.setProfileStatus("");
+  };
+
+  private async onApplyProfile(name: string) {
+    if (appState.cogsProfileWriteInProgress.get()) return;
+    this.setProfileStatus("");
+    const result = await appActions.applyCogProfile(name);
+    if (!result.ok) {
+      this.setProfileStatus(result.message);
+      return;
+    }
+  }
+
+  private onRemoveProfile(name: string) {
+    if (appState.cogsProfileWriteInProgress.get()) return;
+    appActions.removeCogProfile(name);
+    this.setProfileStatus("");
   }
 }
 
