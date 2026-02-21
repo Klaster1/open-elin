@@ -57,10 +57,12 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 - Run headless e2e (from `demo-node`): `npm run test:e2e`
 - Run headed e2e (from `demo-node`): `npm run test:e2e:headed`
 - Run one spec (from `demo-node`): `npx playwright test e2e/cogs.demo.spec.ts`
+- After completing a feature, ALWAYS run all tests (`npm run test:e2e`) to double-check nothing else broke, unless the full suite was already run during that same task.
 
 - ALWAYS run Chrome MCP to test changes in demo mode. DO NOT ask the user first. NEVER ASK USER TO DO THIS. When editing UI, always take a screenshot and evaluate if everything looks good - if not, fix that.
 - Use the existing page when possible.
 - Start Vite to access the app at https://localhost:5173/. When you go to this page, you almost always need to click on "Demo".
-- Always start the dev server with `npm run dev` in a non-hidden terminal (from `demo-node`).
+- ONLY EVER use `npm run dev` to start the dev server (from `demo-node`).
+- Never deviate from `npm run dev` for dev server startup.
 - Always re-use the same terminal session for `npm run dev`; do not start another terminal for the dev server.
 - Avoid getting stuck in tool loops; if a tool call fails repeatedly, stop and reassess before continuing.

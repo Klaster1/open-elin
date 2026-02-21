@@ -5,10 +5,8 @@
   "description": "Demo Node.js TypeScript prototype for BikeNet protocol (scan/list devices)",
   "main": "src/index.ts",
   "scripts": {
-    "start": "node src/index.ts",
-    "build": "tsc",
     "dev": "vite",
-    "build:web": "vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed"
