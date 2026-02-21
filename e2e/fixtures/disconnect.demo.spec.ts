@@ -1,6 +1,6 @@
-import { expect, test } from "./fixtures";
-import { DevicePageModel } from "./pages/DevicePageModel";
-import { LandingPageModel } from "./pages/LandingPageModel";
+import { expect, test } from "../fixture";
+import { DevicePageModel } from "../pages/DevicePageModel";
+import { LandingPageModel } from "../pages/LandingPageModel";
 
 test.describe("Disconnect flow in demo mode", () => {
   test("returns to landing page after disconnect", async ({ page }) => {

@@ -1,7 +1,7 @@
-import { expect, test } from "./fixtures";
-import { DeviceMotorPageModel } from "./pages/DeviceMotorPageModel";
-import { DevicePageModel } from "./pages/DevicePageModel";
-import { LandingPageModel } from "./pages/LandingPageModel";
+import { expect, test } from "../fixture";
+import { DeviceMotorPageModel } from "../pages/DeviceMotorPageModel";
+import { DevicePageModel } from "../pages/DevicePageModel";
+import { LandingPageModel } from "../pages/LandingPageModel";
 
 test.describe("Motor params in demo mode", () => {
   test("shows motor params data and refresh loading state", async ({

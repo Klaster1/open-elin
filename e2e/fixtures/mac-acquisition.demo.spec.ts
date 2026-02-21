@@ -1,7 +1,7 @@
-import { expect, test } from "./fixtures";
-import { DevicePageModel } from "./pages/DevicePageModel";
-import { LandingPageModel } from "./pages/LandingPageModel";
-import { MacPageModel } from "./pages/MacPageModel";
+import { expect, test } from "../fixture";
+import { DevicePageModel } from "../pages/DevicePageModel";
+import { LandingPageModel } from "../pages/LandingPageModel";
+import { MacPageModel } from "../pages/MacPageModel";
 
 test.describe("MAC acquisition in demo full mode", () => {
   test("manual MAC entry on /mac routes to device page", async ({ page }) => {

@@ -1,7 +1,7 @@
-import { expect, test } from "./fixtures";
-import { DeviceListPageModel } from "./pages/DeviceListPageModel";
-import { DevicePageModel } from "./pages/DevicePageModel";
-import { LandingPageModel } from "./pages/LandingPageModel";
+import { expect, test } from "../fixture";
+import { DeviceListPageModel } from "../pages/DeviceListPageModel";
+import { DevicePageModel } from "../pages/DevicePageModel";
+import { LandingPageModel } from "../pages/LandingPageModel";
 
 test.describe("Device list in demo mode", () => {
   test("shows list data and refresh applies seeded mutation", async ({

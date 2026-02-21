@@ -1,7 +1,7 @@
-import { expect, test } from "./fixtures";
-import { CogsPageModel } from "./pages/CogsPageModel";
-import { DevicePageModel } from "./pages/DevicePageModel";
-import { LandingPageModel } from "./pages/LandingPageModel";
+import { expect, test } from "../fixture";
+import { CogsPageModel } from "../pages/CogsPageModel";
+import { DevicePageModel } from "../pages/DevicePageModel";
+import { LandingPageModel } from "../pages/LandingPageModel";
 
 test.describe("Cogs in demo mode", () => {
   test("covers demo entry and cogs interactions", async ({

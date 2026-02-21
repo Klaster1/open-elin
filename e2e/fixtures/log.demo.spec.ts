@@ -1,8 +1,8 @@
-import { expect, test } from "./fixtures";
-import { DeviceListPageModel } from "./pages/DeviceListPageModel";
-import { DeviceLogPageModel } from "./pages/DeviceLogPageModel";
-import { DevicePageModel } from "./pages/DevicePageModel";
-import { LandingPageModel } from "./pages/LandingPageModel";
+import { expect, test } from "../fixture";
+import { DeviceListPageModel } from "../pages/DeviceListPageModel";
+import { DeviceLogPageModel } from "../pages/DeviceLogPageModel";
+import { DevicePageModel } from "../pages/DevicePageModel";
+import { LandingPageModel } from "../pages/LandingPageModel";
 
 test.describe("Log page in demo mode", () => {
   test("shows events and command logs, and stays pinned to bottom when at bottom", async ({

@@ -1,6 +1,6 @@
-import { expect, test } from "./fixtures";
-import { DevicePageModel } from "./pages/DevicePageModel";
-import { LandingPageModel } from "./pages/LandingPageModel";
+import { expect, test } from "../fixture";
+import { DevicePageModel } from "../pages/DevicePageModel";
+import { LandingPageModel } from "../pages/LandingPageModel";
 
 test.describe("MAC acquisition via BLE advertisements", () => {
   test("uses watchAdvertisements manufacturer data to discover MAC", async ({
