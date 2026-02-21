@@ -7,7 +7,6 @@ import "./empty-state.ts";
 
 export class DeviceCogs extends SignalWatcher(LitElement) {
   private readonly absoluteSteps = [10, 5, 1, 0.1] as const;
-  private profileStatus = signal("");
   private profileDialogOpen = signal(false);
   private profileDialogValue = signal("");
   private profileDialogError = signal("");
@@ -408,16 +407,6 @@ export class DeviceCogs extends SignalWatcher(LitElement) {
         gap: 10px;
       }
 
-      .profile-status {
-        margin-top: 10px;
-        font-size: 12px;
-        color: var(--warn, #ffb454);
-      }
-
-      .profile-status.busy {
-        color: #7ef0c3;
-      }
-
       .dialog-actions {
         display: flex;
         justify-content: flex-end;
@@ -502,22 +491,6 @@ export class DeviceCogs extends SignalWatcher(LitElement) {
         </div>
         ${this.renderCogControls(controlsDisabled, gearList)}
         ${this.renderProfilesSection(controlsDisabled, gearList, profiles)}
-        ${writeLocked
-          ? html`
-              <div
-                class="profile-status busy"
-                data-test-id="cogs-profile-applying"
-                role="status"
-              >
-                Applying profile...
-              </div>
-            `
-          : ""}
-        ${this.profileStatus.get() && !writeLocked
-          ? html`<div class="profile-status" data-test-id="cogs-profile-status">
-              ${this.profileStatus.get()}
-            </div>`
-          : ""}
       </div>
       <sl-dialog
         data-test-id="cogs-profile-dialog"
@@ -1057,10 +1030,6 @@ export class DeviceCogs extends SignalWatcher(LitElement) {
     await appActions.absoluteMove(target);
   }
 
-  private setProfileStatus(value: string) {
-    this.profileStatus.set(value);
-  }
-
   private openProfileDialog = () => {
     if (appState.cogsProfileWriteInProgress.get()) return;
     this.profileDialogValue.set("");
@@ -1130,7 +1099,6 @@ export class DeviceCogs extends SignalWatcher(LitElement) {
       return;
     }
     this.closeProfileRenameDialog();
-    this.setProfileStatus("");
   };
 
   private confirmSaveProfile = () => {
@@ -1144,23 +1112,16 @@ export class DeviceCogs extends SignalWatcher(LitElement) {
     }
     this.profileDialogOpen.set(false);
     this.profileDialogError.set("");
-    this.setProfileStatus("");
   };
 
   private async onApplyProfile(name: string) {
     if (appState.cogsProfileWriteInProgress.get()) return;
-    this.setProfileStatus("");
-    const result = await appActions.applyCogProfile(name);
-    if (!result.ok) {
-      this.setProfileStatus(result.message);
-      return;
-    }
+    await appActions.applyCogProfile(name);
   }
 
   private onRemoveProfile(name: string) {
     if (appState.cogsProfileWriteInProgress.get()) return;
     appActions.removeCogProfile(name);
-    this.setProfileStatus("");
   }
 }
 

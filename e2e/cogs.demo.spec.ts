@@ -260,7 +260,6 @@ test.describe("Cogs in demo mode", () => {
     });
 
     const applyPromise = cogs.profileApplyButton(renamedProfileName).click();
-    await expect(cogs.profileApplyingStatus()).toBeVisible();
 
     await expect(cogs.getRearCogInfoButton()).toHaveAttribute("disabled", "");
     await expect(cogs.getPositionButton()).toHaveAttribute("disabled", "");
@@ -284,8 +283,10 @@ test.describe("Cogs in demo mode", () => {
 
     // Assert apply completes and restores saved teeth values after readback
     await applyPromise;
-
-    await expect(cogs.profileApplyingStatus()).toBeHidden();
+    await expect(cogs.getRearCogInfoButton()).toBeEnabled();
+    await expect(cogs.profileApplyButton(renamedProfileName)).toBeEnabled();
+    await expect(cogs.profileRemoveButton(renamedProfileName)).toBeEnabled();
+    await expect(cogs.profileRenameButton(renamedProfileName)).toBeEnabled();
     await expect(cogs.gearTeethInCard(0)).toHaveText("11T");
     await expect(cogs.gearTeethInCard(1)).toHaveText("13T");
     await expect(cogs.gearTeethInCard(2)).toHaveText("15T");

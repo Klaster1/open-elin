@@ -154,14 +154,6 @@ export class CogsPageModel {
     return this.page.getByTestId("cogs-profile-save-current");
   }
 
-  profileApplyingStatus(): Locator {
-    return this.page.getByTestId("cogs-profile-applying");
-  }
-
-  profileStatus(): Locator {
-    return this.page.getByTestId("cogs-profile-status");
-  }
-
   profileRowByName(name: string): Locator {
     return this.page.locator(
       `[data-test-id="cogs-profile-row"][data-profile-name="${name}"]`,
