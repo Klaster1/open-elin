@@ -14,6 +14,7 @@ type MessageHandler = (data: Uint8Array) => void;
 type DemoShiftComplete = { rawHex: string };
 
 const DEMO_RESPONSE_CODE = 0x8000;
+const DEMO_STATUS_INVALID_PARAM = 0x8002;
 const DEMO_BATTERY_CODE = 0x4000;
 const DEMO_BUTTON_ACTION_CODE = 0x4001;
 const DEMO_BUTTON_TABLE_CODE = 0x4002;
@@ -147,7 +148,16 @@ export class DemoTransport implements ProtocolTransport {
         this.queueResponse(device.address, this.buildMotorParamsPayload());
         return;
       case 0x0009:
-        this.queueResponse(device.address);
+        if (this.applyRename(payload)) {
+          this.queueResponse(device.address);
+        } else {
+          this.queueResponse(
+            device.address,
+            undefined,
+            undefined,
+            DEMO_STATUS_INVALID_PARAM,
+          );
+        }
         return;
       case 0x0004:
       default:
@@ -161,10 +171,19 @@ export class DemoTransport implements ProtocolTransport {
     delayMs = this.getDelayMs(
       demoState.state.get().transportDelays.commandExecutionMs,
     ),
+    responseCode = DEMO_RESPONSE_CODE,
   ) {
     setTimeout(() => {
-      this.emitFrame(DEMO_RESPONSE_CODE, targetMac, payload);
+      this.emitFrame(responseCode, targetMac, payload);
     }, delayMs);
+  }
+
+  private applyRename(payload: Uint8Array) {
+    const rawName = payload.length > 8 ? payload.slice(8) : new Uint8Array();
+    const decoded = new TextDecoder("utf-8")
+      .decode(rawName)
+      .replace(/\x00+$/, "");
+    return this.hub.setDeviceName(decoded);
   }
 
   private queueNotify(

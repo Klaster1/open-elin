@@ -299,11 +299,14 @@ export class DevicePage extends SignalWatcher(LitElement) {
           <div class="card">
             <div class="sidebar-head">
               <div class="sidebar-name-row">
-                <div class="sidebar-name">${deviceName}</div>
+                <div class="sidebar-name" data-test-id="device-sidebar-name">
+                  ${deviceName}
+                </div>
                 <div class="sidebar-actions">
                   <button
                     class="icon-button"
                     type="button"
+                    data-test-id="device-rename-button"
                     @click=${this.openRename}
                     aria-label="Rename hub"
                     title="Rename hub"
@@ -348,11 +351,13 @@ export class DevicePage extends SignalWatcher(LitElement) {
         <div class="content">${this.renderDeviceTab(activeTab)}</div>
       </section>
       <sl-dialog
+        data-test-id="device-rename-dialog"
         label="Rename hub"
         ?open=${this.renameOpen}
         @sl-request-close=${this.onRenameRequestClose}
       >
         <sl-input
+          data-test-id="device-rename-input"
           label="New name"
           placeholder="Enter hub name"
           .value=${this.renameValue}
@@ -363,6 +368,7 @@ export class DevicePage extends SignalWatcher(LitElement) {
         ></sl-input>
         <div slot="footer" class="dialog-actions">
           <sl-button
+            data-test-id="device-rename-cancel"
             class="dialog-cancel"
             ?disabled=${this.renameBusy}
             @click=${this.closeRename}
@@ -370,6 +376,7 @@ export class DevicePage extends SignalWatcher(LitElement) {
             Cancel
           </sl-button>
           <sl-button
+            data-test-id="device-rename-confirm"
             variant="primary"
             ?disabled=${this.renameBusy}
             @click=${this.confirmRename}

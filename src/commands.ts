@@ -228,19 +228,6 @@ function normalizeMac(mac?: string) {
   return clean.match(/.{1,2}/g)!.join(":");
 }
 
-function encodeNameBytes(name: string) {
-  const out = new Uint8Array(16);
-  for (let i = 0; i < 16; i++) {
-    if (i < name.length) {
-      const bytes = textEncoder.encode(name.charAt(i));
-      out[i] = bytes.length ? bytes[0] : 0x00;
-    } else {
-      out[i] = 0x00;
-    }
-  }
-  return out;
-}
-
 function buildRearCogParamsHex(cablePositions: number[], teeth?: number[]) {
   if (!cablePositions.length) {
     throw new Error("cablePositions must include at least one value");
@@ -692,7 +679,7 @@ export class BikeNetCommands {
   ): Promise<BasicResponse> {
     const mac = targetMac ?? this.device.address;
     const header = encodeCommandWithMac(AppCommand.SetName, mac);
-    const nameBytes = encodeNameBytes(name);
+    const nameBytes = textEncoder.encode(name);
     const payload = new Uint8Array(header.length + nameBytes.length);
     payload.set(header, 0);
     payload.set(nameBytes, header.length);

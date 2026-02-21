@@ -16,9 +16,24 @@ export class HubMock {
   readonly state = signal<HubStateShape>(structuredClone(hubData));
   private readonly minOffset = 0;
   private readonly maxOffset = 250;
+  private readonly maxNameLength = 16;
 
   getDevice() {
     return this.state.get().device;
+  }
+
+  setDeviceName(name: string) {
+    if (!name) return false;
+    if (name.length > this.maxNameLength) return false;
+    const current = this.state.get();
+    this.state.set({
+      ...current,
+      device: {
+        ...current.device,
+        name,
+      },
+    });
+    return true;
   }
 
   getButtonMapBytes() {
