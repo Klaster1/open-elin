@@ -15,7 +15,27 @@ export class LandingPageModel {
     return this.page.getByTestId("landing-demo-button");
   }
 
+  connectButton(): Locator {
+    return this.page.getByTestId("landing-connect-button");
+  }
+
+  macRouteMatcher() {
+    return /\/mac$/;
+  }
+
   async startDemo() {
     await this.demoButton().click();
+  }
+
+  async startConnect() {
+    await this.connectButton().click();
+  }
+
+  async holdAltForDemoFull() {
+    await this.page.keyboard.down("Alt");
+  }
+
+  async releaseAltForDemoFull() {
+    await this.page.keyboard.up("Alt");
   }
 }

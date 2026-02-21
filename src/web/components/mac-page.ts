@@ -3,6 +3,7 @@ import { SignalWatcher } from "@lit-labs/signals";
 
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
+import "./pod-mock-gui.ts";
 
 export class MacPage extends SignalWatcher(LitElement) {
   static styles = [
@@ -109,8 +110,9 @@ export class MacPage extends SignalWatcher(LitElement) {
     const adStatusText = appState.adStatusText.get();
     const shiftStatusKind = appState.shiftStatusKind.get();
     const shiftStatusText = appState.shiftStatusText.get();
+    const isDemoMode = appState.demoMode.get();
     return html`
-      <section role="main" aria-label="MAC acquisition">
+      <section role="main" aria-label="MAC acquisition" data-test-id="mac-page">
         <div class="card">
           <div class="card-head">
             <h2>2. MAC acquisition</h2>
@@ -127,6 +129,7 @@ export class MacPage extends SignalWatcher(LitElement) {
               </p>
               <div
                 class="status ${adStatusKind}"
+                data-test-id="mac-ad-status"
                 role="status"
                 aria-live="polite"
                 aria-atomic="true"
@@ -142,6 +145,7 @@ export class MacPage extends SignalWatcher(LitElement) {
               </p>
               <div
                 class="status ${shiftStatusKind}"
+                data-test-id="mac-shift-status"
                 role="status"
                 aria-live="polite"
                 aria-atomic="true"
@@ -149,10 +153,16 @@ export class MacPage extends SignalWatcher(LitElement) {
                 ${shiftStatusText}
               </div>
               <p class="hint">A single shift up or down is enough.</p>
+              ${isDemoMode
+                ? html`<pod-mock-gui
+                    data-test-id="mac-pod-controls"
+                  ></pod-mock-gui>`
+                : ""}
             </div>
             <div class="pane">
               <h2>Manual entry</h2>
               <sl-input
+                data-test-id="mac-manual-input"
                 label="Hub MAC address"
                 placeholder="AA:BB:CC:DD:EE:FF"
                 help-text="Format: AA:BB:CC:DD:EE:FF"
@@ -160,7 +170,10 @@ export class MacPage extends SignalWatcher(LitElement) {
                 @sl-input=${this.onManualInput}
               ></sl-input>
               <div class="row">
-                <sl-button variant="default" @click=${this.onManualApply}
+                <sl-button
+                  variant="default"
+                  data-test-id="mac-manual-apply"
+                  @click=${this.onManualApply}
                   >Use this MAC</sl-button
                 >
               </div>
@@ -181,6 +194,11 @@ export class MacPage extends SignalWatcher(LitElement) {
 
   private onManualApply() {
     appActions.applyManualMac();
+    if (appState.mac.get()) {
+      this.dispatchEvent(
+        new CustomEvent("mac-acquired", { bubbles: true, composed: true }),
+      );
+    }
   }
 }
 

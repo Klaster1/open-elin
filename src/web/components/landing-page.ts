@@ -30,6 +30,31 @@ export class LandingPage extends SignalWatcher(LitElement) {
     `,
   ];
 
+  static properties = {
+    demoFull: { type: Boolean, attribute: false },
+  };
+
+  declare demoFull: boolean;
+
+  constructor() {
+    super();
+    this.demoFull = false;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.onWindowKeyDown);
+    window.addEventListener("keyup", this.onWindowKeyUp);
+    window.addEventListener("pointermove", this.onWindowPointerMove);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.onWindowKeyDown);
+    window.removeEventListener("keyup", this.onWindowKeyUp);
+    window.removeEventListener("pointermove", this.onWindowPointerMove);
+    super.disconnectedCallback();
+  }
+
   render() {
     const connectEmpty = appState.connectEmpty.get();
     const connected = appState.connected.get();
@@ -54,7 +79,7 @@ export class LandingPage extends SignalWatcher(LitElement) {
               class="demo-button"
               data-test-id="landing-demo-button"
               @click=${this.onDemo}
-              >Demo</sl-button
+              >${this.demoFull ? "Demo (full)" : "Demo"}</sl-button
             >
           </div>
         </empty-state>
@@ -68,11 +93,33 @@ export class LandingPage extends SignalWatcher(LitElement) {
     );
   }
 
-  private onDemo() {
+  private onDemo(event: MouseEvent) {
     this.dispatchEvent(
-      new CustomEvent("demo-requested", { bubbles: true, composed: true }),
+      new CustomEvent("demo-requested", {
+        bubbles: true,
+        composed: true,
+        detail: { full: this.demoFull || event.altKey },
+      }),
     );
   }
+
+  private onWindowKeyDown = (event: KeyboardEvent) => {
+    if ((event.altKey || event.key === "Alt") && !this.demoFull) {
+      this.demoFull = true;
+    }
+  };
+
+  private onWindowKeyUp = (event: KeyboardEvent) => {
+    if ((!event.altKey || event.key === "Alt") && this.demoFull) {
+      this.demoFull = false;
+    }
+  };
+
+  private onWindowPointerMove = (event: PointerEvent) => {
+    if (event.altKey !== this.demoFull) {
+      this.demoFull = event.altKey;
+    }
+  };
 }
 
 if (!customElements.get("landing-page")) {

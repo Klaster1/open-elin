@@ -254,7 +254,8 @@ export async function connect() {
   });
 }
 
-export async function connectDemo() {
+export async function connectDemo(options: { full?: boolean } = {}) {
+  const full = Boolean(options.full);
   const pod = globalScope.__demo?.pod ?? demoPod;
   const hub = globalScope.__demo?.hub ?? new HubMock();
   publishGlobalDemo({ pod, hub });
@@ -263,6 +264,7 @@ export async function connectDemo() {
     requestLabel: "Starting demo transport...",
     preferStoredMac: false,
     demo: true,
+    autoMacFromDevice: !full,
   });
 }
 
@@ -272,6 +274,7 @@ async function connectWithTransport(
     requestLabel: string;
     preferStoredMac: boolean;
     demo: boolean;
+    autoMacFromDevice: boolean;
   },
 ) {
   connectEmpty.set(false);
@@ -294,7 +297,7 @@ async function connectWithTransport(
     const device = devices[0];
     connectedDevice.set(device);
     const storedMac = options.preferStoredMac ? readStoredMac() : "";
-    const macFromAdvert = device.address;
+    const macFromAdvert = options.autoMacFromDevice ? device.address : "";
     const macToUse = storedMac || macFromAdvert;
 
     if (macToUse) {

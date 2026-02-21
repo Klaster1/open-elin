@@ -97,6 +97,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
         <div class="pod-mock-frame">
           <sl-switch
             class="pod-power"
+            data-test-id="pod-power-switch"
             ?checked=${isOnline}
             @sl-change=${this.onPowerToggle}
           >
@@ -106,6 +107,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
           <button
             class="pod-button pod-button-tune"
             type="button"
+            data-test-id="pod-button-tune"
             @click=${this.onIgnoreClick}
             @pointerdown=${this.onTunePointerDown}
             @pointerup=${this.onTunePointerUp}
@@ -118,6 +120,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
           <button
             class="pod-button pod-button-up"
             type="button"
+            data-test-id="pod-button-up"
             @click=${this.onIgnoreClick}
             @pointerdown=${this.onShiftUpPointerDown}
             @pointerup=${this.onShiftUpPointerUp}
@@ -130,6 +133,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
           <button
             class="pod-button pod-button-down"
             type="button"
+            data-test-id="pod-button-down"
             @click=${this.onIgnoreClick}
             @pointerdown=${this.onShiftDownPointerDown}
             @pointerup=${this.onShiftDownPointerUp}

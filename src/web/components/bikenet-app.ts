@@ -104,7 +104,7 @@ export class BikeNetApp extends SignalWatcher(LitElement) {
   }
 
   private renderMacRoute() {
-    return html`<mac-page></mac-page>`;
+    return html`<mac-page @mac-acquired=${this.handleMacAcquired}></mac-page>`;
   }
 
   private renderDeviceRoute(macParam?: string, tabParam?: string) {
@@ -163,8 +163,19 @@ export class BikeNetApp extends SignalWatcher(LitElement) {
     }
   }
 
-  private async handleDemo() {
-    await appActions.connectDemo();
+  private async handleDemo(event: CustomEvent<{ full?: boolean }> | Event) {
+    const detail = "detail" in event ? event.detail : undefined;
+    const full = Boolean(detail?.full);
+    await appActions.connectDemo({ full });
+    const mac = appState.mac.get();
+    if (mac) {
+      void this.navigate(`/device/${serializeMacForRoute(mac)}/log`);
+    } else if (full) {
+      void this.navigate("/mac");
+    }
+  }
+
+  private handleMacAcquired() {
     const mac = appState.mac.get();
     if (mac) {
       void this.navigate(`/device/${serializeMacForRoute(mac)}/log`);
