@@ -8,7 +8,7 @@ export class LandingPageModel {
   }
 
   root(): Locator {
-    return this.page.getByTestId("landing-page");
+    return this.page.getByTestId("connection-empty-state");
   }
 
   demoButton(): Locator {

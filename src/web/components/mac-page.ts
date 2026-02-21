@@ -115,7 +115,7 @@ export class MacPage extends SignalWatcher(LitElement) {
       <section role="main" aria-label="MAC acquisition" data-test-id="mac-page">
         <div class="card">
           <div class="card-head">
-            <h2>2. MAC acquisition</h2>
+            <h2>MAC acquisition</h2>
             <p class="hint">
               We need the hub MAC to send commands. Use one of the methods
               below.

@@ -4,7 +4,7 @@ import { SignalWatcher } from "@lit-labs/signals";
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import { deviceTabs } from "../device-tabs.ts";
-import "./empty-state.ts";
+import "./connection-empty-state.ts";
 import "./device-list-tab.ts";
 import "./device-motor-tab.ts";
 import "./device-buttons-tab.ts";
@@ -170,12 +170,6 @@ export class DevicePage extends SignalWatcher(LitElement) {
         color: #c0cad6;
       }
 
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-
       .dialog-actions {
         display: flex;
         justify-content: flex-end;
@@ -211,19 +205,6 @@ export class DevicePage extends SignalWatcher(LitElement) {
 
       sl-input::part(form-control) {
         gap: 6px;
-      }
-
-      .demo-button::part(base) {
-        background: transparent;
-        border-color: #2b3a4b;
-        color: var(--muted, #98a6b5);
-        opacity: 0.7;
-      }
-
-      .demo-button::part(base):hover {
-        opacity: 1;
-        border-color: #3a4a5c;
-        color: var(--text, #e7edf5);
       }
 
       @media (max-width: 900px) {
@@ -268,21 +249,10 @@ export class DevicePage extends SignalWatcher(LitElement) {
     const connected = appState.connected.get();
     if (!connected) {
       return html`
-        <section role="main" aria-label="Reconnect">
-          <empty-state
-            title="Reconnect required"
-            message="You opened the device page without an active Bluetooth session. Chrome requires a user click to open the Bluetooth picker."
-          >
-            <div slot="actions" class="actions">
-              <sl-button variant="primary" @click=${this.onReconnect}
-                >Connect to hub</sl-button
-              >
-              <sl-button class="demo-button" @click=${this.onDemo}
-                >Demo</sl-button
-              >
-            </div>
-          </empty-state>
-        </section>
+        <connection-empty-state
+          @connect-action=${this.onReconnect}
+          @demo-action=${this.onDemo}
+        ></connection-empty-state>
       `;
     }
 
