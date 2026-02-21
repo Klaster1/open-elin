@@ -5,7 +5,7 @@ import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import "./refresh-button.ts";
 
-export class DeviceButtonsTab extends SignalWatcher(LitElement) {
+export class DeviceButtons extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -217,8 +217,8 @@ export class DeviceButtonsTab extends SignalWatcher(LitElement) {
   }
 }
 
-if (!customElements.get("device-buttons-tab")) {
-  customElements.define("device-buttons-tab", DeviceButtonsTab);
+if (!customElements.get("device-buttons")) {
+  customElements.define("device-buttons", DeviceButtons);
 }
 
 export {};

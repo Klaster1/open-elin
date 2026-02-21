@@ -4,7 +4,7 @@ export class DeviceLogPageModel {
   constructor(private readonly page: Page) {}
 
   root(): Locator {
-    return this.page.getByTestId("log-tab");
+    return this.page.getByTestId("log");
   }
 
   output(): Locator {

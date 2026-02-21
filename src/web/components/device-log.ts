@@ -5,7 +5,7 @@ import { SignalWatcher } from "@lit-labs/signals";
 import { appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
-export class DeviceLogTab extends SignalWatcher(LitElement) {
+export class DeviceLog extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -58,7 +58,7 @@ export class DeviceLogTab extends SignalWatcher(LitElement) {
   render() {
     const logLines = appState.logLines.get();
     return html`
-      <div class="card" data-test-id="log-tab">
+      <div class="card" data-test-id="log">
         <div class="card-head">
           <h2>Log</h2>
           <p class="hint">Notifications and command results appear here.</p>
@@ -99,8 +99,8 @@ ${logLines.join("\n")}</pre
   }
 }
 
-if (!customElements.get("device-log-tab")) {
-  customElements.define("device-log-tab", DeviceLogTab);
+if (!customElements.get("device-log")) {
+  customElements.define("device-log", DeviceLog);
 }
 
 export {};

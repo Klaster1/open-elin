@@ -4,7 +4,7 @@ export class CogsPageModel {
   constructor(private readonly page: Page) {}
 
   root(): Locator {
-    return this.page.getByTestId("cogs-tab");
+    return this.page.getByTestId("cogs");
   }
 
   heading(): Locator {

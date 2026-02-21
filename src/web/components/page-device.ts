@@ -5,11 +5,11 @@ import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import { deviceTabs } from "../device-tabs.ts";
 import "./connection-empty-state.ts";
-import "./device-list-tab.ts";
-import "./device-motor-tab.ts";
-import "./device-buttons-tab.ts";
-import "./device-cogs-tab.ts";
-import "./device-log-tab.ts";
+import "./device-list.ts";
+import "./device-motor.ts";
+import "./device-buttons.ts";
+import "./device-cogs.ts";
+import "./device-log.ts";
 import "./inline-spinner.ts";
 import "../demo/pod-mock-gui.ts";
 
@@ -389,16 +389,16 @@ export class PageDevice extends SignalWatcher(LitElement) {
   private renderDeviceTab(activeTab: string) {
     switch (activeTab) {
       case "list":
-        return html`<device-list-tab></device-list-tab>`;
+        return html`<device-list></device-list>`;
       case "motor":
-        return html`<device-motor-tab></device-motor-tab>`;
+        return html`<device-motor></device-motor>`;
       case "buttons":
-        return html`<device-buttons-tab></device-buttons-tab>`;
+        return html`<device-buttons></device-buttons>`;
       case "cogs":
-        return html`<device-cogs-tab></device-cogs-tab>`;
+        return html`<device-cogs></device-cogs>`;
       case "log":
       default:
-        return html`<device-log-tab></device-log-tab>`;
+        return html`<device-log></device-log>`;
     }
   }
 

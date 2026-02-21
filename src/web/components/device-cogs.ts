@@ -5,7 +5,7 @@ import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import "./empty-state.ts";
 
-export class DeviceCogsTab extends SignalWatcher(LitElement) {
+export class DeviceCogs extends SignalWatcher(LitElement) {
   private readonly absoluteSteps = [10, 5, 1, 0.1] as const;
   private profileStatus = signal("");
   private profileDialogOpen = signal(false);
@@ -478,7 +478,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
     const gearList = mac ? gearMap[mac] : undefined;
     const profiles = appState.cogProfiles.get();
     return html`
-      <div class="card" data-test-id="cogs-tab">
+      <div class="card" data-test-id="cogs">
         <div class="card-head">
           <h2>Cogs</h2>
           <p class="hint">Rear cog diagnostics and live position snapshots.</p>
@@ -1164,8 +1164,8 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
   }
 }
 
-if (!customElements.get("device-cogs-tab")) {
-  customElements.define("device-cogs-tab", DeviceCogsTab);
+if (!customElements.get("device-cogs")) {
+  customElements.define("device-cogs", DeviceCogs);
 }
 
 export {};

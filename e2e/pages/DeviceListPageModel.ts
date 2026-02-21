@@ -4,7 +4,7 @@ export class DeviceListPageModel {
   constructor(private readonly page: Page) {}
 
   root(): Locator {
-    return this.page.getByTestId("device-list-tab");
+    return this.page.getByTestId("device-list");
   }
 
   refreshButton(): Locator {

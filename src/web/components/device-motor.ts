@@ -5,7 +5,7 @@ import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import "./refresh-button.ts";
 
-export class DeviceMotorTab extends SignalWatcher(LitElement) {
+export class DeviceMotor extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -99,7 +99,7 @@ export class DeviceMotorTab extends SignalWatcher(LitElement) {
     const motorParams = appState.motorParams.get();
     const entries = motorParams ? this.buildMotorEntries(motorParams) : [];
     return html`
-      <div class="card" data-test-id="motor-tab">
+      <div class="card" data-test-id="motor">
         <div class="card-head">
           <div class="card-head-row">
             <h2>Motor params</h2>
@@ -209,8 +209,8 @@ export class DeviceMotorTab extends SignalWatcher(LitElement) {
   }
 }
 
-if (!customElements.get("device-motor-tab")) {
-  customElements.define("device-motor-tab", DeviceMotorTab);
+if (!customElements.get("device-motor")) {
+  customElements.define("device-motor", DeviceMotor);
 }
 
 export {};

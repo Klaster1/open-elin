@@ -4,7 +4,7 @@ export class DeviceMotorPageModel {
   constructor(private readonly page: Page) {}
 
   root(): Locator {
-    return this.page.getByTestId("motor-tab");
+    return this.page.getByTestId("motor");
   }
 
   refreshButton(): Locator {

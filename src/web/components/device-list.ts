@@ -5,7 +5,7 @@ import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import "./refresh-button.ts";
 
-export class DeviceListTab extends SignalWatcher(LitElement) {
+export class DeviceList extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -154,7 +154,7 @@ export class DeviceListTab extends SignalWatcher(LitElement) {
     const canList = appState.connected.get();
     const entries = appState.listEntries.get();
     return html`
-      <div class="card" data-test-id="device-list-tab">
+      <div class="card" data-test-id="device-list">
         <div class="card-head">
           <div class="card-head-row">
             <h2>Device list</h2>
@@ -253,8 +253,8 @@ export class DeviceListTab extends SignalWatcher(LitElement) {
   }
 }
 
-if (!customElements.get("device-list-tab")) {
-  customElements.define("device-list-tab", DeviceListTab);
+if (!customElements.get("device-list")) {
+  customElements.define("device-list", DeviceList);
 }
 
 export {};
