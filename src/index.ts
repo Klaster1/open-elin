@@ -1,12 +1,12 @@
-import { BikeNetCommands } from "./commands.ts";
-import { BikeNetProtocol } from "./protocol.ts";
+import { ProtocolCommands } from "./commands.ts";
+import { Protocol } from "./protocol.ts";
 import { NobleTransport } from "./transport-noble.ts";
 
 async function main() {
   const transport = new NobleTransport({
     scanMs: 8000,
   });
-  const protocol = new BikeNetProtocol(transport);
+  const protocol = new Protocol(transport);
 
   const devices = await protocol.listDevices();
   if (!devices.length) {
@@ -17,7 +17,7 @@ async function main() {
   const device = devices[0];
 
   try {
-    const commands = new BikeNetCommands(protocol, device);
+    const commands = new ProtocolCommands(protocol, device);
     let unsubscribeBattery: (() => void) | undefined;
     let unsubscribeButton: (() => void) | undefined;
     let unsubscribeShift: (() => void) | undefined;

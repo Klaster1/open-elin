@@ -32,7 +32,7 @@ Creates and updates end-to-end tests for the web app with strict, repeatable pat
 
 ## Setup and Execution
 
-- Project root: `c:\dev\nxs\demo-node`
+- Project root: `demo-node`
 - Dev server command: `npm run dev` (only)
 - Full e2e: `npm run test:e2e`
 - Single spec: `npx playwright test e2e/<spec>.ts`

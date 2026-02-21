@@ -13,7 +13,7 @@ import { setBasePath } from "@shoelace-style/shoelace/dist/utilities/base-path.j
 
 const componentModules = import.meta.glob("./components/*.ts", { eager: true });
 void componentModules;
-import "./components/bikenet-app.ts";
+import "./components/openelin-app.ts";
 
 setBasePath("/node_modules/@shoelace-style/shoelace/dist/");
 document.documentElement.classList.add("sl-theme-dark");

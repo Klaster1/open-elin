@@ -1,7 +1,7 @@
 import { Signal, computed, signal } from "@lit-labs/signals";
 
-import { BikeNetCommands } from "../commands.ts";
-import { BikeNetProtocol } from "../protocol.ts";
+import { ProtocolCommands } from "../commands.ts";
+import { Protocol } from "../protocol.ts";
 import type { ProtocolTransport } from "../protocol.ts";
 import type { TransportDevice } from "../protocol.ts";
 import { WebBluetoothTransport } from "./transport-web.ts";
@@ -55,7 +55,7 @@ type StoreState = {
   buttonTable: any | null;
   rearCogInfo: any | null;
   frontCogInfo: any | null;
-  commands: BikeNetCommands | null;
+  commands: ProtocolCommands | null;
   connectedDevice: TransportDevice | null;
   pendingRouteMac: string;
   demoMode: boolean;
@@ -207,9 +207,9 @@ const demoPodBatteryWatcher = new Signal.subtle.Watcher(() => {
 demoPodBatteryWatcher.watch(demoPodBatteryLevel);
 demoState.updatePodBatteryLevel(demoPodBatteryLevel.get());
 
-const macStorageKey = "bikenetHubMac";
-const gearsStorageKey = "bikenetGears";
-const cogProfilesStorageKey = "bikenetCogProfiles";
+const macStorageKey = "openElinHubMac";
+const gearsStorageKey = "openElinGears";
+const cogProfilesStorageKey = "openElinCogProfiles";
 let macLockedByUser = false;
 let pendingAdvertMac: string | null = null;
 let adTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -378,7 +378,7 @@ async function connectWithTransport(
   pendingAdvertMac = null;
   appendLog(options.requestLabel);
 
-  const protocol = new BikeNetProtocol(transport);
+  const protocol = new Protocol(transport);
 
   try {
     const devices = await protocol.listDevices();
@@ -415,7 +415,7 @@ async function connectWithTransport(
       mac: device.address || "(none)",
     });
 
-    const deviceCommands = new BikeNetCommands(protocol, device);
+    const deviceCommands = new ProtocolCommands(protocol, device);
     commands.set(deviceCommands);
     connected.set(true);
 
@@ -433,7 +433,7 @@ async function connectWithTransport(
   }
 }
 
-async function subscribeNotifications(deviceCommands: BikeNetCommands) {
+async function subscribeNotifications(deviceCommands: ProtocolCommands) {
   await deviceCommands.subscribeToBatteryVoltage((battery) => {
     if (battery.status !== "success") return;
     if (battery.isHub) {

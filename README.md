@@ -1,6 +1,6 @@
 # demo-node
 
-TypeScript prototype to scan and list BLE devices (uses `noble`). Highlights BikeNet service UUID if advertised.
+TypeScript prototype to scan and list BLE devices (uses `noble`). Highlights the NXS service UUID if advertised.
 
 Quick start:
 

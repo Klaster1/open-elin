@@ -4,17 +4,20 @@
 
 This is a web-based configuration app for the NXS rear derailleur electronic shifter. It provides a browser UI to connect to a hub, read device data, and send commands, with a demo mode for testing.
 
+- App name: `OpenElin`.
+- Use `OpenElin` for all app/product naming in UI text, tests, docs, comments, and new code.
+
 ## Working Directory
 
 - The main project root is `demo-node`.
-- Run all development and test commands from `c:\dev\nxs\demo-node`.
-- If your terminal is elsewhere, change directory first: `cd c:\dev\nxs\demo-node`.
+- Run all development and test commands from the `demo-node` directory.
+- If your terminal is elsewhere, change directory first: `cd demo-node`.
 
 ## App Architecture (High Level)
 
 - Web UI: Lit components render pages and tabs for device data, logs, and actions.
 - State and actions: A central store manages app state, log lines, and command actions.
-- Protocol and commands: The BikeNet protocol layer encodes/decodes messages and exposes command APIs.
+- Protocol and commands: the protocol layer encodes/decodes messages and exposes command APIs.
 - Transports:
   - Web Bluetooth transport for real devices.
   - Demo transport that simulates device notifications and command responses.

@@ -1,5 +1,5 @@
 import {
-  BikeNetProtocol,
+  Protocol,
   hexToBuffer,
   reverseCommand,
   reverseMacAddress,
@@ -588,11 +588,11 @@ export function parseFrontCogNotify(data: Uint8Array): FrontCogNotify {
   return { status: "error", code, targetMac };
 }
 
-export class BikeNetCommands {
-  private readonly protocol: BikeNetProtocol;
+export class ProtocolCommands {
+  private readonly protocol: Protocol;
   private readonly device: TransportDevice;
 
-  constructor(protocol: BikeNetProtocol, device: TransportDevice) {
+  constructor(protocol: Protocol, device: TransportDevice) {
     this.protocol = protocol;
     this.device = device;
   }

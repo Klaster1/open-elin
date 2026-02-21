@@ -2,7 +2,7 @@
   "name": "demo-node",
   "type": "module",
   "version": "0.1.0",
-  "description": "Demo Node.js TypeScript prototype for BikeNet protocol (scan/list devices)",
+  "description": "Web configuration app for NXS shifter",
   "main": "src/index.ts",
   "scripts": {
     "dev": "vite",

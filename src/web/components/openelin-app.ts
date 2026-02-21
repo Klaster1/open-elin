@@ -24,7 +24,7 @@ type RouteParams = {
   tab?: string;
 };
 
-export class BikeNetApp extends SignalWatcher(LitElement) {
+export class OpenElinApp extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
@@ -88,7 +88,7 @@ export class BikeNetApp extends SignalWatcher(LitElement) {
       <div class="app">
         <header class="hero">
           <div>
-            <h1>NXS</h1>
+            <h1>OpenElin</h1>
           </div>
         </header>
         ${this.router.outlet()}
@@ -198,10 +198,10 @@ export class BikeNetApp extends SignalWatcher(LitElement) {
   }
 }
 
-if (!customElements.get("bikenet-app")) {
+if (!customElements.get("openelin-app")) {
   customElements.define(
-    "bikenet-app",
-    BikeNetApp as unknown as CustomElementConstructor,
+    "openelin-app",
+    OpenElinApp as unknown as CustomElementConstructor,
   );
 }
 
