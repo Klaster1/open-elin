@@ -40,26 +40,16 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 
 ### E2E Testing Principles
 
-- Always start by writing a comment-structured test plan in the spec (step comments first), then implement assertions/actions under those comments.
-- Keep tests deterministic: seed demo state up front via custom fixture mutators in [e2e/fixtures.ts](e2e/fixtures.ts).
-- Prefer asserting behavior through UI contracts (active nav state, visible data, busy/loading state, and final rendered outcome).
-- Assert in specs, not in page models: page models should only expose interactions and reads.
-- Prefer `data-test-id` selectors over brittle structure/style selectors.
-- If a control or element used by a test is missing a `data-test-id`, add one in UI code first, then use that `data-test-id` in page models/specs.
-- Use absolute assertions when seed is controlled (exact gear/offset expectations, not relative drift).
-- Make async behavior testable by design: expose mock timing controls in store/demo state so tests can induce long-running requests.
-- Keep test scope tight: validate requested behavior only (demo mode + cogs flow), avoid extra UX/test complexity.
-- Prefer fixture ergonomics over plumbing: expose test-specific helpers through `test.extend`.
-- Keep tests self-contained: do not add cross-test cleanup/reset logic in a test body.
-- Treat hardware-required paths as out-of-scope for CI e2e and cover them with browser-simulated contract tests (API monkey patches) instead.
+- Use the `write-test` skill for all e2e test authoring/refactors: [.github/skills/write-test/SKILL.md](.github/skills/write-test/SKILL.md).
+- Keep test code and comments aligned with that skill (deterministic setup, branch-free flows, explicit assertion contracts, `data-test-id` first selectors).
 
 ### Running Tests
 
 - Run headless e2e (from `demo-node`): `npm run test:e2e`
 - Run headed e2e (from `demo-node`): `npm run test:e2e:headed`
 - Run one spec (from `demo-node`): `npx playwright test e2e/cogs.demo.spec.ts`
-- After completing a feature, ALWAYS run all tests (`npm run test:e2e`) to double-check nothing else broke, unless the full suite was already run during that same task.
-- Never ask the user whether to run full tests. Run `npm run test:e2e` automatically at task completion (unless already run in that task), then report results.
+- Always run full tests (`npm run test:e2e`) at task completion unless already run in the same task.
+- Never ask the user whether to run full tests; run and report results.
 
 - ALWAYS run Chrome MCP to test changes in demo mode. DO NOT ask the user first. NEVER ASK USER TO DO THIS. When editing UI, always take a screenshot and evaluate if everything looks good - if not, fix that.
 - Use the existing page when possible.
