@@ -31,7 +31,7 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 
 ## Testing and Validation
 
-- ALWAYS run Chrome MCP to test changes in demo mode. DO NOT ask the user first. NEVER ASK USER TO DO THIS.
+- ALWAYS run Chrome MCP to test changes in demo mode. DO NOT ask the user first. NEVER ASK USER TO DO THIS. When editing UI, always take a screenshot and evaluate if everything looks good - if not, fix that.
 - Use the existing page when possible.
 - Start Vite to access the app at https://localhost:5173/. When you go to this page, you almost always need to click on "Demo".
 - Always start the dev server with `npm run dev` in a non-hidden terminal.

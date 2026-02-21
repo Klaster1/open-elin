@@ -37,6 +37,82 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
         gap: 10px;
       }
 
+      .cog-controls {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: minmax(84px, 96px) minmax(0, 1fr) minmax(
+            84px,
+            96px
+          );
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .shift-side {
+        display: flex;
+        justify-content: center;
+        height: 100%;
+      }
+
+      .shift-side-button {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+      }
+
+      .shift-side-button::part(base) {
+        height: 100%;
+      }
+
+      .shift-side-button::part(label) {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .shift-side-content {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        line-height: 1;
+      }
+
+      .shift-side-content sl-icon {
+        display: block;
+        width: 1em;
+        height: 1em;
+        font-size: 26px;
+      }
+
+      .shift-side-label {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      @media (max-width: 860px) {
+        .cog-controls {
+          grid-template-columns: 1fr;
+        }
+
+        .shift-side-button {
+          height: auto;
+          min-height: 76px;
+        }
+
+        .shift-side-content {
+          flex-direction: row;
+          gap: 10px;
+        }
+
+        .shift-side-content sl-icon {
+          font-size: 22px;
+        }
+      }
+
       .absolute-controls {
         margin-top: 12px;
         display: flex;
@@ -65,28 +141,41 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
         min-width: 64px;
       }
 
+      .absolute-step::part(label) {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
       .absolute-step-content {
         display: inline-flex;
         align-items: center;
         gap: 6px;
+        line-height: 1;
       }
 
       .absolute-step-content sl-icon {
+        display: block;
+        width: 1em;
+        height: 1em;
         font-size: 14px;
       }
 
       .gear-strip {
-        margin-top: 16px;
-        display: flex;
-        gap: 8px;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        gap: 6px;
         align-items: flex-end;
-        justify-content: center;
-        overflow-x: auto;
+        justify-content: stretch;
+        width: 100%;
+        overflow: hidden;
         padding: 8px 2px 4px;
       }
 
       .gear-card {
-        min-width: 42px;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -94,7 +183,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
       }
 
       .gear-number {
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
         color: var(--muted, #98a6b5);
         min-height: 16px;
@@ -103,7 +192,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
       }
 
       .gear-teeth {
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 600;
         color: #7ef0c3;
         min-height: 14px;
@@ -123,7 +212,7 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
       }
 
       .gear-offset {
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
         min-height: 16px;
         display: flex;
@@ -213,16 +302,47 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
           <sl-button ?disabled=${!canSend} @click=${this.onGetPosition}
             >Get position</sl-button
           >
-          <sl-button ?disabled=${!canSend} @click=${this.onShiftUp}
-            >Shift up</sl-button
-          >
-          <sl-button ?disabled=${!canSend} @click=${this.onShiftDown}
-            >Shift down</sl-button
-          >
         </div>
         <div class="absolute-controls">
           ${this.renderAbsoluteControls(canSend, gearList)}
         </div>
+        ${this.renderCogControls(canSend, gearList)}
+      </div>
+    `;
+  }
+
+  private renderCogControls(
+    canSend: boolean,
+    gearList:
+      | Array<{
+          gearNumber: number;
+          offsetApproximate: number;
+          offsetPrecise: number | null;
+          current: boolean;
+          teeth: number | null;
+        }>
+      | undefined,
+  ) {
+    return html`
+      <div class="cog-controls">
+        <div class="shift-side shift-side-left">
+          <sl-button
+            class="shift-side-button"
+            size="large"
+            ?disabled=${!canSend}
+            @click=${this.onShiftDown}
+          >
+            <span class="shift-side-content"
+              ><sl-icon
+                library="system"
+                name="chevron-left"
+                aria-hidden="true"
+              ></sl-icon
+              ><span class="shift-side-label">Shift down</span></span
+            >
+          </sl-button>
+        </div>
+
         ${gearList?.length
           ? this.renderGearStrip(gearList)
           : html`
@@ -230,6 +350,24 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
                 No gear data yet. Fetch rear cog info to get started.
               </div>
             `}
+
+        <div class="shift-side shift-side-right">
+          <sl-button
+            class="shift-side-button"
+            size="large"
+            ?disabled=${!canSend}
+            @click=${this.onShiftUp}
+          >
+            <span class="shift-side-content"
+              ><sl-icon
+                library="system"
+                name="chevron-right"
+                aria-hidden="true"
+              ></sl-icon
+              ><span class="shift-side-label">Shift up</span></span
+            >
+          </sl-button>
+        </div>
       </div>
     `;
   }
