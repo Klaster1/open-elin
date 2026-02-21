@@ -370,12 +370,14 @@ function parseRearCogInfoResponse(data: Uint8Array): RearCogInfoResponse {
       teethValues.push(payload[i + 2] & 0xff);
     }
 
+    const hasTeethData = teethValues.some((value) => value !== 0);
+
     return {
       status: "success",
       code,
       targetMac,
       values,
-      teeth: teethValues.length ? teethValues : undefined,
+      teeth: hasTeethData ? teethValues : undefined,
       rawHex,
       rawBytes,
     };
@@ -712,6 +714,20 @@ export class BikeNetCommands {
       AppCommand.ShiftDown,
       this.device.address,
     );
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
+  }
+
+  async absoluteMove(targetPosition: number): Promise<BasicResponse> {
+    const header = encodeCommandWithMac(
+      AppCommand.AbsoluteMove,
+      this.device.address,
+    );
+    const scaled = Math.trunc(targetPosition * 10) & 0xffff;
+    const params = new Uint8Array([scaled & 0xff, (scaled >> 8) & 0xff]);
+    const payload = new Uint8Array(header.length + params.length);
+    payload.set(header, 0);
+    payload.set(params, header.length);
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseBasicResponse(response);
   }

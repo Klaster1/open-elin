@@ -147,6 +147,7 @@ export const appActions = {
   getList,
   getMotorParams,
   getPosition,
+  absoluteMove,
   shiftUp,
   shiftDown,
   readButtonMap,
@@ -656,7 +657,7 @@ export async function getPosition() {
       updatePreciseGear(
         getActiveMacKey(),
         response.gearPosition,
-        response.gearPosition ?? null,
+        response.absolutePosition ?? null,
       );
       appendLog("Position", {
         absolutePosition: response.absolutePosition,
@@ -692,6 +693,23 @@ export async function shiftDown() {
     appendLog("Shift down result", response ?? {});
   } catch (err) {
     appendLog("Shift down error", err instanceof Error ? err.message : err);
+  }
+}
+
+export async function absoluteMove(targetPosition: number) {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) return;
+  appendLog("Absolute move...", { targetPosition });
+  try {
+    const response = await deviceCommands.absoluteMove(targetPosition);
+    appendLog("Absolute move result", response ?? {});
+    if (response.status === "success") {
+      await getPosition();
+    }
+    return response;
+  } catch (err) {
+    appendLog("Absolute move error", err instanceof Error ? err.message : err);
+    return null;
   }
 }
 

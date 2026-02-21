@@ -133,6 +133,12 @@ export class DemoTransport implements ProtocolTransport {
           this.pod.state.get().online ? this.buildPositionPayload() : undefined,
         );
         return;
+      case 0x000e:
+        if (this.pod.state.get().online) {
+          this.applyAbsoluteMove(payload);
+        }
+        this.queueResponse(device.address);
+        return;
       case 0x0010:
         this.queueResponse(device.address);
         this.handleShift(device.address, "up");
@@ -353,6 +359,14 @@ export class DemoTransport implements ProtocolTransport {
 
   private applyTuneShift(direction: "up" | "down") {
     this.hub.applyTuneShift(direction, TUNE_STEP);
+  }
+
+  private applyAbsoluteMove(payload: Uint8Array) {
+    const paramsOffset = 8;
+    if (payload.length < paramsOffset + 2) return;
+    const scaled = payload[paramsOffset] | (payload[paramsOffset + 1] << 8);
+    const targetPosition = scaled / 10;
+    this.hub.applyAbsoluteMove(targetPosition);
   }
 
   private macToBytes(mac: string) {

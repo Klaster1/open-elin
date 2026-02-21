@@ -14,6 +14,8 @@ type CurrentPosition = HubState["current"];
 
 export class HubMock {
   readonly state = signal<HubState>(structuredClone(hubData));
+  private readonly minOffset = 0;
+  private readonly maxOffset = 250;
 
   getDevice() {
     return this.state.get().device;
@@ -33,7 +35,7 @@ export class HubMock {
 
   getRearCogApproximateBytes() {
     const rearCogs = this.state.get().rearCogs;
-    return buildRearCogBytes(rearCogs.approximate);
+    return buildRearCogBytes(rearCogs.approximate, rearCogs.teeth);
   }
 
   getPositionBytes() {
@@ -52,7 +54,10 @@ export class HubMock {
       rearCogs.precise[nextGear - 1] ??
       rearCogs.approximate[nextGear - 1] ??
       current.offset;
-    this.updateCurrent({ gear: nextGear, offset: nextOffset });
+    this.updateCurrent({
+      gear: nextGear,
+      offset: this.boundOffset(nextOffset),
+    });
   }
 
   applyTuneShift(direction: ShiftDirection, step: number) {
@@ -60,18 +65,44 @@ export class HubMock {
     const rearCogs = this.state.get().rearCogs;
     const index = clampGear(current.gear, rearCogs.approximate.length) - 1;
     const delta = direction === "up" ? step : -step;
-    const nextOffset = Math.max(0, current.offset + delta);
+    const nextOffset = this.boundOffset(current.offset + delta);
     const nextApprox = [...rearCogs.approximate];
     const nextPrecise = [...rearCogs.precise];
     nextApprox[index] = Math.max(0, nextApprox[index] + delta);
     nextPrecise[index] = nextOffset;
     this.updateState({
       rearCogs: {
+        ...rearCogs,
         approximate: nextApprox,
         precise: nextPrecise,
       },
       current: { gear: current.gear, offset: nextOffset },
     });
+  }
+
+  applyAbsoluteMove(targetOffset: number) {
+    const current = this.state.get().current;
+    const rearCogs = this.state.get().rearCogs;
+    const boundedOffset = this.boundOffset(targetOffset);
+    const clampedGear = clampGear(current.gear, rearCogs.approximate.length);
+    const index = clampedGear - 1;
+    const nextApprox = [...rearCogs.approximate];
+    const nextPrecise = [...rearCogs.precise];
+    nextApprox[index] = boundedOffset;
+    nextPrecise[index] = boundedOffset;
+    this.updateState({
+      rearCogs: {
+        ...rearCogs,
+        approximate: nextApprox,
+        precise: nextPrecise,
+      },
+      current: { gear: clampedGear, offset: boundedOffset },
+    });
+  }
+
+  private boundOffset(value: number) {
+    const safeValue = Number.isFinite(value) ? value : this.minOffset;
+    return Math.min(this.maxOffset, Math.max(this.minOffset, safeValue));
   }
 
   private updateCurrent(next: CurrentPosition) {
@@ -85,13 +116,16 @@ export class HubMock {
   }
 }
 
-function buildRearCogBytes(values: number[]) {
-  const chunks = values.map((value) => {
+function buildRearCogBytes(values: number[], teeth?: number[]) {
+  const chunks = values.map((value, index) => {
     const scaled = Math.max(0, Math.round(value * 10));
-    return [0x00, (scaled >> 8) & 0xff, scaled & 0xff];
+    const toothCount =
+      typeof teeth?.[index] === "number" && Number.isFinite(teeth[index])
+        ? Math.max(0, Math.min(255, Math.round(teeth[index])))
+        : 0;
+    return [scaled & 0xff, (scaled >> 8) & 0xff, toothCount];
   });
-  const reversed = chunks.reverse().flat();
-  return new Uint8Array(reversed);
+  return new Uint8Array(chunks.flat());
 }
 
 function buildPositionBytes(offset: number, gear: number) {

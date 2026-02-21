@@ -5,6 +5,8 @@ import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
 export class DeviceCogsTab extends SignalWatcher(LitElement) {
+  private readonly absoluteSteps = [10, 5, 1, 0.1] as const;
+
   static styles = [
     sharedStyles,
     css`
@@ -33,6 +35,44 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
+      }
+
+      .absolute-controls {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .absolute-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .absolute-center {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted, #98a6b5);
+        padding: 0 4px;
+      }
+
+      .absolute-step {
+        min-width: 64px;
+      }
+
+      .absolute-step-content {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .absolute-step-content sl-icon {
+        font-size: 14px;
       }
 
       .gear-strip {
@@ -180,6 +220,9 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
             >Shift down</sl-button
           >
         </div>
+        <div class="absolute-controls">
+          ${this.renderAbsoluteControls(canSend, gearList)}
+        </div>
         ${gearList?.length
           ? this.renderGearStrip(gearList)
           : html`
@@ -187,6 +230,65 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
                 No gear data yet. Fetch rear cog info to get started.
               </div>
             `}
+      </div>
+    `;
+  }
+
+  private renderAbsoluteControls(
+    canSend: boolean,
+    gearList:
+      | Array<{
+          gearNumber: number;
+          offsetApproximate: number;
+          offsetPrecise: number | null;
+          current: boolean;
+          teeth: number | null;
+        }>
+      | undefined,
+  ) {
+    const currentOffset = this.getCurrentAbsoluteOffset(gearList);
+    const disabled = !canSend || currentOffset === null;
+    return html`
+      <div class="absolute-group" role="group" aria-label="Decrease absolute">
+        ${this.absoluteSteps.map(
+          (step) => html`
+            <sl-button
+              class="absolute-step"
+              size="small"
+              ?disabled=${disabled}
+              @click=${() => this.onAbsoluteNudge(-step, currentOffset)}
+            >
+              <span class="absolute-step-content"
+                ><sl-icon
+                  library="system"
+                  name="chevron-left"
+                  aria-hidden="true"
+                ></sl-icon
+                >${step}</span
+              ></sl-button
+            >
+          `,
+        )}
+      </div>
+      <div class="absolute-center">tune</div>
+      <div class="absolute-group" role="group" aria-label="Increase absolute">
+        ${[...this.absoluteSteps].reverse().map(
+          (step) => html`
+            <sl-button
+              class="absolute-step"
+              size="small"
+              ?disabled=${disabled}
+              @click=${() => this.onAbsoluteNudge(step, currentOffset)}
+            >
+              <span class="absolute-step-content"
+                >${step}<sl-icon
+                  library="system"
+                  name="chevron-right"
+                  aria-hidden="true"
+                ></sl-icon></span
+            ></sl-button>
+          `,
+        )}
       </div>
     `;
   }
@@ -268,6 +370,41 @@ export class DeviceCogsTab extends SignalWatcher(LitElement) {
 
   private async onShiftDown() {
     await appActions.shiftDown();
+  }
+
+  private getCurrentAbsoluteOffset(
+    gearList:
+      | Array<{
+          gearNumber: number;
+          offsetApproximate: number;
+          offsetPrecise: number | null;
+          current: boolean;
+          teeth: number | null;
+        }>
+      | undefined,
+  ) {
+    const currentGear = gearList?.find((gear) => gear.current);
+    if (currentGear) {
+      const gearOffset =
+        currentGear.offsetPrecise ?? currentGear.offsetApproximate;
+      if (Number.isFinite(gearOffset)) return gearOffset;
+    }
+
+    const absolutePosition = appState.position.get()?.absolutePosition;
+    if (
+      typeof absolutePosition === "number" &&
+      Number.isFinite(absolutePosition)
+    ) {
+      return absolutePosition;
+    }
+
+    return null;
+  }
+
+  private async onAbsoluteNudge(delta: number, baseOffset: number | null) {
+    if (baseOffset === null) return;
+    const target = Math.round((baseOffset + delta) * 10) / 10;
+    await appActions.absoluteMove(target);
   }
 }
 
