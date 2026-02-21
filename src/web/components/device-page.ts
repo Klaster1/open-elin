@@ -330,9 +330,12 @@ export class DevicePage extends SignalWatcher(LitElement) {
                   </button>
                 </div>
               </div>
-              <div class="sidebar-mac">${displayMac}</div>
+              <div class="sidebar-mac" data-test-id="device-sidebar-mac">
+                ${displayMac}
+              </div>
               <div
                 class="status ${batteryStatus.kind}"
+                data-test-id="device-sidebar-battery-status"
                 role="status"
                 aria-live="polite"
                 aria-atomic="true"

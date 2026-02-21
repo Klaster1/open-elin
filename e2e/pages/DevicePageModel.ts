@@ -43,6 +43,14 @@ export class DevicePageModel {
     return this.page.getByTestId("device-sidebar-name");
   }
 
+  sidebarMac(): Locator {
+    return this.page.getByTestId("device-sidebar-mac");
+  }
+
+  sidebarBatteryStatus(): Locator {
+    return this.page.getByTestId("device-sidebar-battery-status");
+  }
+
   renameButton(): Locator {
     return this.page.getByTestId("device-rename-button");
   }
