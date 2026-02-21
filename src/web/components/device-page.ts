@@ -320,6 +320,7 @@ export class DevicePage extends SignalWatcher(LitElement) {
                   <button
                     class="icon-button"
                     type="button"
+                    data-test-id="device-disconnect-button"
                     @click=${this.onDisconnect}
                     aria-label="Disconnect"
                     title="Disconnect"

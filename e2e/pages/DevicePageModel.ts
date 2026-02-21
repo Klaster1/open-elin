@@ -72,7 +72,7 @@ export class DevicePageModel {
   }
 
   disconnectButton(): Locator {
-    return this.page.getByRole("button", { name: "Disconnect" });
+    return this.page.getByTestId("device-disconnect-button");
   }
 
   sidebarShiftUpButton(): Locator {
