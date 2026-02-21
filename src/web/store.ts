@@ -32,33 +32,107 @@ export type CogProfile = {
   cogs: CogProfileEntry[];
 };
 
-const connected = signal(false);
-const connectEmpty = signal(false);
-const mac = signal("");
-const manualMac = signal("");
-const adStatusText = signal("Listening for advertisements...");
-const adStatusKind = signal<StatusKind>("wait");
-const shiftStatusText = signal("Waiting for a shift-complete notification...");
-const shiftStatusKind = signal<StatusKind>("wait");
-const logLines = signal<string[]>([]);
-const hubBatteryVoltage = signal<number | null>(null);
-const listEntries = signal<any[]>([]);
-const motorParams = signal<any | null>(null);
-const position = signal<{
+type PositionState = {
   absolutePosition?: number;
   gearPosition?: number;
-} | null>(null);
-const buttonMap = signal<any | null>(null);
-const buttonTable = signal<any | null>(null);
-const rearCogInfo = signal<any | null>(null);
-const frontCogInfo = signal<any | null>(null);
-const commands = signal<BikeNetCommands | null>(null);
-const connectedDevice = signal<TransportDevice | null>(null);
-const pendingRouteMac = signal("");
-const demoMode = signal(false);
-const gears = signal<GearMap>(readStoredGears());
-const cogProfiles = signal<CogProfile[]>(readStoredCogProfiles());
-const cogsProfileWriteInProgress = signal(false);
+};
+
+type StoreState = {
+  connected: boolean;
+  connectEmpty: boolean;
+  mac: string;
+  manualMac: string;
+  adStatusText: string;
+  adStatusKind: StatusKind;
+  shiftStatusText: string;
+  shiftStatusKind: StatusKind;
+  logLines: string[];
+  hubBatteryVoltage: number | null;
+  listEntries: any[];
+  motorParams: any | null;
+  position: PositionState | null;
+  buttonMap: any | null;
+  buttonTable: any | null;
+  rearCogInfo: any | null;
+  frontCogInfo: any | null;
+  commands: BikeNetCommands | null;
+  connectedDevice: TransportDevice | null;
+  pendingRouteMac: string;
+  demoMode: boolean;
+  gears: GearMap;
+  cogProfiles: CogProfile[];
+  cogsProfileWriteInProgress: boolean;
+};
+
+type StoreField<TValue> = {
+  get: () => TValue;
+  set: (next: TValue) => void;
+};
+
+const state = signal<StoreState>({
+  connected: false,
+  connectEmpty: false,
+  mac: "",
+  manualMac: "",
+  adStatusText: "Listening for advertisements...",
+  adStatusKind: "wait",
+  shiftStatusText: "Waiting for a shift-complete notification...",
+  shiftStatusKind: "wait",
+  logLines: [],
+  hubBatteryVoltage: null,
+  listEntries: [],
+  motorParams: null,
+  position: null,
+  buttonMap: null,
+  buttonTable: null,
+  rearCogInfo: null,
+  frontCogInfo: null,
+  commands: null,
+  connectedDevice: null,
+  pendingRouteMac: "",
+  demoMode: false,
+  gears: readStoredGears(),
+  cogProfiles: readStoredCogProfiles(),
+  cogsProfileWriteInProgress: false,
+});
+
+function field<TKey extends keyof StoreState>(
+  key: TKey,
+): StoreField<StoreState[TKey]> {
+  return {
+    get: () => state.get()[key],
+    set: (next) => {
+      const current = state.get();
+      if (Object.is(current[key], next)) return;
+      state.set({ ...current, [key]: next });
+    },
+  };
+}
+
+const connected = field("connected");
+const connectEmpty = field("connectEmpty");
+const mac = field("mac");
+const manualMac = field("manualMac");
+const adStatusText = field("adStatusText");
+const adStatusKind = field("adStatusKind");
+const shiftStatusText = field("shiftStatusText");
+const shiftStatusKind = field("shiftStatusKind");
+const logLines = field("logLines");
+const hubBatteryVoltage = field("hubBatteryVoltage");
+const listEntries = field("listEntries");
+const motorParams = field("motorParams");
+const position = field("position");
+const buttonMap = field("buttonMap");
+const buttonTable = field("buttonTable");
+const rearCogInfo = field("rearCogInfo");
+const frontCogInfo = field("frontCogInfo");
+const commands = field("commands");
+const connectedDevice = field("connectedDevice");
+const pendingRouteMac = field("pendingRouteMac");
+const demoMode = field("demoMode");
+const gears = field("gears");
+const cogProfiles = field("cogProfiles");
+const cogsProfileWriteInProgress = field("cogsProfileWriteInProgress");
 
 type DemoGlobals = {
   pod: PodMock;
