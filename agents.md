@@ -38,11 +38,13 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 - Prefer asserting behavior through UI contracts (active nav state, visible data, busy/loading state, and final rendered outcome).
 - Assert in specs, not in page models: page models should only expose interactions and reads.
 - Prefer `data-test-id` selectors over brittle structure/style selectors.
+- If a control or element used by a test is missing a `data-test-id`, add one in UI code first, then use that `data-test-id` in page models/specs.
 - Use absolute assertions when seed is controlled (exact gear/offset expectations, not relative drift).
 - Make async behavior testable by design: expose mock timing controls in store/demo state so tests can induce long-running requests.
 - Keep test scope tight: validate requested behavior only (demo mode + cogs flow), avoid extra UX/test complexity.
 - Prefer fixture ergonomics over plumbing: expose test-specific helpers through `test.extend`.
 - Keep tests self-contained: do not add cross-test cleanup/reset logic in a test body.
+- Treat hardware-required paths as out-of-scope for CI e2e and cover them with browser-simulated contract tests (API monkey patches) instead.
 
 ### Running Tests
 
