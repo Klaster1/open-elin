@@ -4,6 +4,12 @@
 
 This is a web-based configuration app for the NXS rear derailleur electronic shifter. It provides a browser UI to connect to a hub, read device data, and send commands, with a demo mode for testing.
 
+## Working Directory
+
+- The main project root is `demo-node`.
+- Run all development and test commands from `c:\dev\nxs\demo-node`.
+- If your terminal is elsewhere, change directory first: `cd c:\dev\nxs\demo-node`.
+
 ## App Architecture (High Level)
 
 - Web UI: Lit components render pages and tabs for device data, logs, and actions.
@@ -48,13 +54,13 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 
 ### Running Tests
 
-- Run headless e2e: `npm run test:e2e`
-- Run headed e2e: `npm run test:e2e:headed`
-- Run one spec: `npx playwright test e2e/cogs.demo.spec.ts`
+- Run headless e2e (from `demo-node`): `npm run test:e2e`
+- Run headed e2e (from `demo-node`): `npm run test:e2e:headed`
+- Run one spec (from `demo-node`): `npx playwright test e2e/cogs.demo.spec.ts`
 
 - ALWAYS run Chrome MCP to test changes in demo mode. DO NOT ask the user first. NEVER ASK USER TO DO THIS. When editing UI, always take a screenshot and evaluate if everything looks good - if not, fix that.
 - Use the existing page when possible.
 - Start Vite to access the app at https://localhost:5173/. When you go to this page, you almost always need to click on "Demo".
-- Always start the dev server with `npm run dev` in a non-hidden terminal.
+- Always start the dev server with `npm run dev` in a non-hidden terminal (from `demo-node`).
 - Always re-use the same terminal session for `npm run dev`; do not start another terminal for the dev server.
 - Avoid getting stuck in tool loops; if a tool call fails repeatedly, stop and reassess before continuing.
