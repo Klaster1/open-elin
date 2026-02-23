@@ -9,6 +9,7 @@ import "./page-device-list.ts";
 import "./page-device-motor.ts";
 import "./page-device-buttons.ts";
 import "./page-device-cogs.ts";
+import "./page-device-setup.ts";
 import "./page-device-log.ts";
 import "./inline-spinner.ts";
 import "../demo/pod-mock-gui.ts";
@@ -397,12 +398,7 @@ export class ShellDevice extends SignalWatcher(LitElement) {
       case "cogs":
         return html`<page-device-cogs></page-device-cogs>`;
       case "setup":
-        return html`
-          <section class="card" data-test-id="setup">
-            <h2>Setup</h2>
-            <p>Setup screen is being prepared.</p>
-          </section>
-        `;
+        return html`<page-device-setup></page-device-setup>`;
       case "log":
       default:
         return html`<page-device-log></page-device-log>`;
