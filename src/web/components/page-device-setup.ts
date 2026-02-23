@@ -74,20 +74,6 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
         margin-top: 14px;
       }
 
-      .help-title {
-        margin: 0 0 8px;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text, #e7edf5);
-      }
-
-      .help-title sl-icon {
-        font-size: 14px;
-      }
-
       .help sl-details + sl-details {
         margin-top: 8px;
       }
@@ -398,11 +384,7 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
         </p>
 
         <section class="help" data-test-id="setup-help">
-          <p class="help-title" data-test-id="setup-help-title">
-            <sl-icon library="system" name="info-circle"></sl-icon>
-            Setup help
-          </p>
-          <sl-details summary="New here? Read this first">
+          <sl-details summary="ⓘ New here? Read this first">
             <div class="help-body">
               <p class="help-copy">
                 Setup is your guided onboarding flow for configuring a cassette
