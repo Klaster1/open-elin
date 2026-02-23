@@ -4,7 +4,15 @@ export class DevicePageModel {
   constructor(private readonly page: Page) {}
 
   deviceRouteMatcher() {
-    return /\/device\/[A-F0-9-]+\/(log|cogs|list|motor)$/;
+    return /\/device\/[A-F0-9-]+\/(setup|log|cogs|list|motor)$/;
+  }
+
+  setupRouteMatcher() {
+    return /\/device\/[A-F0-9-]+\/setup$/;
+  }
+
+  setupTabLink(): Locator {
+    return this.page.getByTestId("device-nav-setup");
   }
 
   cogsRouteMatcher() {
@@ -89,6 +97,10 @@ export class DevicePageModel {
 
   async goToCogsTab() {
     await this.cogsTabLink().click();
+  }
+
+  async goToSetupTab() {
+    await this.setupTabLink().click();
   }
 
   async goToListTab() {
