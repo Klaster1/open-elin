@@ -396,6 +396,13 @@ export class ShellDevice extends SignalWatcher(LitElement) {
         return html`<page-device-buttons></page-device-buttons>`;
       case "cogs":
         return html`<page-device-cogs></page-device-cogs>`;
+      case "setup":
+        return html`
+          <section class="card" data-test-id="setup">
+            <h2>Setup</h2>
+            <p>Setup screen is being prepared.</p>
+          </section>
+        `;
       case "log":
       default:
         return html`<page-device-log></page-device-log>`;
