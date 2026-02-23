@@ -13,11 +13,15 @@ import "./tune-controls.ts";
 
 export class PageDeviceSetup extends SignalWatcher(LitElement) {
   private setupMode = signal(false);
-  private currentStep = signal<1 | 2 | 3>(1);
+  private currentStep = signal<1 | 2 | 3 | 4>(1);
   private selectedCogCount = signal(12);
+  private cassetteTeeth = signal<number[]>(Array.from({ length: 12 }, () => 0));
   private smallestOffset = signal<number | null>(null);
   private largestOffset = signal<number | null>(null);
   private offsetValidationError = signal("");
+  private profileDialogOpen = signal(false);
+  private profileDialogValue = signal("");
+  private profileDialogError = signal("");
 
   static styles = [
     sharedStyles,
@@ -120,6 +124,30 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
         border-color: #2b3b4c;
         background: #0e141b;
         color: var(--text, #e7edf5);
+      }
+
+      .cassette-teeth {
+        margin-top: 10px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .cassette-teeth-title {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted, #98a6b5);
+      }
+
+      .cassette-teeth-row {
+        display: grid;
+        grid-template-columns: auto minmax(120px, 180px);
+        gap: 10px;
+        align-items: center;
+      }
+
+      .cassette-teeth-row span {
+        font-size: 13px;
+        color: var(--muted, #98a6b5);
       }
 
       .offset-grid {
@@ -262,6 +290,31 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
         border-color: #2f6753;
         color: #9cecc9;
       }
+
+      .finish-next {
+        margin: 0;
+        color: var(--muted, #98a6b5);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .finish-link {
+        color: var(--text, #e7edf5);
+        text-decoration: underline;
+      }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .dialog-cancel::part(base) {
+        border-color: #2b3b4c;
+        background: #0e141b;
+        color: inherit;
+      }
     `,
   ];
 
@@ -319,6 +372,42 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
             `
           : html``}
       </div>
+
+      <sl-dialog
+        data-test-id="setup-profile-dialog"
+        label="Save profile"
+        ?open=${this.profileDialogOpen.get()}
+        @sl-request-close=${this.onProfileDialogRequestClose}
+      >
+        <sl-input
+          data-test-id="setup-profile-dialog-input"
+          label="Profile name"
+          placeholder="Enter profile name"
+          .value=${this.profileDialogValue.get()}
+          ?invalid=${Boolean(this.profileDialogError.get())}
+          help-text=${this.profileDialogError.get()}
+          @sl-input=${this.onProfileDialogInput}
+          ?disabled=${appState.cogsProfileWriteInProgress.get()}
+        ></sl-input>
+        <div slot="footer" class="dialog-actions">
+          <sl-button
+            data-test-id="setup-profile-dialog-cancel"
+            class="dialog-cancel"
+            ?disabled=${appState.cogsProfileWriteInProgress.get()}
+            @click=${this.closeProfileDialog}
+          >
+            Cancel
+          </sl-button>
+          <sl-button
+            data-test-id="setup-profile-dialog-confirm"
+            variant="primary"
+            ?disabled=${appState.cogsProfileWriteInProgress.get()}
+            @click=${this.confirmSaveProfile}
+          >
+            Save
+          </sl-button>
+        </div>
+      </sl-dialog>
     `;
   }
 
@@ -371,6 +460,7 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
   }
 
   private renderStep1Controls(cogCount: number) {
+    const teeth = this.getCassetteTeeth(cogCount);
     return html`
       <div data-test-id="setup-step-1-panel">
         <label for="setup-cog-count-select">
@@ -388,6 +478,29 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
             )}
           </sl-select>
         </label>
+        <div class="cassette-teeth" data-test-id="setup-cassette-teeth-list">
+          <p class="cassette-teeth-title">
+            Optional: set cassette cog tooth counts (defaults to 0)
+          </p>
+          ${Array.from({ length: cogCount }, (_, index) => index).map(
+            (index) => html`
+              <div class="cassette-teeth-row">
+                <span>Cog ${index + 1}</span>
+                <sl-input
+                  type="number"
+                  min="0"
+                  max="255"
+                  step="1"
+                  data-test-id="setup-cassette-tooth-input"
+                  data-cog-index=${String(index + 1)}
+                  value=${String(teeth[index] ?? 0)}
+                  @sl-input=${(event: Event) =>
+                    this.onCassetteToothInput(index, event)}
+                ></sl-input>
+              </div>
+            `,
+          )}
+        </div>
         <div class="actions">
           <sl-button
             variant="primary"
@@ -502,7 +615,7 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
   }
 
   private renderStepIndicator(
-    currentStep: 1 | 2 | 3,
+    currentStep: 1 | 2 | 3 | 4,
     cogCount: number,
     smallest: number | null,
     largest: number | null,
@@ -530,6 +643,12 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
         title: "Set largest offset and interpolate",
         copy: "Set largest-cog offset, then calculate intermediate values.",
         complete: step3Complete,
+      },
+      {
+        id: 4,
+        title: "Finish",
+        copy: "Optional next steps after writing setup to hub.",
+        complete: this.currentStep.get() >= 4,
       },
     ];
 
@@ -566,11 +685,13 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
                         ? this.renderStep1Controls(cogCount)
                         : item.id === 2
                           ? this.renderStep2Controls(smallest, offsetError)
-                          : this.renderStep3Controls(
-                              largest,
-                              canWrite,
-                              offsetError,
-                            )}
+                          : item.id === 3
+                            ? this.renderStep3Controls(
+                                largest,
+                                canWrite,
+                                offsetError,
+                              )
+                            : this.renderStep4Controls()}
                     </div>
                   `
                 : html``}
@@ -601,9 +722,13 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
   private startSetup() {
     this.currentStep.set(1);
     this.selectedCogCount.set(12);
+    this.cassetteTeeth.set(Array.from({ length: 12 }, () => 0));
     this.smallestOffset.set(null);
     this.largestOffset.set(null);
     this.offsetValidationError.set("");
+    this.profileDialogOpen.set(false);
+    this.profileDialogValue.set("");
+    this.profileDialogError.set("");
     this.setupMode.set(true);
   }
 
@@ -667,7 +792,18 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
     if (!Number.isInteger(next)) return;
     if (next < 5 || next > 14) return;
     this.selectedCogCount.set(next);
+    this.cassetteTeeth.set(this.getCassetteTeeth(next));
     this.validateOffsets();
+  }
+
+  private onCassetteToothInput(index: number, event: Event) {
+    const target = event.target as (EventTarget & { value?: string }) | null;
+    const parsed = Number(target?.value ?? "");
+    const normalized = Number.isFinite(parsed) ? Math.round(parsed) : 0;
+    const clamped = Math.min(255, Math.max(0, normalized));
+    const next = [...this.getCassetteTeeth(this.selectedCogCount.get())];
+    next[index] = clamped;
+    this.cassetteTeeth.set(next);
   }
 
   private onSmallestOffsetTune = (event: CustomEvent<{ delta: number }>) => {
@@ -689,7 +825,105 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
   private onWriteToNxs = async () => {
     const offsets = this.getInterpolatedOffsets(this.selectedCogCount.get());
     if (!offsets?.length) return;
-    await appActions.writeSetupRearCogs(offsets);
+    const teeth = this.getCassetteTeeth(this.selectedCogCount.get());
+    const result = await appActions.writeSetupRearCogs(offsets, teeth);
+    if (result.ok) {
+      this.currentStep.set(4);
+    }
+  };
+
+  private renderStep4Controls() {
+    const saveDisabled =
+      appState.cogsProfileWriteInProgress.get() ||
+      this.getInterpolatedOffsets(this.selectedCogCount.get()) === null;
+    return html`
+      <div data-test-id="setup-step-4-panel">
+        <p class="finish-next">
+          <a
+            class="finish-link"
+            data-test-id="setup-finish-go-cogs"
+            href=${this.getCogsHref()}
+          >
+            Go to Cogs
+          </a>
+          and tweak each cog for best performance.
+        </p>
+        <div class="actions">
+          <sl-button
+            variant="primary"
+            data-test-id="setup-finish-save-profile"
+            ?disabled=${saveDisabled}
+            @click=${this.openProfileDialog}
+          >
+            Save current setup as profile
+          </sl-button>
+        </div>
+      </div>
+    `;
+  }
+
+  private getCogsHref() {
+    const mac = appState.mac.get().trim().toUpperCase();
+    const routeMac = encodeURIComponent(mac.replace(/:/g, "-"));
+    return `/device/${routeMac}/cogs`;
+  }
+
+  private navigateToCogs() {
+    const href = this.getCogsHref();
+    window.history.pushState({}, "", href);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }
+
+  private openProfileDialog = () => {
+    if (appState.cogsProfileWriteInProgress.get()) return;
+    this.profileDialogValue.set("");
+    this.profileDialogError.set("");
+    this.profileDialogOpen.set(true);
+  };
+
+  private closeProfileDialog = () => {
+    this.profileDialogOpen.set(false);
+    this.profileDialogError.set("");
+  };
+
+  private onProfileDialogRequestClose = (event: Event) => {
+    if (appState.cogsProfileWriteInProgress.get()) {
+      event.preventDefault();
+      return;
+    }
+    this.closeProfileDialog();
+  };
+
+  private onProfileDialogInput = (event: Event) => {
+    const target = event.target as HTMLInputElement | null;
+    this.profileDialogValue.set(target?.value ?? "");
+    if (this.profileDialogError.get()) {
+      this.profileDialogError.set("");
+    }
+  };
+
+  private confirmSaveProfile = () => {
+    if (appState.cogsProfileWriteInProgress.get()) return;
+    const offsets = this.getInterpolatedOffsets(this.selectedCogCount.get());
+    if (!offsets?.length) {
+      this.profileDialogError.set("No setup offsets to save.");
+      return;
+    }
+    const teeth = this.getCassetteTeeth(this.selectedCogCount.get());
+    const result = appActions.saveCogProfileFromEntries(
+      this.profileDialogValue.get(),
+      offsets.map((offset, index) => ({
+        offset,
+        toothCount: teeth[index] ?? 0,
+      })),
+    );
+    if (!result.ok) {
+      this.profileDialogError.set(result.message);
+      return;
+    }
+    this.profileDialogOpen.set(false);
+    this.profileDialogError.set("");
+    this.navigateToCogs();
   };
 
   private validateOffsets() {
@@ -758,6 +992,15 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
       values[0] = currentOffset;
     }
     return values;
+  }
+
+  private getCassetteTeeth(cogCount: number) {
+    const current = this.cassetteTeeth.get();
+    return Array.from({ length: cogCount }, (_, index) => {
+      const value = current[index];
+      if (!Number.isFinite(value)) return 0;
+      return Math.min(255, Math.max(0, Math.round(value)));
+    });
   }
 
   private formatPreviewOffset(value: number | null) {

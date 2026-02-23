@@ -295,6 +295,7 @@ export const appActions = {
   refreshCurrentGear,
   reloadCogProfiles,
   saveCurrentCogProfile,
+  saveCogProfileFromEntries,
   renameCogProfile,
   removeCogProfile,
   applyCogProfile,
@@ -798,6 +799,22 @@ function updatePreciseGear(
   setGearsForMac(normalized, updated);
 }
 
+function updatePreciseGearsFromOffsets(macKey: string, offsets: number[]) {
+  if (!macKey || !offsets.length) return;
+  const normalized = macKey.toUpperCase();
+  const existing = gears.get()[normalized];
+  if (!existing?.length) return;
+  const updated = existing.map((gear) => {
+    const nextPrecise = offsets[gear.gearNumber - 1];
+    if (!Number.isFinite(nextPrecise)) return gear;
+    return {
+      ...gear,
+      offsetPrecise: nextPrecise,
+    };
+  });
+  setGearsForMac(normalized, updated);
+}
+
 const DEMO_BUTTON_SHIFT_MAP: Record<number, "up" | "down"> = {
   1: "up",
   0: "down",
@@ -1043,11 +1060,12 @@ export function reloadCogProfiles() {
   cogProfiles.set(readStoredCogProfiles());
 }
 
-export function saveCurrentCogProfile(name: string) {
+function validateNewProfileName(name: string) {
   const normalizedName = name.trim();
   if (!normalizedName) {
     return { ok: false as const, message: "Profile name is required." };
   }
+
   const existingProfiles = cogProfiles.get();
   if (
     existingProfiles.some(
@@ -1060,6 +1078,29 @@ export function saveCurrentCogProfile(name: string) {
     return { ok: false as const, message: "Profile name must be unique." };
   }
 
+  return { ok: true as const, normalizedName, existingProfiles };
+}
+
+export function saveCogProfileFromEntries(
+  name: string,
+  cogs: CogProfileEntry[],
+) {
+  const nameResult = validateNewProfileName(name);
+  if (!nameResult.ok) return nameResult;
+
+  if (!cogs.length) {
+    return { ok: false as const, message: "No cog data to save." };
+  }
+
+  const profile: CogProfile = {
+    name: nameResult.normalizedName,
+    cogs,
+  };
+  setCogProfiles([...nameResult.existingProfiles, profile]);
+  return { ok: true as const };
+}
+
+export function saveCurrentCogProfile(name: string) {
   const activeMac = getActiveMacKey();
   const currentGears = activeMac ? gears.get()[activeMac] : undefined;
   if (!currentGears?.length) {
@@ -1083,15 +1124,13 @@ export function saveCurrentCogProfile(name: string) {
     };
   }
 
-  const profile: CogProfile = {
-    name: normalizedName,
-    cogs: sorted.map((gear) => ({
+  return saveCogProfileFromEntries(
+    name,
+    sorted.map((gear) => ({
       offset: gear.offsetPrecise ?? 0,
       toothCount: gear.teeth ?? 0,
     })),
-  };
-  setCogProfiles([...existingProfiles, profile]);
-  return { ok: true as const };
+  );
 }
 
 export function removeCogProfile(name: string) {
@@ -1194,7 +1233,7 @@ export async function applyCogProfile(name: string) {
   }
 }
 
-export async function writeSetupRearCogs(offsets: number[]) {
+export async function writeSetupRearCogs(offsets: number[], teeth?: number[]) {
   const deviceCommands = commands.get();
   if (!deviceCommands) {
     return { ok: false as const, message: "Connect to a hub first." };
@@ -1207,21 +1246,37 @@ export async function writeSetupRearCogs(offsets: number[]) {
     return { ok: false as const, message: "No cog offsets to write." };
   }
 
+  const sanitizedTeeth =
+    Array.isArray(teeth) && teeth.length === sanitizedOffsets.length
+      ? teeth.map((value) => {
+          const safe = Number.isFinite(value) ? Math.round(value) : 0;
+          return Math.min(255, Math.max(0, safe));
+        })
+      : sanitizedOffsets.map(() => 0);
+
   cogsProfileWriteInProgress.set(true);
   appendLog("Write setup cogs...", {
     cogCount: sanitizedOffsets.length,
+    teethCount: sanitizedTeeth.length,
   });
   try {
-    const teeth = sanitizedOffsets.map(() => 0);
     const response = await deviceCommands.setRearCogInfo(
       sanitizedOffsets,
-      teeth,
+      sanitizedTeeth,
     );
     appendLog("Write setup cogs result", response ?? {});
     if (response.status !== "success") {
       return { ok: false as const, message: "Failed to write setup cogs." };
     }
+    const activeMac = getActiveMacKey();
+    if (activeMac) {
+      updatePreciseGearsFromOffsets(activeMac, sanitizedOffsets);
+    }
     await refreshCogsData();
+    const refreshedMac = getActiveMacKey();
+    if (refreshedMac) {
+      updatePreciseGearsFromOffsets(refreshedMac, sanitizedOffsets);
+    }
     appendLog("Write setup cogs readback complete", {
       cogCount: sanitizedOffsets.length,
     });
