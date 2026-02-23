@@ -6,6 +6,9 @@ import { sharedStyles } from "../styles.ts";
 
 export class PageDeviceSetup extends SignalWatcher(LitElement) {
   private setupMode = signal(false);
+  private selectedCogCount = signal(12);
+  private smallestOffset = signal<number | null>(null);
+  private largestOffset = signal<number | null>(null);
 
   static styles = [
     sharedStyles,
@@ -68,6 +71,122 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
         color: var(--muted, #98a6b5);
         background: rgba(20, 30, 40, 0.6);
       }
+
+      .steps {
+        margin-top: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .setup-controls {
+        margin-top: 14px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .setup-controls label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--muted, #98a6b5);
+      }
+
+      .setup-controls select {
+        max-width: 220px;
+        border-radius: 10px;
+        border: 1px solid #2b3b4c;
+        background: #0e141b;
+        color: var(--text, #e7edf5);
+        padding: 8px 10px;
+      }
+
+      .preview {
+        border-radius: 12px;
+        border: 1px solid #2a3747;
+        background: rgba(20, 30, 40, 0.6);
+        overflow: hidden;
+      }
+
+      .preview-title {
+        margin: 0;
+        padding: 10px 12px;
+        border-bottom: 1px solid #2a3747;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted, #98a6b5);
+      }
+
+      .preview-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .preview-table th,
+      .preview-table td {
+        padding: 8px 12px;
+        text-align: left;
+        border-bottom: 1px solid #223142;
+        font-size: 13px;
+      }
+
+      .preview-table tr:last-child td {
+        border-bottom: none;
+      }
+
+      .preview-table th {
+        color: var(--muted, #98a6b5);
+        font-weight: 600;
+      }
+
+      .preview-offset-empty {
+        color: var(--muted, #98a6b5);
+      }
+
+      .step {
+        border-radius: 12px;
+        border: 1px solid #2a3747;
+        background: rgba(20, 30, 40, 0.6);
+        padding: 12px;
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+
+      .step[data-complete="true"] {
+        border-color: #2f6753;
+        background: rgba(38, 96, 74, 0.24);
+      }
+
+      .step-head {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text, #e7edf5);
+      }
+
+      .step-copy {
+        margin: 4px 0 0;
+        color: var(--muted, #98a6b5);
+        font-size: 13px;
+      }
+
+      .step-status {
+        white-space: nowrap;
+        border-radius: 999px;
+        border: 1px solid #3a4a5c;
+        padding: 2px 10px;
+        font-size: 11px;
+        color: var(--muted, #98a6b5);
+      }
+
+      .step-status[data-complete="true"] {
+        border-color: #2f6753;
+        color: #9cecc9;
+      }
     `,
   ];
 
@@ -119,16 +238,158 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
         ${this.setupMode.get()
           ? html`
               <div class="pending" data-test-id="setup-mode-pending">
-                Setup mode is enabled. Step controls will be added next.
+                Setup mode is enabled. Complete the steps below.
               </div>
+              ${this.renderStepIndicator()} ${this.renderSetupControls()}
             `
           : html``}
       </div>
     `;
   }
 
+  private renderSetupControls() {
+    const cogCount = this.selectedCogCount.get();
+    const rows = Array.from({ length: cogCount }, (_, index) => index + 1);
+    return html`
+      <section class="setup-controls" data-test-id="setup-controls">
+        <label for="setup-cog-count-select">
+          Cog amount
+          <select
+            id="setup-cog-count-select"
+            data-test-id="setup-cog-count"
+            @change=${this.onCogCountChange}
+          >
+            ${Array.from({ length: 10 }, (_, index) => 5 + index).map(
+              (value) => html`
+                <option value=${String(value)} ?selected=${value === cogCount}>
+                  ${value}
+                </option>
+              `,
+            )}
+          </select>
+        </label>
+
+        <section class="preview" data-test-id="setup-preview-table">
+          <p class="preview-title">Cog preview</p>
+          <table class="preview-table">
+            <thead>
+              <tr>
+                <th>Cog</th>
+                <th>Offset</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(
+                (gearNumber) => html`
+                  <tr
+                    data-test-id="setup-preview-row"
+                    data-gear-number=${gearNumber}
+                  >
+                    <td>${gearNumber}</td>
+                    <td
+                      class="preview-offset-empty"
+                      data-test-id="setup-preview-offset"
+                    >
+                      --
+                    </td>
+                  </tr>
+                `,
+              )}
+            </tbody>
+          </table>
+        </section>
+      </section>
+    `;
+  }
+
+  private renderStepIndicator() {
+    const step1Complete = this.isStep1Complete();
+    const step2Complete = this.isStep2Complete();
+    const step3Complete = this.isStep3Complete();
+    const items = [
+      {
+        id: 1,
+        title: "Set cog amount",
+        copy: "Choose how many cogs the cassette uses.",
+        complete: step1Complete,
+      },
+      {
+        id: 2,
+        title: "Set smallest cog offset",
+        copy: "Capture the smallest-cog baseline offset.",
+        complete: step2Complete,
+      },
+      {
+        id: 3,
+        title: "Set largest offset and interpolate",
+        copy: "Set largest-cog offset, then calculate intermediate values.",
+        complete: step3Complete,
+      },
+    ];
+
+    return html`
+      <section
+        class="steps"
+        data-test-id="setup-steps"
+        aria-label="Setup steps"
+      >
+        ${items.map(
+          (item) => html`
+            <article
+              class="step"
+              data-test-id=${`setup-step-${item.id}`}
+              data-complete=${item.complete ? "true" : "false"}
+            >
+              <div>
+                <p class="step-head">Step ${item.id}: ${item.title}</p>
+                <p class="step-copy">${item.copy}</p>
+              </div>
+              <span
+                class="step-status"
+                data-test-id=${`setup-step-${item.id}-status`}
+                data-complete=${item.complete ? "true" : "false"}
+              >
+                ${item.complete ? "Complete" : "Pending"}
+              </span>
+            </article>
+          `,
+        )}
+      </section>
+    `;
+  }
+
+  private isStep1Complete() {
+    if (!this.setupMode.get()) return false;
+    const value = this.selectedCogCount.get();
+    return Number.isInteger(value) && value >= 5 && value <= 14;
+  }
+
+  private isStep2Complete() {
+    if (!this.isStep1Complete()) return false;
+    return this.smallestOffset.get() !== null;
+  }
+
+  private isStep3Complete() {
+    if (!this.isStep2Complete()) return false;
+    const smallest = this.smallestOffset.get();
+    const largest = this.largestOffset.get();
+    if (smallest === null || largest === null) return false;
+    return largest > smallest;
+  }
+
   private startSetup() {
+    this.selectedCogCount.set(12);
+    this.smallestOffset.set(null);
+    this.largestOffset.set(null);
     this.setupMode.set(true);
+  }
+
+  private onCogCountChange(event: Event) {
+    const target = event.target as HTMLSelectElement | null;
+    const next = Number(target?.value ?? "");
+    if (!Number.isInteger(next)) return;
+    if (next < 5 || next > 14) return;
+    this.selectedCogCount.set(next);
   }
 }
 
