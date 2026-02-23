@@ -12,10 +12,13 @@ type RearCogs = HubStateShape["rearCogs"];
 
 type CurrentPosition = HubStateShape["current"];
 
+export const HUB_MOCK_MIN_OFFSET = 0;
+export const HUB_MOCK_MAX_OFFSET = 250;
+
 export class HubMock {
   readonly state = signal<HubStateShape>(structuredClone(hubData));
-  private readonly minOffset = 0;
-  private readonly maxOffset = 250;
+  private readonly minOffset = HUB_MOCK_MIN_OFFSET;
+  private readonly maxOffset = HUB_MOCK_MAX_OFFSET;
   private readonly maxNameLength = 16;
 
   getDevice() {

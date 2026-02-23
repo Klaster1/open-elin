@@ -710,7 +710,9 @@ export class ProtocolCommands {
       AppCommand.AbsoluteMove,
       this.device.address,
     );
-    const scaled = Math.trunc(targetPosition * 10) & 0xffff;
+    const safeTarget = Number.isFinite(targetPosition) ? targetPosition : 0;
+    const boundedTarget = Math.max(0, Math.min(6553.5, safeTarget));
+    const scaled = Math.trunc(boundedTarget * 10);
     const params = new Uint8Array([scaled & 0xff, (scaled >> 8) & 0xff]);
     const payload = new Uint8Array(header.length + params.length);
     payload.set(header, 0);

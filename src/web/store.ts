@@ -8,6 +8,7 @@ import { WebBluetoothTransport } from "./transport-web.ts";
 import { DemoTransport } from "./demo/transport-demo.ts";
 import { demoState } from "./demo/demo-state.ts";
 import type { DemoState } from "./demo/demo-state.ts";
+import { HUB_MOCK_MAX_OFFSET, HUB_MOCK_MIN_OFFSET } from "./demo/hub-mock.ts";
 import hubData from "./demo/hub-mock-data.json";
 import { HubMock } from "./demo/hub-mock.ts";
 import { PodMock } from "./demo/pod-mock.ts";
@@ -215,6 +216,33 @@ let pendingAdvertMac: string | null = null;
 let adTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let onShiftMac: ((mac: string) => void) | null = null;
 
+export type OffsetBounds = {
+  min: number;
+  max: number | null;
+};
+
+export function getOffsetBounds(): OffsetBounds {
+  if (demoMode.get()) {
+    return {
+      min: HUB_MOCK_MIN_OFFSET,
+      max: HUB_MOCK_MAX_OFFSET,
+    };
+  }
+
+  return {
+    min: 0,
+    max: null,
+  };
+}
+
+export function clampOffsetToBounds(value: number): number {
+  const bounds = getOffsetBounds();
+  const safeValue = Number.isFinite(value) ? value : bounds.min;
+  const lowerBounded = Math.max(bounds.min, safeValue);
+  if (bounds.max === null) return lowerBounded;
+  return Math.min(bounds.max, lowerBounded);
+}
+
 export const appState = {
   connected,
   connectEmpty,
@@ -270,6 +298,7 @@ export const appActions = {
   renameCogProfile,
   removeCogProfile,
   applyCogProfile,
+  writeSetupRearCogs,
 };
 
 export function setShiftMacListener(
@@ -893,9 +922,13 @@ export async function shiftDown() {
 export async function absoluteMove(targetPosition: number) {
   const deviceCommands = commands.get();
   if (!deviceCommands) return;
-  appendLog("Absolute move...", { targetPosition });
+  const clampedTarget = clampOffsetToBounds(targetPosition);
+  appendLog("Absolute move...", {
+    targetPosition,
+    clampedTarget,
+  });
   try {
-    const response = await deviceCommands.absoluteMove(targetPosition);
+    const response = await deviceCommands.absoluteMove(clampedTarget);
     appendLog("Absolute move result", response ?? {});
     if (response.status === "success") {
       await getPosition();
@@ -1155,6 +1188,53 @@ export async function applyCogProfile(name: string) {
     return {
       ok: false as const,
       message: err instanceof Error ? err.message : "Failed to apply profile.",
+    };
+  } finally {
+    cogsProfileWriteInProgress.set(false);
+  }
+}
+
+export async function writeSetupRearCogs(offsets: number[]) {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) {
+    return { ok: false as const, message: "Connect to a hub first." };
+  }
+
+  const sanitizedOffsets = offsets.filter((value): value is number =>
+    Number.isFinite(value),
+  );
+  if (!sanitizedOffsets.length) {
+    return { ok: false as const, message: "No cog offsets to write." };
+  }
+
+  cogsProfileWriteInProgress.set(true);
+  appendLog("Write setup cogs...", {
+    cogCount: sanitizedOffsets.length,
+  });
+  try {
+    const teeth = sanitizedOffsets.map(() => 0);
+    const response = await deviceCommands.setRearCogInfo(
+      sanitizedOffsets,
+      teeth,
+    );
+    appendLog("Write setup cogs result", response ?? {});
+    if (response.status !== "success") {
+      return { ok: false as const, message: "Failed to write setup cogs." };
+    }
+    await refreshCogsData();
+    appendLog("Write setup cogs readback complete", {
+      cogCount: sanitizedOffsets.length,
+    });
+    return { ok: true as const };
+  } catch (err) {
+    appendLog(
+      "Write setup cogs error",
+      err instanceof Error ? err.message : err,
+    );
+    return {
+      ok: false as const,
+      message:
+        err instanceof Error ? err.message : "Failed to write setup cogs.",
     };
   } finally {
     cogsProfileWriteInProgress.set(false);

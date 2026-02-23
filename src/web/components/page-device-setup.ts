@@ -1,8 +1,14 @@
 import { LitElement, css, html } from "lit";
 import { SignalWatcher, signal } from "@lit-labs/signals";
 
-import { appActions, appState } from "../store.ts";
+import {
+  appActions,
+  appState,
+  clampOffsetToBounds,
+  getOffsetBounds,
+} from "../store.ts";
 import { sharedStyles } from "../styles.ts";
+import "./cog-profile-meta-table.ts";
 import "./tune-controls.ts";
 
 export class PageDeviceSetup extends SignalWatcher(LitElement) {
@@ -105,6 +111,17 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
         padding: 8px 10px;
       }
 
+      .setup-controls sl-select {
+        max-width: 220px;
+      }
+
+      .setup-controls sl-select::part(base) {
+        border-radius: 10px;
+        border-color: #2b3b4c;
+        background: #0e141b;
+        color: var(--text, #e7edf5);
+      }
+
       .offset-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -172,30 +189,23 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
         color: var(--muted, #98a6b5);
       }
 
-      .preview-table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-
-      .preview-table th,
-      .preview-table td {
-        padding: 8px 12px;
-        text-align: left;
-        border-bottom: 1px solid #223142;
-        font-size: 13px;
-      }
-
-      .preview-table tr:last-child td {
-        border-bottom: none;
-      }
-
-      .preview-table th {
-        color: var(--muted, #98a6b5);
-        font-weight: 600;
-      }
-
       .preview-offset-empty {
         color: var(--muted, #98a6b5);
+      }
+
+      .step-panel {
+        border-radius: 12px;
+        border: 1px solid #2a3747;
+        background: rgba(20, 30, 40, 0.6);
+        padding: 12px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .step-panel-copy {
+        margin: 0;
+        color: var(--muted, #98a6b5);
+        font-size: 13px;
       }
 
       .step {
@@ -203,10 +213,22 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
         border: 1px solid #2a3747;
         background: rgba(20, 30, 40, 0.6);
         padding: 12px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .step-head-row {
         display: flex;
         gap: 12px;
         justify-content: space-between;
         align-items: flex-start;
+      }
+
+      .step-controls {
+        border-top: 1px solid #223142;
+        padding-top: 10px;
+        display: grid;
+        gap: 10px;
       }
 
       .step[data-complete="true"] {
@@ -293,184 +315,200 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
               <div class="pending" data-test-id="setup-mode-pending">
                 Setup mode is enabled. Complete the steps below.
               </div>
-              ${this.renderStepIndicator()} ${this.renderSetupControls()}
+              ${this.renderSetupFlow()}
             `
           : html``}
       </div>
     `;
   }
 
-  private renderSetupControls() {
+  private renderSetupFlow() {
     const currentStep = this.currentStep.get();
     const cogCount = this.selectedCogCount.get();
     const rows = Array.from({ length: cogCount }, (_, index) => index + 1);
     const previewOffsets = this.getPreviewOffsets(cogCount);
+    const offsetError = this.offsetValidationError.get();
+    const interpolated = this.getInterpolatedOffsets(cogCount);
+    const canWrite =
+      currentStep === 3 &&
+      interpolated !== null &&
+      !offsetError &&
+      !appState.cogsProfileWriteInProgress.get();
     const smallest = this.smallestOffset.get();
     const largest = this.largestOffset.get();
-    const offsetError = this.offsetValidationError.get();
+    const previewRows = [
+      {
+        label: "Cogs",
+        values: rows.map((gearNumber) => String(gearNumber)),
+        valueTestId: "setup-preview-gear",
+      },
+      {
+        label: "Offsets",
+        values: previewOffsets.map((value) => this.formatPreviewOffset(value)),
+        valueTestId: "setup-preview-offset",
+      },
+    ];
     return html`
       <section class="setup-controls" data-test-id="setup-controls">
-        ${currentStep === 1
-          ? html`
-              <label for="setup-cog-count-select">
-                Cog amount
-                <select
-                  id="setup-cog-count-select"
-                  data-test-id="setup-cog-count"
-                  @change=${this.onCogCountChange}
-                >
-                  ${Array.from({ length: 10 }, (_, index) => 5 + index).map(
-                    (value) => html`
-                      <option
-                        value=${String(value)}
-                        ?selected=${value === cogCount}
-                      >
-                        ${value}
-                      </option>
-                    `,
-                  )}
-                </select>
-              </label>
-            `
-          : html``}
-        ${currentStep === 2
-          ? html`
-              <div class="offset-grid">
-                <section
-                  class="offset-tune"
-                  data-test-id="setup-smallest-control"
-                >
-                  <div class="offset-tune-head">
-                    <p class="offset-tune-label">Smallest cog offset</p>
-                    <p
-                      class="offset-tune-value"
-                      data-test-id="setup-smallest-offset-value"
-                    >
-                      ${this.formatPreviewOffset(smallest)}
-                    </p>
-                  </div>
-                  <div class="offset-tune-controls">
-                    <tune-controls
-                      test-id-prefix="setup-smallest-tune"
-                      @tune-delta=${this.onSmallestOffsetTune}
-                    ></tune-controls>
-                  </div>
-                </section>
-              </div>
-            `
-          : html``}
-        ${currentStep === 3
-          ? html`
-              <div class="offset-grid">
-                <section
-                  class="offset-tune"
-                  data-test-id="setup-largest-control"
-                >
-                  <div class="offset-tune-head">
-                    <p class="offset-tune-label">Largest cog offset</p>
-                    <p
-                      class="offset-tune-value"
-                      data-test-id="setup-largest-offset-value"
-                    >
-                      ${this.formatPreviewOffset(largest)}
-                    </p>
-                  </div>
-                  <div class="offset-tune-controls">
-                    <tune-controls
-                      test-id-prefix="setup-largest-tune"
-                      @tune-delta=${this.onLargestOffsetTune}
-                    ></tune-controls>
-                  </div>
-                </section>
-              </div>
-            `
-          : html``}
+        ${this.renderStepIndicator(
+          currentStep,
+          cogCount,
+          smallest,
+          largest,
+          canWrite,
+          offsetError,
+        )}
+      </section>
+      <section class="preview" data-test-id="setup-preview-table">
+        <p class="preview-title">Cog preview</p>
+        <cog-profile-meta-table
+          table-test-id="setup-preview-meta-table"
+          .count=${cogCount}
+          .rows=${previewRows}
+        ></cog-profile-meta-table>
+      </section>
+    `;
+  }
+
+  private renderStep1Controls(cogCount: number) {
+    return html`
+      <div data-test-id="setup-step-1-panel">
+        <label for="setup-cog-count-select">
+          Cog amount
+          <sl-select
+            id="setup-cog-count-select"
+            data-test-id="setup-cog-count"
+            value=${String(cogCount)}
+            @sl-change=${this.onCogCountChange}
+          >
+            ${Array.from({ length: 10 }, (_, index) => 5 + index).map(
+              (value) => html`
+                <sl-option value=${String(value)}> ${value} </sl-option>
+              `,
+            )}
+          </sl-select>
+        </label>
+        <div class="actions">
+          <sl-button
+            variant="primary"
+            data-test-id="setup-step1-next"
+            @click=${this.goToStep2}
+          >
+            Continue to smallest offset
+          </sl-button>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderStep2Controls(smallest: number | null, offsetError: string) {
+    return html`
+      <div data-test-id="setup-step-2-panel">
+        <p class="step-panel-copy">
+          Shift to the smallest cog first. The current position is used as your
+          starting value for tuning.
+        </p>
+        <div class="offset-grid">
+          <section class="offset-tune" data-test-id="setup-smallest-control">
+            <div class="offset-tune-head">
+              <p class="offset-tune-label">Smallest cog offset</p>
+              <p
+                class="offset-tune-value"
+                data-test-id="setup-smallest-offset-value"
+              >
+                ${this.formatPreviewOffset(smallest)}
+              </p>
+            </div>
+            <div class="offset-tune-controls">
+              <tune-controls
+                test-id-prefix="setup-smallest-tune"
+                @tune-delta=${this.onSmallestOffsetTune}
+              ></tune-controls>
+            </div>
+          </section>
+        </div>
+        <div class="actions">
+          <sl-button data-test-id="setup-step2-back" @click=${this.goToStep1}>
+            Back to cog amount
+          </sl-button>
+          <sl-button
+            variant="primary"
+            data-test-id="setup-step2-next"
+            ?disabled=${smallest === null}
+            @click=${this.goToStep3}
+          >
+            Continue to largest offset
+          </sl-button>
+        </div>
         ${offsetError
           ? html`<p class="offset-error" data-test-id="setup-offset-error">
               ${offsetError}
             </p>`
           : html``}
-
-        <section class="preview" data-test-id="setup-preview-table">
-          <p class="preview-title">Cog preview</p>
-          <table class="preview-table">
-            <thead>
-              <tr>
-                <th>Cog</th>
-                <th>Offset</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.map(
-                (gearNumber) => html`
-                  <tr
-                    data-test-id="setup-preview-row"
-                    data-gear-number=${gearNumber}
-                  >
-                    <td>${gearNumber}</td>
-                    <td
-                      class=${previewOffsets[gearNumber - 1] === null
-                        ? "preview-offset-empty"
-                        : ""}
-                      data-test-id="setup-preview-offset"
-                    >
-                      ${this.formatPreviewOffset(
-                        previewOffsets[gearNumber - 1],
-                      )}
-                    </td>
-                  </tr>
-                `,
-              )}
-            </tbody>
-          </table>
-        </section>
-
-        <div class="actions">
-          ${currentStep === 1
-            ? html`
-                <sl-button
-                  variant="primary"
-                  data-test-id="setup-step1-next"
-                  @click=${this.goToStep2}
-                >
-                  Continue to smallest offset
-                </sl-button>
-              `
-            : html``}
-          ${currentStep === 2
-            ? html`
-                <sl-button
-                  data-test-id="setup-step2-back"
-                  @click=${this.goToStep1}
-                >
-                  Back to cog amount
-                </sl-button>
-                <sl-button
-                  variant="primary"
-                  data-test-id="setup-step2-next"
-                  ?disabled=${smallest === null}
-                  @click=${this.goToStep3}
-                >
-                  Continue to largest offset
-                </sl-button>
-              `
-            : html``}
-          ${currentStep === 3
-            ? html`
-                <sl-button
-                  data-test-id="setup-step3-back"
-                  @click=${this.goToStep2}
-                >
-                  Back to smallest offset
-                </sl-button>
-              `
-            : html``}
-        </div>
-      </section>
+      </div>
     `;
   }
 
-  private renderStepIndicator() {
+  private renderStep3Controls(
+    largest: number | null,
+    canWrite: boolean,
+    offsetError: string,
+  ) {
+    return html`
+      <div data-test-id="setup-step-3-panel">
+        <p class="step-panel-copy">
+          Set the largest cog offset to finalize interpolation across the
+          cassette.
+        </p>
+        <div class="offset-grid">
+          <section class="offset-tune" data-test-id="setup-largest-control">
+            <div class="offset-tune-head">
+              <p class="offset-tune-label">Largest cog offset</p>
+              <p
+                class="offset-tune-value"
+                data-test-id="setup-largest-offset-value"
+              >
+                ${this.formatPreviewOffset(largest)}
+              </p>
+            </div>
+            <div class="offset-tune-controls">
+              <tune-controls
+                test-id-prefix="setup-largest-tune"
+                @tune-delta=${this.onLargestOffsetTune}
+              ></tune-controls>
+            </div>
+          </section>
+        </div>
+        <div class="actions">
+          <sl-button data-test-id="setup-step3-back" @click=${this.goToStep2}>
+            Back to smallest offset
+          </sl-button>
+          <sl-button
+            variant="primary"
+            data-test-id="setup-write"
+            ?disabled=${!canWrite}
+            @click=${this.onWriteToNxs}
+          >
+            Write to NXS
+          </sl-button>
+        </div>
+        ${offsetError
+          ? html`<p class="offset-error" data-test-id="setup-offset-error">
+              ${offsetError}
+            </p>`
+          : html``}
+      </div>
+    `;
+  }
+
+  private renderStepIndicator(
+    currentStep: 1 | 2 | 3,
+    cogCount: number,
+    smallest: number | null,
+    largest: number | null,
+    canWrite: boolean,
+    offsetError: string,
+  ) {
     const step1Complete = this.isStep1Complete();
     const step2Complete = this.isStep2Complete();
     const step3Complete = this.isStep3Complete();
@@ -484,7 +522,7 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
       {
         id: 2,
         title: "Set smallest cog offset",
-        copy: "Capture the smallest-cog baseline offset.",
+        copy: "Shift to smallest cog and capture baseline offset.",
         complete: step2Complete,
       },
       {
@@ -508,17 +546,34 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
               data-test-id=${`setup-step-${item.id}`}
               data-complete=${item.complete ? "true" : "false"}
             >
-              <div>
-                <p class="step-head">Step ${item.id}: ${item.title}</p>
-                <p class="step-copy">${item.copy}</p>
+              <div class="step-head-row">
+                <div>
+                  <p class="step-head">Step ${item.id}: ${item.title}</p>
+                  <p class="step-copy">${item.copy}</p>
+                </div>
+                <span
+                  class="step-status"
+                  data-test-id=${`setup-step-${item.id}-status`}
+                  data-complete=${item.complete ? "true" : "false"}
+                >
+                  ${item.complete ? "Complete" : "Pending"}
+                </span>
               </div>
-              <span
-                class="step-status"
-                data-test-id=${`setup-step-${item.id}-status`}
-                data-complete=${item.complete ? "true" : "false"}
-              >
-                ${item.complete ? "Complete" : "Pending"}
-              </span>
+              ${item.id === currentStep
+                ? html`
+                    <div class="step-controls">
+                      ${item.id === 1
+                        ? this.renderStep1Controls(cogCount)
+                        : item.id === 2
+                          ? this.renderStep2Controls(smallest, offsetError)
+                          : this.renderStep3Controls(
+                              largest,
+                              canWrite,
+                              offsetError,
+                            )}
+                    </div>
+                  `
+                : html``}
             </article>
           `,
         )}
@@ -552,7 +607,14 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
     this.setupMode.set(true);
   }
 
-  private goToStep2 = () => {
+  private goToStep2 = async () => {
+    if (this.smallestOffset.get() === null) {
+      const currentOffset = await this.ensureCurrentAbsoluteOffset();
+      if (currentOffset !== null) {
+        this.smallestOffset.set(currentOffset);
+      }
+    }
+    this.validateOffsets();
     this.currentStep.set(2);
   };
 
@@ -561,12 +623,46 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
   };
 
   private goToStep3 = () => {
-    if (this.smallestOffset.get() === null) return;
+    const smallest = this.smallestOffset.get();
+    if (smallest === null) return;
+    if (this.largestOffset.get() === null) {
+      this.largestOffset.set(smallest);
+    }
+    this.validateOffsets();
     this.currentStep.set(3);
   };
 
+  private async ensureCurrentAbsoluteOffset() {
+    const known = this.getCurrentAbsoluteOffset();
+    if (known !== null) return known;
+    await appActions.getPosition();
+    return this.getCurrentAbsoluteOffset();
+  }
+
+  private getCurrentAbsoluteOffset() {
+    const mac = appState.mac.get();
+    const key = mac.toUpperCase();
+    const gearList = key ? appState.gears.get()[key] : undefined;
+    const currentGear = gearList?.find((gear) => gear.current);
+    if (currentGear) {
+      const gearOffset =
+        currentGear.offsetPrecise ?? currentGear.offsetApproximate;
+      if (Number.isFinite(gearOffset)) return gearOffset;
+    }
+
+    const absolutePosition = appState.position.get()?.absolutePosition;
+    if (
+      typeof absolutePosition === "number" &&
+      Number.isFinite(absolutePosition)
+    ) {
+      return absolutePosition;
+    }
+
+    return null;
+  }
+
   private onCogCountChange(event: Event) {
-    const target = event.target as HTMLSelectElement | null;
+    const target = event.target as (EventTarget & { value?: string }) | null;
     const next = Number(target?.value ?? "");
     if (!Number.isInteger(next)) return;
     if (next < 5 || next > 14) return;
@@ -576,23 +672,51 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
 
   private onSmallestOffsetTune = (event: CustomEvent<{ delta: number }>) => {
     const current = this.smallestOffset.get() ?? 0;
-    const target = Math.round((current + event.detail.delta) * 10) / 10;
+    const next = Math.round((current + event.detail.delta) * 10) / 10;
+    const target = clampOffsetToBounds(next);
     this.smallestOffset.set(target);
     this.validateOffsets();
   };
 
   private onLargestOffsetTune = (event: CustomEvent<{ delta: number }>) => {
     const current = this.largestOffset.get() ?? 0;
-    const target = Math.round((current + event.detail.delta) * 10) / 10;
+    const next = Math.round((current + event.detail.delta) * 10) / 10;
+    const target = clampOffsetToBounds(next);
     this.largestOffset.set(target);
     this.validateOffsets();
+  };
+
+  private onWriteToNxs = async () => {
+    const offsets = this.getInterpolatedOffsets(this.selectedCogCount.get());
+    if (!offsets?.length) return;
+    await appActions.writeSetupRearCogs(offsets);
   };
 
   private validateOffsets() {
     const smallest = this.smallestOffset.get();
     const largest = this.largestOffset.get();
+    const bounds = getOffsetBounds();
     if (smallest === null || largest === null) {
       this.offsetValidationError.set("");
+      return;
+    }
+    if (
+      smallest < bounds.min ||
+      (bounds.max !== null && smallest > bounds.max)
+    ) {
+      this.offsetValidationError.set(
+        bounds.max !== null
+          ? `Smallest cog offset must stay between ${bounds.min} and ${bounds.max}.`
+          : `Smallest cog offset must be at least ${bounds.min}.`,
+      );
+      return;
+    }
+    if (largest < bounds.min || (bounds.max !== null && largest > bounds.max)) {
+      this.offsetValidationError.set(
+        bounds.max !== null
+          ? `Largest cog offset must stay between ${bounds.min} and ${bounds.max}.`
+          : `Largest cog offset must be at least ${bounds.min}.`,
+      );
       return;
     }
     if (largest <= smallest) {
@@ -627,6 +751,11 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
     const smallest = this.smallestOffset.get();
     if (smallest !== null && cogCount > 0) {
       values[0] = smallest;
+      return values;
+    }
+    const currentOffset = this.getCurrentAbsoluteOffset();
+    if (currentOffset !== null && cogCount > 0) {
+      values[0] = currentOffset;
     }
     return values;
   }

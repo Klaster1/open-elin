@@ -3,6 +3,7 @@ import { SignalWatcher, signal } from "@lit-labs/signals";
 
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
+import "./cog-profile-meta-table.ts";
 import "./empty-state.ts";
 import "./tune-controls.ts";
 
@@ -733,6 +734,18 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
   ) {
     const teethValues = profile.cogs.map((cog) => `${cog.toothCount}T`);
     const offsetValues = profile.cogs.map((cog) => cog.offset.toFixed(2));
+    const rows = [
+      {
+        label: "Teeth",
+        values: teethValues,
+        valueTestId: "cogs-profile-teeth",
+      },
+      {
+        label: "Offsets",
+        values: offsetValues,
+        valueTestId: "cogs-profile-offsets",
+      },
+    ];
     return html`
       <div
         class="profile-row"
@@ -758,26 +771,12 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
               </svg>
             </button>
           </div>
-          <div class="profile-meta">
-            <table class="profile-meta-table">
-              <tr>
-                <td data-test-id="cogs-profile-count">
-                  Cogs: ${profile.cogs.length}
-                </td>
-                ${teethValues.map(
-                  (value) =>
-                    html`<td data-test-id="cogs-profile-teeth">${value}</td>`,
-                )}
-              </tr>
-              <tr>
-                <td>Offsets</td>
-                ${offsetValues.map(
-                  (value) =>
-                    html`<td data-test-id="cogs-profile-offsets">${value}</td>`,
-                )}
-              </tr>
-            </table>
-          </div>
+          <cog-profile-meta-table
+            table-test-id="cogs-profile-meta-table"
+            data-test-id="cogs-profile-count"
+            .count=${profile.cogs.length}
+            .rows=${rows}
+          ></cog-profile-meta-table>
         </div>
         <div class="profile-actions">
           <sl-button
