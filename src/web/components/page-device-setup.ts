@@ -70,6 +70,51 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
         margin-top: 10px;
       }
 
+      .help {
+        margin-top: 14px;
+      }
+
+      .help-title {
+        margin: 0 0 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text, #e7edf5);
+      }
+
+      .help-title sl-icon {
+        font-size: 14px;
+      }
+
+      .help sl-details + sl-details {
+        margin-top: 8px;
+      }
+
+      .help sl-details::part(base) {
+        border-radius: 12px;
+        border: 1px solid #2a3747;
+        background: rgba(20, 30, 40, 0.6);
+      }
+
+      .help sl-details::part(summary) {
+        font-weight: 600;
+        color: var(--text, #e7edf5);
+      }
+
+      .help-copy {
+        margin: 0;
+        color: var(--muted, #98a6b5);
+        line-height: 1.45;
+        font-size: 13px;
+      }
+
+      .help-body {
+        display: grid;
+        gap: 12px;
+      }
+
       .actions {
         margin-top: 16px;
         display: flex;
@@ -336,7 +381,6 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
       <div class="card" data-test-id="setup">
         <div class="card-head">
           <h2>Setup</h2>
-          <p class="hint">Cassette reconfiguration flow.</p>
         </div>
 
         <p class="summary" data-test-id="setup-current-cog-count">
@@ -352,6 +396,49 @@ export class PageDeviceSetup extends SignalWatcher(LitElement) {
           If you want to reconfigure for another cassette with a different
           amount of cogs, press Start setup.
         </p>
+
+        <section class="help" data-test-id="setup-help">
+          <p class="help-title" data-test-id="setup-help-title">
+            <sl-icon library="system" name="info-circle"></sl-icon>
+            Setup help
+          </p>
+          <sl-details summary="New here? Read this first">
+            <div class="help-body">
+              <p class="help-copy">
+                Setup is your guided onboarding flow for configuring a cassette
+                from scratch. It is best when you changed cassette type, changed
+                cog count, or need to rebuild your full offset map.
+              </p>
+
+              <p class="help-copy">
+                Use Setup when you installed a cassette with a different cog
+                count or when your full cassette map no longer matches real
+                shifting behavior. If only one or two gears need tiny
+                corrections, Cogs is usually the better tool.
+              </p>
+
+              <p class="help-copy">
+                During Setup, you define two anchor points: the smallest-cog
+                offset and the largest-cog offset. OpenElin calculates all
+                intermediate offsets between those points and writes the full
+                rear-cog table (including tooth values) to NXS when you confirm
+                Write to NXS.
+              </p>
+
+              <p class="help-copy">
+                After writing, go to Cogs and verify shifting across every gear.
+                If needed, apply small per-cog refinements there, then save the
+                result as a profile so you can quickly reapply the same setup
+                later.
+              </p>
+
+              <p class="help-copy">
+                Safety tip: make small changes and test in a controlled
+                environment before normal riding.
+              </p>
+            </div>
+          </sl-details>
+        </section>
 
         <div class="actions">
           <sl-button
