@@ -65,4 +65,5 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 - ONLY EVER use `npm run dev` to start the dev server (from `demo-node`).
 - Never deviate from `npm run dev` for dev server startup.
 - Always re-use the same terminal session for `npm run dev`; do not start another terminal for the dev server.
+- NEVER run `npm run build` to check for compile errors. Use the active `npm run dev` Vite process and its diagnostics/output for compilation validation.
 - Avoid getting stuck in tool loops; if a tool call fails repeatedly, stop and reassess before continuing.

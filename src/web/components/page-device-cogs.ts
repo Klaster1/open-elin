@@ -4,9 +4,9 @@ import { SignalWatcher, signal } from "@lit-labs/signals";
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import "./empty-state.ts";
+import "./tune-controls.ts";
 
 export class PageDeviceCogs extends SignalWatcher(LitElement) {
-  private readonly absoluteSteps = [10, 5, 1, 0.1] as const;
   private profileDialogOpen = signal(false);
   private profileDialogValue = signal("");
   private profileDialogError = signal("");
@@ -136,43 +136,7 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
       }
 
       .absolute-group {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .absolute-center {
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--muted, #98a6b5);
-        padding: 0 4px;
-      }
-
-      .absolute-step {
-        min-width: 64px;
-      }
-
-      .absolute-step::part(label) {
-        width: 100%;
-        display: flex;
-        justify-content: center;
         align-items: center;
-      }
-
-      .absolute-step-content {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        line-height: 1;
-      }
-
-      .absolute-step-content sl-icon {
-        display: block;
-        width: 1em;
-        height: 1em;
-        font-size: 14px;
       }
 
       .gear-strip {
@@ -643,49 +607,12 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
     const currentOffset = this.getCurrentAbsoluteOffset(gearList);
     const disabled = controlsDisabled || currentOffset === null;
     return html`
-      <div class="absolute-group" role="group" aria-label="Decrease absolute">
-        ${this.absoluteSteps.map(
-          (step) => html`
-            <sl-button
-              class="absolute-step"
-              data-test-id=${`cogs-tune-decrease-${this.getStepToken(step)}`}
-              size="small"
-              ?disabled=${disabled}
-              @click=${() => this.onAbsoluteNudge(-step, currentOffset)}
-            >
-              <span class="absolute-step-content"
-                ><sl-icon
-                  library="system"
-                  name="chevron-left"
-                  aria-hidden="true"
-                ></sl-icon
-                >${step}</span
-              ></sl-button
-            >
-          `,
-        )}
-      </div>
-      <div class="absolute-center">tune</div>
-      <div class="absolute-group" role="group" aria-label="Increase absolute">
-        ${[...this.absoluteSteps].reverse().map(
-          (step) => html`
-            <sl-button
-              class="absolute-step"
-              data-test-id=${`cogs-tune-increase-${this.getStepToken(step)}`}
-              size="small"
-              ?disabled=${disabled}
-              @click=${() => this.onAbsoluteNudge(step, currentOffset)}
-            >
-              <span class="absolute-step-content"
-                >${step}<sl-icon
-                  library="system"
-                  name="chevron-right"
-                  aria-hidden="true"
-                ></sl-icon></span
-            ></sl-button>
-          `,
-        )}
-      </div>
+      <tune-controls
+        test-id-prefix="cogs-tune"
+        ?disabled=${disabled}
+        @tune-delta=${(event: CustomEvent<{ delta: number }>) =>
+          this.onAbsoluteNudge(event.detail.delta, currentOffset)}
+      ></tune-controls>
     `;
   }
 
@@ -988,10 +915,6 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
 
   private async onShiftDown() {
     await appActions.shiftDown();
-  }
-
-  private getStepToken(step: number) {
-    return step.toString().replace(".", "-");
   }
 
   private getCurrentAbsoluteOffset(
