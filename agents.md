@@ -1,5 +1,10 @@
 # Agents Guidance
 
+## North Star
+
+- The overall code north star is reduced human cognitive load when reviewing changes made by the agent.
+- Prefer clarity over cleverness: keep diffs small, behavior explicit, naming predictable, and structure easy to scan.
+
 ## What This Repo Is
 
 This is a web-based configuration app for the NXS rear derailleur electronic shifter. It provides a browser UI to connect to a hub, read device data, and send commands, with a demo mode for testing.
@@ -60,6 +65,8 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 - Never ask the user whether to run full tests; run and report results.
 
 - ALWAYS run Chrome MCP to test changes in demo mode. DO NOT ask the user first. NEVER ASK USER TO DO THIS. When editing UI, always take a screenshot and evaluate if everything looks good - if not, fix that.
+- For layout/visibility/icon rendering discussions, treat screenshot visuals as the source of truth; do not conclude "visible" from DOM presence alone.
+- If user asks to verify something visually, provide verification from fresh screenshots first, then adjust UI based on what is actually seen.
 - Use the existing page when possible.
 - Start Vite to access the app at https://localhost:5173/. When you go to this page, you almost always need to click on "Demo".
 - ONLY EVER use `npm run dev` to start the dev server (from `demo-node`).

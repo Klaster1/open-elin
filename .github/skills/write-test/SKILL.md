@@ -18,6 +18,12 @@ Creates and updates end-to-end tests for the web app with strict, repeatable pat
 - Use comment-structured test plans directly in the spec before each logical block.
 - Use concise imperative comments matching repo style (e.g., `// Go to app`, `// Assert ...`).
 - Do not use `Step 1`, `Step 2`, etc.
+- When user requests comment-mode planning, create a spec skeleton with comments only and an empty test body (`test(..., async () => {})`), then STOP and wait for review before implementation.
+- In comment-mode planning, keep comments in execution order and avoid strategy bullets that do not map to immediate test flow.
+- Do not implement assertions/actions until user explicitly approves moving past comment-mode checkpoint.
+- Default to one high-value fast-path spec that covers the critical user journey end-to-end.
+- Only introduce split specs or matrix coverage when explicitly requested by user, or when a single path cannot cover required risk areas.
+- If considering split/matrix coverage, state the specific risk gap first; if no concrete gap exists, keep one-spec scope.
 - Comments must describe exact assertion contracts, not vague intent.
 - Keep tests deterministic: seed demo state with fixture mutators before entering dependent screens.
 - Avoid conditional branches in test flow (`if`, fallback navigation branches, etc.) unless explicitly required by product behavior.
@@ -69,6 +75,7 @@ await expect(cogs.saveProfileButtonInEmptyState()).toHaveAttribute(
 ## Anti-Patterns to Reject
 
 - `if`-driven fallback flows in tests for convenience
+- Expanding to split specs or matrix permutations without explicit requirement or concrete risk gap
 - Vague comments like "Verify stuff" or "Check works"
 - `Step N` comment prefixes
 - Direct brittle selectors like `.foo > div:nth-child(2)` or internal element probes when `data-test-id` can be used
@@ -77,6 +84,8 @@ await expect(cogs.saveProfileButtonInEmptyState()).toHaveAttribute(
 ## Conversation-Learned Guardrails
 
 - Seed demo cog data before navigating to cogs-dependent assertions.
+- If setup logic depends on current position, seed that value at test start before navigating to Setup.
 - If a refresh is already automatic in screen lifecycle, do not duplicate it in test setup.
 - Use comments that map directly to the following assertion lines (e.g., "Assert empty state is visible and empty-state action is disabled").
 - Keep persistence checks deterministic (explicit known route flow) rather than branch-based route recovery.
+- For single-spec fast-path requests, collapse matrix cases into one deterministic path and keep only required persistence/state checks.
