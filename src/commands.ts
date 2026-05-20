@@ -1,10 +1,10 @@
-import {
-  Protocol,
-  hexToBuffer,
-  reverseCommand,
-  reverseMacAddress,
-} from "./protocol.ts";
 import type { TransportDevice } from "./protocol.ts";
+import {
+    Protocol,
+    hexToBuffer,
+    reverseCommand,
+    reverseMacAddress,
+} from "./protocol.ts";
 
 export interface GetListEntry {
   mac: string;
@@ -143,50 +143,53 @@ export interface ButtonMapEntry {
 const textDecoder = new TextDecoder("utf-8");
 const textEncoder = new TextEncoder();
 
-const enum AppCommand {
-  GetList = "0x0000",
-  AddDevice = "0x0001",
-  RemoveDevice = "0x0002",
-  SetPin = "0x0003",
-  BlinkLed = "0x0004",
-  SetBikeNet = "0x0005",
-  ResetBikeNet = "0x0006",
-  DisconnectDevice = "0x0007",
-  ReconnectDevice = "0x0008",
-  SetName = "0x0009",
-  Calibrate = "0x000B",
-  CreateShiftTable = "0x000C",
-  IncrementMove = "0x000D",
-  AbsoluteMove = "0x000E",
-  UpdatePosition = "0x000F",
-  ShiftUp = "0x0010",
-  ShiftDown = "0x0011",
-  MoveToCog = "0x0012",
-  GetPosition = "0x0013",
-  WriteButtonMap = "0x0014",
-  ReadButtonMap = "0x0015",
-  SetMotorParams = "0x0016",
-  GetMotorParams = "0x0017",
-  MotorHome = "0x0019",
-  SetRearCogInfo = "0x001D",
-  GetRearCogInfo = "0x001F",
-  SetTuningButtonLevel = "0x0022",
-  ReadTuningButton = "0x0023",
-  GetLastV = "0x0024",
-  AppAction = "0xFFFF",
-}
+const AppCommand = {
+  GetList: "0x0000",
+  AddDevice: "0x0001",
+  RemoveDevice: "0x0002",
+  SetPin: "0x0003",
+  BlinkLed: "0x0004",
+  SetBikeNet: "0x0005",
+  ResetBikeNet: "0x0006",
+  DisconnectDevice: "0x0007",
+  ReconnectDevice: "0x0008",
+  SetName: "0x0009",
+  Calibrate: "0x000B",
+  CreateShiftTable: "0x000C",
+  IncrementMove: "0x000D",
+  AbsoluteMove: "0x000E",
+  UpdatePosition: "0x000F",
+  ShiftUp: "0x0010",
+  ShiftDown: "0x0011",
+  MoveToCog: "0x0012",
+  GetPosition: "0x0013",
+  WriteButtonMap: "0x0014",
+  ReadButtonMap: "0x0015",
+  SetMotorParams: "0x0016",
+  GetMotorParams: "0x0017",
+  MotorHome: "0x0019",
+  SetRearCogInfo: "0x001D",
+  GetRearCogInfo: "0x001F",
+  SetTuningButtonLevel: "0x0022",
+  ReadTuningButton: "0x0023",
+  GetLastV: "0x0024",
+  AppAction: "0xFFFF",
+} as const;
+type AppCommand = (typeof AppCommand)[keyof typeof AppCommand];
 
-const enum PeripheralCommand {
-  BatteryVoltage = 0x4000,
-  ButtonAction = 0x4001,
-  ButtonTable = 0x4002,
-  ShiftComplete = 0x4003,
-  FrontCog = 0x4004,
-}
+const PeripheralCommand = {
+  BatteryVoltage: 0x4000,
+  ButtonAction: 0x4001,
+  ButtonTable: 0x4002,
+  ShiftComplete: 0x4003,
+  FrontCog: 0x4004,
+} as const;
+type PeripheralCommand = (typeof PeripheralCommand)[keyof typeof PeripheralCommand];
 
-const enum ResponseCode {
-  Success = 0x8000,
-}
+const ResponseCode = {
+  Success: 0x8000,
+} as const;
+type ResponseCode = (typeof ResponseCode)[keyof typeof ResponseCode];
 
 function bytesToHex(bytes: Uint8Array) {
   return Array.from(bytes)

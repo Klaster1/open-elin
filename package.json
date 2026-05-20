@@ -16,7 +16,6 @@
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
-    "@abandonware/noble": "^1.9.2-26",
     "@lit-labs/router": "^0.1.0",
     "@lit-labs/signals": "0.2.0",
     "@shoelace-style/shoelace": "^2.20.1",
