@@ -158,7 +158,7 @@ Format unknown. Open questions:
 
 ## Plan
 
-- [ ] 1. **Hub CLI** — headless Node CLI wrapping the existing demo-node protocol/transport stack. Lets us drive the hub programmatically without the browser UI.
+- [x] 1. **Hub CLI** — headless Node CLI wrapping the existing demo-node protocol/transport stack. Lets us drive the hub programmatically without the browser UI.
 - [ ] 2. **PC fake pod** — standalone Node app that acts as a BLE peripheral with the BikeNet GATT service. Hub connects to it; we log everything the hub writes. Only viable way to observe hub→pod wire format without hardware.
 - [ ] 3. **nice!nano USB-only prototype** — once protocol is known, port to Zephyr on nice!nano. No buttons/LEDs/battery yet; events injected via USB serial. Proves the nRF52840 + Zephyr stack works end-to-end with the real hub.
 - [ ] 4. **Breadboard** — wire buttons and LiPo to nice!nano. Verify full hardware path.
