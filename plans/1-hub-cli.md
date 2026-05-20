@@ -94,8 +94,8 @@ open-elin agent-context
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--address=<mac>` | — | Hub MAC address (required for hub commands) |
-| `--pin=<pin>` | `0000` | Hub PIN |
-| `--timeout=<ms>` | `5000` | Scan/connect timeout |
+| `--pin=<pin>` | `1111` | Hub PIN |
+| `--timeout=<ms>` | `8000` | Scan/connect timeout |
 | `--json` | false | Emit JSON to stdout |
 | `--no-color` | auto | Disable ANSI (auto-disabled on non-TTY) |
 
@@ -126,8 +126,8 @@ open-elin-cli/
     cli.ts                 ← optique `or(command(...))` root; global flags via `merge()`
     agent-context.ts       ← schema_version + full command/flag shape as JSON
     ble/
-      transport.ts         ← adapted from demo-node/src/node/transport-noble.ts
-      connection.ts        ← connect(address, pin, timeout) → Connection; retry-safe
+      transport-noble.ts   ← NobleTransport (BLE scan + connect via @abandonware/noble)
+      connection.ts        ← openHub(address, pin, timeout) → {protocol, commands, device}
     commands/
       scan.ts
       hub/
@@ -158,12 +158,12 @@ open-elin-cli/
 ```ts
 import { parseGetListResponse, parseBatteryVoltageNotify } from "demo-node/src/commands.ts";
 import { Protocol } from "demo-node/src/protocol.ts";
-import { NobleTransport } from "demo-node/src/node/transport-noble.ts";
+// NobleTransport now lives in open-elin-cli/src/ble/transport-noble.ts
 ```
 
 `node` runs `.ts` files natively in Node 26 (type stripping, no flag). No build step — `bin` points directly to `src/cli.ts`. Type-check with `tsc --noEmit`.
 
-`src/ble/transport.ts` is still needed as a thin adapter that unwraps `NobleTransport`'s connection into the `AppTransport` interface expected by `connection.ts`.
+`NobleTransport` was moved from `demo-node/src/node/` into `open-elin-cli/src/ble/transport-noble.ts`; `@abandonware/noble` was removed from `demo-node`. `src/ble/transport.ts` (thin re-export shim) was deleted as unnecessary.
 
 ---
 
@@ -171,7 +171,7 @@ import { NobleTransport } from "demo-node/src/node/transport-noble.ts";
 
 ### Connection flow (per-command, stateless)
 ```
-scan (5 s) → find address → connect → PIN unlock → execute command → disconnect
+scan (8 s) → find address → connect → PIN unlock → execute command → disconnect
 ```
 Every command does this inline. No persistent daemon. BLE scan is the slow part (~2–3 s);
 total round-trip target ≤ 8 s.
@@ -202,34 +202,34 @@ or `--timeout`. Example output:
 
 ## Implementation checklist
 
-- [ ] Scaffold: `package.json`, `tsconfig.json`, `.node-version`, `.gitignore`; install optique via `npx jsr add @optique/core @optique/run`
-- [ ] Wire npm workspaces (`c:\dev\nxs\package.json`) + `demo-node` exports field
-- [ ] `output.ts` helpers + `exit-codes.ts`
-- [ ] `scan` command
-- [ ] `ble/connection.ts` (connect + PIN unlock + disconnect wrapper)
-- [ ] `hub blink` command (simplest write command — smoke test for connection)
-- [ ] `hub list` / `hub get` commands
-- [ ] `hub shift-up` / `hub shift-down` / `hub move` / `hub get-position`
-- [ ] `hub get-rear-cog` / `hub set-rear-cog`
-- [ ] `hub read-button-map` / `hub read-button-table`
-- [ ] `hub get-motor-params` / `hub set-name`
-- [ ] `hub monitor` command
-- [ ] `agent-context` command
-- [ ] `SKILL.md`
-- [ ] End-to-end smoke test: scan → list → blink
+- [x] Scaffold: `package.json`, `tsconfig.json`, `.node-version`, `.gitignore`; install optique via `npx jsr add @optique/core @optique/run`
+- [x] Wire npm workspaces (`c:\dev\nxs\package.json`) + `demo-node` exports field
+- [x] `output.ts` helpers + `exit-codes.ts`
+- [x] `scan` command
+- [x] `ble/connection.ts` (connect + PIN unlock + disconnect wrapper)
+- [x] `hub blink` command (simplest write command — smoke test for connection)
+- [x] `hub list` / `hub get` commands
+- [x] `hub shift-up` / `hub shift-down` / `hub move` / `hub get-position`
+- [x] `hub get-rear-cog` / `hub set-rear-cog`
+- [x] `hub read-button-map` / `hub read-button-table`
+- [x] `hub get-motor-params` / `hub set-name`
+- [x] `hub monitor` command
+- [x] `agent-context` command
+- [x] `SKILL.md`
+- [x] End-to-end smoke test: scan → list → blink
 
 ---
 
 ## Success criteria
 
-- `open-elin scan --json` → JSON array of hubs, exit 0; exit 4 if none found
-- `open-elin hub list --address=<mac> --json` → paired device list JSON
-- `open-elin hub blink --address=<mac> --json` → hub LED blinks, `{"ok":true}` returned
-- `open-elin hub shift-up --address=<mac> --json` / `shift-down` → `{"ok":true}`
-- `open-elin hub get-position --address=<mac> --json` → `{"absolutePosition":..., "gearPosition":...}`
-- `open-elin hub get-rear-cog --address=<mac> --json` → cog calibration JSON
-- `open-elin hub read-button-table --address=<mac> --json` → button map entries JSON
-- `open-elin hub get-motor-params --address=<mac> --json` → motor params JSON
-- `open-elin hub monitor --address=<mac> --json` → events stream line-by-line; Ctrl-C exits cleanly
-- `open-elin agent-context` → valid JSON with `schema_version`
-- All commands exit non-zero on error with message on stderr, nothing on stdout
+- ✅ `open-elin scan --json` → JSON array of hubs, exit 0; exit 4 if none found
+- ✅ `open-elin hub list --address=<mac> --json` → paired device list JSON
+- ✅ `open-elin hub blink --address=<mac> --json` → hub LED blinks, `{"ok":true}` returned
+- ✅ `open-elin hub shift-down --address=<mac> --json` → `{"ok":true}`; `shift-up` returns exit 6 when hub is at gear 1 (0x8003 INVALID_STATE — correct hub-side rejection)
+- ✅ `open-elin hub get-position --address=<mac> --json` → `{"absolutePosition":..., "gearPosition":...}`
+- ✅ `open-elin hub get-rear-cog --address=<mac> --json` → cog calibration JSON
+- ✅ `open-elin hub read-button-table --address=<mac> --json` → button map entries JSON
+- ✅ `open-elin hub get-motor-params --address=<mac> --json` → motor params JSON
+- ✅ `open-elin hub monitor --address=<mac> --json` → connects and streams; WinRT service-discovery hang fixed via retry logic in `NobleTransport.connect()` (8 s discover timeout → disconnect → 12 s wait → retry, up to 3 attempts)
+- ✅ `open-elin agent-context` → valid JSON with `schema_version`
+- ✅ All commands exit non-zero on error with message on stderr, nothing on stdout
