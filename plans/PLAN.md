@@ -158,11 +158,11 @@ Format unknown. Open questions:
 
 ## Plan
 
-1. **Hub CLI** — headless Node CLI wrapping the existing demo-node protocol/transport stack. Lets us drive the hub programmatically without the browser UI.
-2. **PC fake pod** — standalone Node app that acts as a BLE peripheral with the BikeNet GATT service. Hub connects to it; we log everything the hub writes. Only viable way to observe hub→pod wire format without hardware.
-3. **nice!nano USB-only prototype** — once protocol is known, port to Zephyr on nice!nano. No buttons/LEDs/battery yet; events injected via USB serial. Proves the nRF52840 + Zephyr stack works end-to-end with the real hub.
-4. **Breadboard** — wire buttons and LiPo to nice!nano. Verify full hardware path.
-5. **Optimise** — tune BLE connection interval and sleep modes; verify battery life on LiPo.
+- [ ] 1. **Hub CLI** — headless Node CLI wrapping the existing demo-node protocol/transport stack. Lets us drive the hub programmatically without the browser UI.
+- [ ] 2. **PC fake pod** — standalone Node app that acts as a BLE peripheral with the BikeNet GATT service. Hub connects to it; we log everything the hub writes. Only viable way to observe hub→pod wire format without hardware.
+- [ ] 3. **nice!nano USB-only prototype** — once protocol is known, port to Zephyr on nice!nano. No buttons/LEDs/battery yet; events injected via USB serial. Proves the nRF52840 + Zephyr stack works end-to-end with the real hub.
+- [ ] 4. **Breadboard** — wire buttons and LiPo to nice!nano. Verify full hardware path.
+- [ ] 5. **Optimise** — tune BLE connection interval and sleep modes; verify battery life on LiPo.
 
 **Tools available:** webcam pointed at the bike for visual confirmation of hub LED states during steps 2–4. Access: open a browser tab to a local camera stream (e.g. OBS virtual cam → browser source, or any IP camera URL), or open any page that calls `getUserMedia` and grant camera permission once — tab stays open, agent takes screenshots on demand with no further user interaction required.
 
