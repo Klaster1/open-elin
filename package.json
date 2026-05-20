@@ -5,6 +5,9 @@
   "license": "MIT",
   "description": "Web configuration app for NXS shifter",
   "main": "src/index.ts",
+  "exports": {
+    "./src/*": "./src/*"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
