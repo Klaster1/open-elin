@@ -17,7 +17,7 @@
     "@abandonware/noble": "^1.9.2-26",
     "@optique/core": "npm:@jsr/optique__core@*",
     "@optique/run": "npm:@jsr/optique__run@*",
-    "open-elin-web": "*"
+    "open-elin-lib": "*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

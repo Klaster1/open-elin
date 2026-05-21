@@ -1,8 +1,8 @@
 import { Signal, computed, signal } from "@lit-labs/signals";
 
-import { ProtocolCommands } from "../commands.ts";
-import type { ProtocolTransport, TransportDevice } from "../protocol.ts";
-import { Protocol } from "../protocol.ts";
+import { ProtocolCommands } from "open-elin-lib/commands";
+import type { ProtocolTransport, TransportDevice } from "open-elin-lib/protocol";
+import { Protocol } from "open-elin-lib/protocol";
 import type { DemoState } from "./demo/demo-state.ts";
 import { demoState } from "./demo/demo-state.ts";
 import hubData from "./demo/hub-mock-data.json";

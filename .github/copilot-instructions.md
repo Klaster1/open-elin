@@ -8,6 +8,7 @@ Open-source replacement firmware and tools for the NXS BikeNet wireless electron
 
 | Folder | Purpose |
 |--------|---------|
+| `open-elin-lib/` | Shared protocol library (commands, protocol) — cross-platform (Node.js + browser) |
 | `open-elin-cli/` | Node.js CLI for controlling NXS hubs over BLE (TypeScript, ESM) |
 | `open-elin-web/` | Lit-based web app for hub configuration via Web Bluetooth |
 | `open-elin-pod-firmware/` | Replacement pod firmware docs and hardware reference |

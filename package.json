@@ -5,6 +5,7 @@
     "web": "npm run dev --workspace=open-elin-web"
   },
   "workspaces": [
+    "open-elin-lib",
     "open-elin-cli",
     "open-elin-web"
   ]

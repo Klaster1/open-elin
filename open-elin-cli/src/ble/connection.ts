@@ -1,6 +1,6 @@
-import { ProtocolCommands } from "open-elin-web/src/commands.ts";
-import type { TransportDevice } from "open-elin-web/src/protocol.ts";
-import { Protocol } from "open-elin-web/src/protocol.ts";
+import { ProtocolCommands } from "open-elin-lib/commands";
+import type { TransportDevice } from "open-elin-lib/protocol";
+import { Protocol } from "open-elin-lib/protocol";
 import { ExitCode } from "../exit-codes.ts";
 import { die } from "../output.ts";
 import { NobleTransport } from "./transport-noble.ts";
