@@ -7,20 +7,23 @@ A Node.js BLE peripheral that impersonates an NXS BikeNet pod. Runs on the **Mac
 **Repo (PC):** `c:\dev\nxs\open-elin-pc-pod`  
 **Mac copy:** `~/dev/open-elin-pc-pod` (synced via `scp`)  
 **Node version:** 26.2.0 — installed at `~/node-v26.2.0-darwin-arm64/bin/node`  
-**Mac BT adapter MAC:** `84:2f:57:31:36:f3` (use this in manufacturer data)
+**Mac BT adapter MAC:** `84:2f:57:31:36:f3`
+
+> ⚠️ **macOS address rotation blocker**: CoreBluetooth rotates the peripheral's Bluetooth address periodically (privacy feature). The hub bonds to the address it first sees, then reconnects by stored address — which rotates. Result: after the first session the hub can no longer reconnect to the fake pod. Workaround: factory-reset the hub before each experiment session so it re-pairs fresh each time. This is sufficient for capturing the one-time connection-init sequence (Exp 1–2).
 
 ---
 
 ## What we're trying to find out
 
-| Question | Experiment |
-|----------|------------|
-| Does hub use service UUID, manufacturer data, or both to discover pods? | Exp 1: advertise minimal → add manufacturer data if needed |
-| Does hub send a PIN unlock to the pod? | Observe first write after connection |
-| What does hub write on connection init (opcode, payload)? | Log all MSG + PIN char writes |
-| What does hub write when a shift or app command references the pod? | Use open-elin-cli + app while hub is connected to fake pod |
-| Does hub expect a specific ACK/response to stay connected? | Log disconnects; try replying to writes |
-| Button notify format (pod→hub)? | After establishing stable connection, send candidate payloads and observe hub reaction via open-elin hub monitor |
+| Question | Status | Experiment |
+|----------|--------|------------|
+| How does hub discover pods? | ✅ **RESOLVED** — hub scans by BLE local name `NXS MTB Pod` only. No service UUID, no manufacturer data required in advertisement. | Confirmed empirically 2026-05-21 |
+| Button notify format (pod→hub)? | ✅ **RESOLVED** — `[00 00][01 40][pod MAC 6B LE][buttonId][actionFlag]` | Captured via `hub monitor` 2026-05-21 |
+| Battery notify format (pod→hub)? | ✅ **RESOLVED** — `[00 00][00 40][pod MAC 6B LE][mV LE16]` | Captured via `hub monitor` 2026-05-21 |
+| Does hub send a PIN unlock to the pod? | ❓ | Observe first write after connection |
+| What does hub write on connection init (opcode, payload)? | ❓ | Log all MSG + PIN char writes |
+| What does hub write when a shift or app command references the pod? | ❓ | Use open-elin-cli + app while hub is connected to fake pod |
+| Does hub expect a specific ACK/response to stay connected? | ❓ | Log disconnects; try replying to writes |
 
 ---
 
@@ -36,6 +39,8 @@ A Node.js BLE peripheral that impersonates an NXS BikeNet pod. Runs on the **Mac
 
 **Smoke test verified** (`node src/smoke.ts`): device `84:2f:57:31:36:f3` advertising service UUID `A5C1C000-…` visible in nRF Connect. ✅
 
+> Note: the smoke test advertised service UUID with **no local name**. This is why the hub never connected — hub discovers pods by local name `NXS MTB Pod`, not by service UUID. Next run must set local name.
+
 **Sync workflow** (PC → Mac):
 ```powershell
 # after editing on PC:
@@ -46,16 +51,18 @@ Run on Mac via SSH:
 ssh -i ~/.ssh/id_ed25519 klaster_1@192.168.1.34 "export PATH=/Users/klaster_1/node-v26.2.0-darwin-arm64/bin:/usr/local/bin:/usr/bin:/bin && cd ~/dev/open-elin-pc-pod && node src/smoke.ts"
 ```
 
-### Advertisement format
+### Advertisement format — CONFIRMED
 
-The hub filters by BikeNet service UUID + non-empty manufacturer data (from `listDevices()` in `open-elin-cli`). Whether the hub's **own** scan-for-pods firmware uses the same filter is unknown — this is what Exp 1 determines.
+Hub discovers pods by **BLE local name only**. Empirically confirmed 2026-05-21: real pod `d5:89:b2:13:fa:04` advertises with no service UUID and no manufacturer data in its primary advertisement. Hub connects to it by scanning for local name `NXS MTB Pod`.
 
-Start with the same manufacturer data format as the hub:
+Required advertisement:
 ```
-company ID:  0xDE98 (LE: 98 DE)
-data bytes:  08 01 <MAC reversed 6 bytes>
+Local name:        NXS MTB Pod   ← REQUIRED, this is the only filter the hub uses
+Service UUIDs:     (none in primary adv)
+Manufacturer data: (none)
+TX power:          0 dBm
 ```
-The "MAC" here should be the fake pod's address (the PC BT adapter MAC, or a synthetic address). If hub ignores manufacturer data content during pairing we can simplify; if it parses the MAC from it we need to make it consistent.
+The BikeNet service UUID (`A5C1C000-…`) must still be present in the **GATT service**, just not in the advertisement packet.
 
 ---
 
@@ -93,16 +100,18 @@ All decoded frames are logged alongside the raw hex so that known opcodes are hu
 
 - [x] Scaffold `open-elin-pc-pod` (package.json, tsconfig, .node-version, .gitignore)
 - [x] Add to root workspace (`c:\dev\nxs\package.json`)
+- [x] Scaffold `open-elin-pc-pod` (package.json, tsconfig, .node-version, .gitignore)
+- [x] Add to root workspace (`c:\dev\nxs\package.json`)
 - [x] Install `@stoprocent/bleno`; verify it can advertise on macOS (smoke test ✅ — `84:2f:57:31:36:f3` visible in nRF Connect)
-- [ ] `advertise.ts` — build BikeNet service UUID + manufacturer data advertisement
+- [ ] `advertise.ts` — local name `NXS MTB Pod`, no service UUID, no manufacturer data
 - [ ] `gatt.ts` — MSG characteristic (write + notify); PIN characteristic (write + notify); log all writes
 - [ ] `logger.ts` — JSON-line output: `{ts, char, raw_hex, decoded?}`
 - [ ] `main.ts` — wire up bleno, start advertising, handle connect/disconnect events, SIGINT cleanup
-- [ ] **Exp 1** — trigger hub factory reset + pairing mode; run fake pod; confirm hub connects
+- [ ] **Exp 1** — factory-reset hub (`hub set-bikenet`); run fake pod with name `NXS MTB Pod`; confirm hub connects via `hub list`
 - [ ] **Exp 2** — log and analyse every write the hub sends immediately after connection
-- [ ] **Exp 3** — with hub connected to fake pod, run `open-elin hub list / shift-down / get-position` and observe what (if anything) the hub forwards to the pod
+- [ ] **Exp 3** — with hub connected to fake pod, run `hub shift-down / hub list` and observe what (if anything) the hub forwards to the pod
 - [ ] **Exp 4** — use the BikeNet app while hub is connected to fake pod; observe additional hub→pod traffic
-- [ ] **Exp 5** — send candidate `BLE_MSG_BAT_V` (0x4000) notify from fake pod → hub; confirm hub accepts it (verify via `open-elin hub list` — battery voltage field updates)
+- [ ] **Exp 5** — send `BLE_MSG_BAT_V` (0x4000) notify from fake pod → hub; confirm hub caches it (verify via `hub list` — battery voltage updates)
 - [ ] Document findings in `FINDINGS.md` inside `open-elin-pc-pod/`
 
 ---
@@ -123,19 +132,25 @@ Every characteristic write is emitted as a JSON line to stdout:
 
 ## Success criteria
 
-- [ ] Fake pod advertises on Windows with BikeNet service UUID + manufacturer data
-- [ ] Hub (in pairing mode) connects to fake pod
+- [ ] Fake pod advertises with local name `NXS MTB Pod` (no service UUID, no manufacturer data)
+- [ ] Hub connects to fake pod after `hub set-bikenet` + `hub add-device` (no app required)
 - [ ] All hub→pod writes captured and logged in hex
 - [ ] At least the first hub→pod write decoded (opcode identified)
-- [ ] `BLE_MSG_BAT_V` notify accepted by hub (battery reading visible via `open-elin hub list`)
+- [ ] `BLE_MSG_BAT_V` notify sent from fake pod → hub accepted (battery reading updates in `hub list`)
 - [ ] Enough data captured to describe the hub→pod connection init sequence in `FINDINGS.md`
 
 ---
 
 ## Known unknowns (to be resolved by experiments)
 
-- Does the hub send a PIN auth write to the pod? (likely no — pod PIN is `0000` by default)
+- Does the hub send a PIN auth write to the pod? (likely no — pod PIN is `0000` by default and PIN was never enforced in testing)
 - What is the first opcode the hub writes to a freshly-paired pod?
-- Does the hub write anything when app-side gear commands are issued?
-- What is the button notify payload format?
+- Does the hub write anything when app-side or CLI gear commands are issued?
 - Does the hub expect a response to stay connected, or is it fire-and-forget?
+
+## Already resolved (no longer need fake pod for these)
+
+- **Hub discovery mechanism**: local name `NXS MTB Pod` only — confirmed 2026-05-21
+- **Button notify format**: `[00 00][01 40][pod MAC 6B LE][buttonId][actionFlag]` — captured via `hub monitor` 2026-05-21
+- **Battery notify format**: `[00 00][00 40][pod MAC 6B LE][mV LE16]` — captured via `hub monitor` 2026-05-21
+- **Spurious button-0 Release on connect**: pod always sends Release of buttonId `0x00` at connection; firmware must replicate
