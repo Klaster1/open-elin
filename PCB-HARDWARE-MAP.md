@@ -51,7 +51,7 @@ Sources: `images/pod-pcb-front.jpg`, `images/pod-pcb-back.jpg`, `images/nrf52-qf
 | 16 | P0.14          | NC | Unknown — probe required | `[UNKNOWN]` |
 | 17 | P0.15          | NC | Unknown — probe required | `[UNKNOWN]` |
 | 18 | P0.16          | NC | Unknown — probe required | `[UNKNOWN]` |
-| 19 | P0.17          | NC | Unknown — probe required | `[UNKNOWN]` |
+| 19 | P0.17          | NC | **Pairing button** — connected to GND plane; 7th pin from left on bottom edge (visually confirmed from PCB photo). Button press pulls P0.17 low. | `[TRACED]` |
 | 20 | P0.18          | NC | Unknown — probe required | `[UNKNOWN]` |
 | 21 | P0.19          | NC | Unknown — probe required | `[UNKNOWN]` |
 | 22 | P0.20          | NC | Unknown — probe required | `[UNKNOWN]` |
@@ -115,7 +115,7 @@ Sources: `images/pod-pcb-front.jpg`, `images/pod-pcb-back.jpg`, `images/nrf52-qf
 | Upper-left front  | Tactile button      | Shift button (Up or Down)          | Left-side GPIO (pins 1–12) `[INFERRED]` |
 | Middle-left front | Tactile button      | Shift button (Down or Up)          | Left-side GPIO (pins 1–12) `[INFERRED]` |
 | Upper-right front | Spring-contact button | Shift or Fn button               | Unknown `[UNKNOWN]` |
-| Lower-right front | Spring-contact button | Shift, Fn, or hidden Pairing     | Unknown `[UNKNOWN]` |
+| Lower-right front | Spring-contact button | **Pairing button** (hidden, under "N" logo, hold 6 s) | P0.17 → GND `[TRACED]` |
 | Between left buttons and chip left edge | Row of ~7 identical SMD passives | Pull-up resistors or ADC resistor ladder | Connects to pins 1–12 (left side) `[INFERRED]` |
 | Lower-left front  | Blue LED + series resistor | Status / pairing indicator  | GPIO TBD `[UNKNOWN]` |
 | Right edge        | 6-pad header V/IO/CLK/G/TX/RX | SWD + UART debug | IO→pin 43, CLK→pin 44; TX/RX GPIO `[UNKNOWN]` `[POD EXTRA]` |
