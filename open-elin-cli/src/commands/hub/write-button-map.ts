@@ -1,4 +1,4 @@
-import type { ButtonMapEntry } from "demo-node/src/commands.ts";
+import type { ButtonMapEntry } from "open-elin-web/src/commands.ts";
 import { openHub } from "../../ble/connection.ts";
 import { ExitCode } from "../../exit-codes.ts";
 import { die, printJson, printLine } from "../../output.ts";

@@ -1,4 +1,9 @@
-# open-elin SKILL
+---
+name: open-elin-cli
+description: 'Interact with an NXS BikeNet hub over BLE. Use when: running hub commands, scanning for hubs, shifting gears, reading/writing button maps, monitoring BLE events, or any NXS hardware interaction via CLI.'
+---
+
+# open-elin CLI
 
 Use this skill when you need to interact with an NXS BikeNet hub over BLE
 from any agent or automation context.
@@ -8,18 +13,20 @@ from any agent or automation context.
 - Node.js ≥ 26.2.0  
 - Windows / macOS / Linux with a BLE adapter supported by `@abandonware/noble`  
 - Hub powered on and in range  
-- Run `npm install` in the `open-elin-cli` workspace once  
+- Run `npm install` in the workspace root once  
 
 ## Invoking the CLI
 
-```
-node src/cli.ts <command> [flags]
-```
-
-Or, after `npm link` / global install:
+From workspace root:
 
 ```
-open-elin <command> [flags]
+npm run cli -- <command> [flags]
+```
+
+Or directly:
+
+```
+node open-elin-cli/src/cli.ts <command> [flags]
 ```
 
 ## Key commands
