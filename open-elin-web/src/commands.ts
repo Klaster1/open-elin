@@ -606,7 +606,6 @@ export class ProtocolCommands {
       this.device.address,
     );
     const response = await this.protocol.sendCommand(this.device, payload);
-    process.stderr.write(`[DEBUG getList] raw response (${response.length}B): ${bytesToHex(response)}\n`);
     return parseGetListResponse(response);
   }
 
