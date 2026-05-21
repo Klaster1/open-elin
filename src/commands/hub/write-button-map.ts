@@ -14,6 +14,10 @@ const CAPTURED_ENTRIES: ButtonMapEntry[] = [
   { podAddressHex: "04FA13B289D5", elinkAddressHex: "E5A052ABBAD7", button1: { code: "02" }, button2: { code: "00" }, action: { code: "00" }, function: { code: "11" }, index: 6 },
 ];
 
+function macToHexLE(mac: string): string {
+  return mac.split(":").reverse().map((b) => b.toUpperCase()).join("");
+}
+
 export interface WriteButtonMapOpts {
   address: string;
   pin: string;
@@ -21,6 +25,7 @@ export interface WriteButtonMapOpts {
   json: boolean;
   entriesJson?: string;
   useCaptured?: boolean;
+  podMac?: string;
 }
 
 export async function run(opts: WriteButtonMapOpts): Promise<void> {
@@ -29,7 +34,11 @@ export async function run(opts: WriteButtonMapOpts): Promise<void> {
   let entries: ButtonMapEntry[];
   let writeResult;
   try {
-    if (opts.useCaptured) {
+    if (opts.podMac) {
+      const podHex = macToHexLE(opts.podMac);
+      const hubHex = macToHexLE(opts.address);
+      entries = CAPTURED_ENTRIES.map((e) => ({ ...e, podAddressHex: podHex, elinkAddressHex: hubHex }));
+    } else if (opts.useCaptured) {
       entries = CAPTURED_ENTRIES;
     } else if (opts.entriesJson) {
       // Use entries supplied by caller (from --entries-json flag)

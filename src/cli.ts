@@ -58,7 +58,7 @@ const setRcParser   = merge(
 );
 const readBmParser    = merge(object({ type: constant("read-button-map") }), hubFlags);
 const readBtParser    = merge(object({ type: constant("read-button-table") }), hubFlags);
-const writeBmParser   = merge(object({ type: constant("write-button-map"), entriesJson: optional(option("--entries-json", string({ metavar: "JSON" }))), useCaptured: option("--use-captured") }), hubFlags);
+const writeBmParser   = merge(object({ type: constant("write-button-map"), entriesJson: optional(option("--entries-json", string({ metavar: "JSON" }))), useCaptured: option("--use-captured"), podMac: optional(option("--pod-mac", string({ metavar: "MAC" }))) }), hubFlags);
 const getMotParser  = merge(object({ type: constant("get-motor-params") }), hubFlags);
 const setNameParser = merge(
   object({
