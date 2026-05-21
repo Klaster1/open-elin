@@ -606,6 +606,7 @@ export class ProtocolCommands {
       this.device.address,
     );
     const response = await this.protocol.sendCommand(this.device, payload);
+    process.stderr.write(`[DEBUG getList] raw response (${response.length}B): ${bytesToHex(response)}\n`);
     return parseGetListResponse(response);
   }
 
@@ -630,6 +631,38 @@ export class ProtocolCommands {
       8000,
     );
     return parseButtonTableNotify(notify);
+  }
+
+  async writeButtonMap(entries: ButtonMapEntry[]): Promise<BasicResponse> {
+    const cmd = reverseCommand(AppCommand.WriteButtonMap);
+    const hubMacLE = reverseMacAddress(this.device.address);
+
+    // Step 1: send size header — tells hub how many bytes of map data to expect
+    const totalBytes = entries.length * 16;
+    const sizeHex16 = totalBytes.toString(16).padStart(4, "0");
+    const sizeBytesLE = sizeHex16.substring(2, 4) + sizeHex16.substring(0, 2);
+    const sizePayload = hexToBuffer(cmd + hubMacLE + "00" + sizeBytesLE);
+    const sizeResponse = await this.protocol.sendCommand(this.device, sizePayload);
+    const sizeResult = parseBasicResponse(sizeResponse);
+    if (sizeResult.status !== "success") return sizeResult;
+
+    // Step 2: send each entry individually, waiting for ACK before the next
+    for (const entry of entries) {
+      const podMacLE = entry.podAddressHex.toLowerCase();
+      const elinkMacLE = entry.elinkAddressHex.toLowerCase();
+      const b1 = entry.button1.code.toLowerCase().padStart(2, "0");
+      const b2 = entry.button2.code.toLowerCase().padStart(2, "0");
+      const act = entry.action.code.toLowerCase().padStart(2, "0");
+      const fn = entry.function.code.toLowerCase().padStart(2, "0");
+      const entryPayload = hexToBuffer(
+        cmd + hubMacLE + "01" + podMacLE + elinkMacLE + b1 + b2 + act + fn,
+      );
+      const entryResponse = await this.protocol.sendCommand(this.device, entryPayload);
+      const entryResult = parseBasicResponse(entryResponse);
+      if (entryResult.status !== "success") return entryResult;
+    }
+
+    return { status: "success", code: 0x8000 };
   }
 
   async getRearCogInfo(): Promise<RearCogInfoResponse> {
@@ -665,6 +698,30 @@ export class ProtocolCommands {
     );
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseGetPositionResponse(response);
+  }
+
+  async setBikeNet(): Promise<BasicResponse> {
+    const payload = encodeCommandWithMac(AppCommand.SetBikeNet, this.device.address);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
+  }
+
+  async addDevice(podMac: string): Promise<BasicResponse> {
+    const cmd = reverseCommand(AppCommand.AddDevice);
+    const revHub = reverseMacAddress(this.device.address);
+    const revPod = reverseMacAddress(podMac);
+    const payload = hexToBuffer(cmd + revHub + revPod);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
+  }
+
+  async removeDevice(podMac: string): Promise<BasicResponse> {
+    const cmd = reverseCommand(AppCommand.RemoveDevice);
+    const revHub = reverseMacAddress(this.device.address);
+    const revPod = reverseMacAddress(podMac);
+    const payload = hexToBuffer(cmd + revHub + revPod);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
   }
 
   async blinkLed(): Promise<BasicResponse> {

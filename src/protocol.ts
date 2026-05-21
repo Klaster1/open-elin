@@ -175,6 +175,17 @@ export class Protocol {
     };
   }
 
+  async subscribeToRawMessages(
+    device: TransportDevice,
+    handler: (data: Uint8Array) => void,
+  ) {
+    const session = await this.getSession(device);
+    session.rawHandlers.push(handler);
+    return () => {
+      session.rawHandlers = session.rawHandlers.filter((h) => h !== handler);
+    };
+  }
+
   private async getSession(device: TransportDevice) {
     const existing = this.sessions.get(device.id);
     if (existing) return existing;
@@ -197,6 +208,7 @@ export class Protocol {
         code: number;
         handler: (data: Uint8Array) => void;
       }>,
+      rawHandlers: [] as Array<(data: Uint8Array) => void>,
     };
 
     await connection.subscribeMsg((data) => this.handleMsg(device.id, data));
@@ -217,6 +229,7 @@ export class Protocol {
   private handleMsg(deviceId: string, data: Uint8Array) {
     const session = this.sessions.get(deviceId);
     if (!session) return;
+    session.rawHandlers.forEach((h) => h(data));
     const code = responseCode(data);
     if (code < 0x8000) {
       session.peripheralSubscriptions
@@ -233,12 +246,26 @@ export class Protocol {
         });
       }
     }
-    if (!session.pending) return;
-    if (code >= 0x8000 || code === 0x0008) {
-      const pending = session.pending;
-      clearTimeout(pending.timer);
-      session.pending = null;
-      pending.resolve(data);
+    if (code >= 0x8000) {
+      if (session.pending) {
+        const pending = session.pending;
+        clearTimeout(pending.timer);
+        session.pending = null;
+        pending.resolve(data);
+      } else {
+        // Unsolicited high-code notification (e.g. 0x8006 = pod connected)
+        session.peripheralSubscriptions
+          .filter((s) => s.code === code)
+          .forEach((s) => s.handler(data));
+        const matching = session.peripheralWaiters.filter((w) => w.code === code);
+        if (matching.length) {
+          session.peripheralWaiters = session.peripheralWaiters.filter((w) => w.code !== code);
+          matching.forEach((w) => {
+            clearTimeout(w.timer);
+            w.resolve(data);
+          });
+        }
+      }
     }
   }
 }
