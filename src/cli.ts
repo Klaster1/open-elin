@@ -7,6 +7,7 @@ import { run } from "@optique/run";
 import process from "node:process";
 
 import * as agentContextCmd from "./agent-context.ts";
+import * as addDeviceCmd from "./commands/hub/add-device.ts";
 import * as blinkCmd from "./commands/hub/blink.ts";
 import * as getMotorParamsCmd from "./commands/hub/get-motor-params.ts";
 import * as getPositionCmd from "./commands/hub/get-position.ts";
@@ -17,10 +18,13 @@ import * as monitorCmd from "./commands/hub/monitor.ts";
 import * as moveCmd from "./commands/hub/move.ts";
 import * as readButtonMapCmd from "./commands/hub/read-button-map.ts";
 import * as readButtonTableCmd from "./commands/hub/read-button-table.ts";
+import * as removeDeviceCmd from "./commands/hub/remove-device.ts";
+import * as setBikeNetCmd from "./commands/hub/set-bikenet.ts";
 import * as setNameCmd from "./commands/hub/set-name.ts";
 import * as setRearCogCmd from "./commands/hub/set-rear-cog.ts";
 import * as shiftDownCmd from "./commands/hub/shift-down.ts";
 import * as shiftUpCmd from "./commands/hub/shift-up.ts";
+import * as writeButtonMapCmd from "./commands/hub/write-button-map.ts";
 import * as scanCmd from "./commands/scan.ts";
 import { ExitCode } from "./exit-codes.ts";
 
@@ -33,7 +37,10 @@ const hubFlags = object("Connection", {
 });
 
 // -- Hub subcommand parsers --
-const listParser    = merge(object({ type: constant("list") }), hubFlags);
+const addDevParser    = merge(object({ type: constant("add-device"), podMac: argument(string({ metavar: "POD-MAC" })), waitForPod: withDefault(option("--wait-for-pod", integer({ min: 0, metavar: "SECS" })), 0) }), hubFlags);
+const removeDevParser = merge(object({ type: constant("remove-device"), podMac: argument(string({ metavar: "POD-MAC" })) }), hubFlags);
+const setBikeNetParser = merge(object({ type: constant("set-bikenet") }), hubFlags);
+const listParser      = merge(object({ type: constant("list") }), hubFlags);
 const getParser     = merge(object({ type: constant("get"), mac: argument(string({ metavar: "MAC" })) }), hubFlags);
 const blinkParser   = merge(object({ type: constant("blink") }), hubFlags);
 const shiftUpParser = merge(object({ type: constant("shift-up") }), hubFlags);
@@ -49,8 +56,9 @@ const setRcParser   = merge(
   }),
   hubFlags,
 );
-const readBmParser  = merge(object({ type: constant("read-button-map") }), hubFlags);
-const readBtParser  = merge(object({ type: constant("read-button-table") }), hubFlags);
+const readBmParser    = merge(object({ type: constant("read-button-map") }), hubFlags);
+const readBtParser    = merge(object({ type: constant("read-button-table") }), hubFlags);
+const writeBmParser   = merge(object({ type: constant("write-button-map"), entriesJson: optional(option("--entries-json", string({ metavar: "JSON" }))), useCaptured: option("--use-captured") }), hubFlags);
 const getMotParser  = merge(object({ type: constant("get-motor-params") }), hubFlags);
 const setNameParser = merge(
   object({
@@ -70,6 +78,9 @@ const monitorParser = merge(
 
 // Split into two groups to stay within or() arity limit.
 const hubGroup1 = or(
+  command("add-device",    addDevParser),
+  command("remove-device", removeDevParser),
+  command("set-bikenet",   setBikeNetParser),
   command("list",        listParser),
   command("get",         getParser),
   command("blink",       blinkParser),
@@ -84,6 +95,7 @@ const hubGroup2 = or(
   command("set-rear-cog",      setRcParser),
   command("read-button-map",   readBmParser),
   command("read-button-table", readBtParser),
+  command("write-button-map",  writeBmParser),
   command("get-motor-params",  getMotParser),
   command("set-name",          setNameParser),
   command("monitor",           monitorParser),
@@ -114,6 +126,15 @@ const result = run(parser, {
 switch (result.type) {
   case "scan":
     await scanCmd.run(result);
+    break;
+  case "add-device":
+    await addDeviceCmd.run(result);
+    break;
+  case "remove-device":
+    await removeDeviceCmd.run(result);
+    break;
+  case "set-bikenet":
+    await setBikeNetCmd.run(result);
     break;
   case "list":
     await listCmd.run(result);
@@ -147,6 +168,9 @@ switch (result.type) {
     break;
   case "read-button-table":
     await readButtonTableCmd.run(result);
+    break;
+  case "write-button-map":
+    await writeButtonMapCmd.run(result);
     break;
   case "get-motor-params":
     await getMotorParamsCmd.run(result);
