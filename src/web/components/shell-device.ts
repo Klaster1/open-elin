@@ -1,18 +1,18 @@
-import { LitElement, css, html, nothing } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
+import { LitElement, PropertyValues, css, html, nothing } from "lit";
 
+import "../demo/pod-mock-gui.ts";
+import { devicePages } from "../device-pages.ts";
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
-import { devicePages } from "../device-pages.ts";
 import "./connection-empty-state.ts";
-import "./page-device-list.ts";
-import "./page-device-motor.ts";
+import "./inline-spinner.ts";
 import "./page-device-buttons.ts";
 import "./page-device-cogs.ts";
-import "./page-device-setup.ts";
+import "./page-device-list.ts";
 import "./page-device-log.ts";
-import "./inline-spinner.ts";
-import "../demo/pod-mock-gui.ts";
+import "./page-device-motor.ts";
+import "./page-device-setup.ts";
 
 export class ShellDevice extends SignalWatcher(LitElement) {
   static styles = [
@@ -235,6 +235,12 @@ export class ShellDevice extends SignalWatcher(LitElement) {
   declare renameValue: string;
   declare renameError: string;
   declare renameBusy: boolean;
+
+  protected updated(changed: PropertyValues) {
+    if (changed.has("activePage")) {
+      appActions.setActivePage(this.activePage);
+    }
+  }
 
   constructor() {
     super();

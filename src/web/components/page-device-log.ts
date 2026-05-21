@@ -1,6 +1,6 @@
+import { SignalWatcher } from "@lit-labs/signals";
 import { LitElement, css, html } from "lit";
 import { createRef, ref, type Ref } from "lit/directives/ref.js";
-import { SignalWatcher } from "@lit-labs/signals";
 
 import { appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
@@ -23,9 +23,16 @@ export class PageDeviceLog extends SignalWatcher(LitElement) {
 
       .card-head {
         display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .card-head-text {
+        display: flex;
         flex-direction: column;
         gap: 6px;
-        margin-bottom: 16px;
       }
 
       .hint {
@@ -60,8 +67,11 @@ export class PageDeviceLog extends SignalWatcher(LitElement) {
     return html`
       <div class="card" data-test-id="log">
         <div class="card-head">
-          <h2>Log</h2>
-          <p class="hint">Notifications and command results appear here.</p>
+          <div class="card-head-text">
+            <h2>Log</h2>
+            <p class="hint">Notifications and command results appear here.</p>
+          </div>
+          <sl-button size="small" @click=${this.clearLog}>Clear</sl-button>
         </div>
         <pre
           class="log"
@@ -88,6 +98,10 @@ ${logLines.join("\n")}</pre
     const log = this.logRef.value;
     if (!log) return;
     log.scrollTop = log.scrollHeight;
+  }
+
+  private clearLog() {
+    appState.logLines.set([]);
   }
 
   private isAtBottom(element: HTMLElement) {

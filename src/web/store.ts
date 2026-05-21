@@ -1,18 +1,20 @@
 import { Signal, computed, signal } from "@lit-labs/signals";
 
 import { ProtocolCommands } from "../commands.ts";
+import type { ProtocolTransport, TransportDevice } from "../protocol.ts";
 import { Protocol } from "../protocol.ts";
-import type { ProtocolTransport } from "../protocol.ts";
-import type { TransportDevice } from "../protocol.ts";
-import { WebBluetoothTransport } from "./transport-web.ts";
-import { DemoTransport } from "./demo/transport-demo.ts";
-import { demoState } from "./demo/demo-state.ts";
 import type { DemoState } from "./demo/demo-state.ts";
-import { HUB_MOCK_MAX_OFFSET, HUB_MOCK_MIN_OFFSET } from "./demo/hub-mock.ts";
+import { demoState } from "./demo/demo-state.ts";
 import hubData from "./demo/hub-mock-data.json";
-import { HubMock } from "./demo/hub-mock.ts";
-import { PodMock } from "./demo/pod-mock.ts";
+import {
+  HUB_MOCK_MAX_OFFSET,
+  HUB_MOCK_MIN_OFFSET,
+  HubMock,
+} from "./demo/hub-mock.ts";
 import type { PodButtonActionEvent } from "./demo/pod-mock.ts";
+import { PodMock } from "./demo/pod-mock.ts";
+import { DemoTransport } from "./demo/transport-demo.ts";
+import { WebBluetoothTransport } from "./transport-web.ts";
 
 export type StatusKind = "wait" | "warn" | "ok";
 export type Gear = {
@@ -215,6 +217,7 @@ let macLockedByUser = false;
 let pendingAdvertMac: string | null = null;
 let adTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let onShiftMac: ((mac: string) => void) | null = null;
+let currentActivePage = "log";
 
 export type OffsetBounds = {
   min: number;
@@ -272,6 +275,7 @@ export const appState = {
 
 export const appActions = {
   initStoredMac,
+  setActivePage,
   setPendingRouteMac,
   setShiftMacListener,
   setMacFromRoute,
@@ -301,6 +305,10 @@ export const appActions = {
   applyCogProfile,
   writeSetupRearCogs,
 };
+
+export function setActivePage(page: string) {
+  currentActivePage = page;
+}
 
 export function setShiftMacListener(
   listener: ((value: string) => void) | null,
