@@ -1,12 +1,12 @@
 import type {
-  ProtocolTransport,
-  TransportConnection,
-  TransportDevice,
+    ProtocolTransport,
+    TransportConnection,
+    TransportDevice,
 } from "open-elin-lib/protocol";
 import { hexToBuffer, reverseMacAddress } from "open-elin-lib/protocol";
+import type { DemoBatterySample } from "./demo-state.ts";
 import { demoState } from "./demo-state.ts";
 import type { HubMock } from "./hub-mock.ts";
-import type { DemoBatterySample } from "./demo-state.ts";
 import type { PodMock } from "./pod-mock.ts";
 
 type MessageHandler = (data: Uint8Array) => void;

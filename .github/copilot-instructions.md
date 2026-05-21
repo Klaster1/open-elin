@@ -40,3 +40,4 @@ Open-source replacement firmware and tools for the NXS BikeNet wireless electron
 - Use `npm run cli -- <args>` from workspace root to invoke the CLI
 - `--json` flag on CLI commands for machine-readable output
 - Protocol docs in `documents/` are the source of truth; `decompilation/` is raw reference
+- When asked to plan, write a plan file directly to `plans/YYYY-MM-DD-<name>.md` — no brainstorming skill, no design doc, just the plan

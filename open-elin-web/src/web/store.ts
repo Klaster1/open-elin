@@ -7,9 +7,9 @@ import type { DemoState } from "./demo/demo-state.ts";
 import { demoState } from "./demo/demo-state.ts";
 import hubData from "./demo/hub-mock-data.json";
 import {
-  HUB_MOCK_MAX_OFFSET,
-  HUB_MOCK_MIN_OFFSET,
-  HubMock,
+    HUB_MOCK_MAX_OFFSET,
+    HUB_MOCK_MIN_OFFSET,
+    HubMock,
 } from "./demo/hub-mock.ts";
 import type { PodButtonActionEvent } from "./demo/pod-mock.ts";
 import { PodMock } from "./demo/pod-mock.ts";

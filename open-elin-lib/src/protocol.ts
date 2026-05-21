@@ -88,6 +88,7 @@ export class Protocol {
         reject: (err: Error) => void;
         timer: TimeoutHandle;
       } | null;
+      commandQueue: Promise<Uint8Array>;
       peripheralWaiters: Array<{
         code: number;
         resolve: (data: Uint8Array) => void;
@@ -120,19 +121,20 @@ export class Protocol {
 
   async sendCommand(device: TransportDevice, payload: Uint8Array) {
     const session = await this.getSession(device);
-    if (session.pending) {
-      throw new Error("Command already in flight");
-    }
-    const response = new Promise<Uint8Array>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        session.pending = null;
-        reject(new Error("Response timeout"));
-      }, this.responseTimeoutMs);
-      session.pending = { resolve, reject, timer };
-    });
-
-    await session.connection.writeMsg(payload, false);
-    return response;
+    const doSend = async () => {
+      const response = new Promise<Uint8Array>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          session.pending = null;
+          reject(new Error("Response timeout"));
+        }, this.responseTimeoutMs);
+        session.pending = { resolve, reject, timer };
+      });
+      await session.connection.writeMsg(payload, false);
+      return response;
+    };
+    const result = session.commandQueue.then(doSend, doSend);
+    session.commandQueue = result.then(() => {}, () => {});
+    return result;
   }
 
   async waitForPeripheralMessage(
@@ -198,6 +200,7 @@ export class Protocol {
         reject: (err: Error) => void;
         timer: TimeoutHandle;
       },
+      commandQueue: Promise.resolve() as Promise<unknown>,
       peripheralWaiters: [] as Array<{
         code: number;
         resolve: (data: Uint8Array) => void;

@@ -177,4 +177,4 @@ function toHexByte(value: number) {
 }
 
 export type PodState = ReturnType<PodMock["state"]["get"]>;
-export type { PodMode, PodMockOptions, PodButtonActionEvent };
+export type { PodButtonActionEvent, PodMockOptions, PodMode };
