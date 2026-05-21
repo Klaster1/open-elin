@@ -12,6 +12,7 @@ Goal: build a drop-in replacement pod for the NXS BikeNet system running on a ni
 - Must be compatible with NXS hub (eLink) and the BikeNet Android/Flutter apps
 - Good battery life mandatory
 - **No hub↔pod traffic visibility**: btsnoop is phone HCI log (phone↔hub only); nRF-based sniffer only captures advertisements. Hub↔pod packet content is not observable with current tools. Every claim about what the hub sends to the pod, or how the pod responds, is an unverified hypothesis until empirically demonstrated.
+- **btsnoop analysis note**: All occurrences of the BikeNet service UUID in `btsnoop_hci.log` come from the **hub's own advertisement** (MAC `d7:ba:ab:52:a0:e5`). The hub advertises: service UUID `A5C1C000-…` + manufacturer data `ff 98 de 08 01 [hub MAC LE]` (company ID `0xDE98`, payload starts with `08 01`). No pod advertisement packets are present in the capture.
 
 ---
 
@@ -112,14 +113,26 @@ Implication: during pairing the hub likely scans for pods and initiates the conn
 
 ---
 
-## Pod GATT profile — ADVERTISEMENT CONFIRMED, CONTENT UNKNOWN
+## Pod GATT profile — ADVERTISEMENT AND GATT CONFIRMED
 
-User observation: **when the hub is asleep and the pod is discoverable, it advertises the same service UUID and characteristics as the hub.**
+### Advertisement (empirically captured via noble scan, May 2026)
 
-Confirmed from direct observation (nRF Connect):
+| Field | Value |
+| ----- | ----- |
+| **Local name** | `NXS MTB Pod` |
+| **Service UUIDs in adv** | *(none — not included in primary advertisement)* |
+| **Manufacturer data** | *(none)* |
+| **TX power level** | 0 dBm |
+| **Service data** | *(none)* |
+
+The BikeNet service UUID does **not** appear in the pod's advertisement packet. The hub must be discovering pods by local name (`NXS MTB Pod`), not by service UUID filtering. Confirmed by the failed experiment where a fake pod advertising service UUID but with name `open-elin-pod` was not connected to by the hub.
+
+### GATT services (confirmed via nRF Connect):
 - Service: `A5C1C000-CC20-BA91-0C1A-EF3F9E643D79`
 - MSG char: `A5C1CC01-CC20-BA91-0C1A-EF3F9E643D79` (write + notify)
 - PIN char: `A5C1CC02-CC20-BA91-0C1A-EF3F9E643D79` (write + notify)
+
+Direct GATT enumeration from PC (noble/WinRT) returned `Unreachable` — the pod likely drops connections from unrecognised MAC addresses, or requires prior bonding.
 
 **What the hub actually sends to the pod over these characteristics, and what the pod sends back, is entirely unknown.** The guess that the hub reuses the same encoding as the app uses for hub commands is a hypothesis — not observed. Do not design firmware around it until verified empirically.
 
@@ -147,19 +160,149 @@ Format unknown. Open questions:
 
 **Do not assume — verify via experiment.**
 
+### Hub → App notifications (empirically confirmed via `hub monitor`, May 2026)
+
+All notifications arrive on the MSG characteristic and are parsed into the same frame:
+```
+[00 00] [opcode 2 bytes LE] [target MAC 6 bytes LE] [payload...]
+```
+
+| Event | Opcode | Payload | Notes |
+|-------|--------|---------|-------|
+| `battery-voltage` | `0x4000` | `[mV 2 bytes LE]` (pod) / `[mV bytes reversed, i.e. BE]` (hub) | Sent when pod/hub reports voltage |
+| `button-action` | `0x4001` | `[buttonId 1 byte] [actionFlag 1 byte]` — actionFlag `0x00` = Press, `0x01` = Release | targetMac = **pod MAC** — hub forwards pod button events to app |
+| `shift-complete` | `0x4003` | 3 bytes observed: `[0x1F, 0x00, 0x01]` (gear/position data) | targetMac = **hub MAC** — fires when shift finishes, incl. pod-button-triggered shifts |
+
+#### Raw `hub monitor` output — real session (2026-05-21T06:53 UTC)
+
+Scenario: pod connected, single button press (A-1 = Shift Down), shift completes.
+
+```jsonl
+{"event":"battery-voltage","status":"success","code":16384,"targetMac":"D5:89:B2:13:FA:04","batteryVoltage":2871,"isHub":false,"rawHex":"370B","rawBytes":[55,11],"ts":"2026-05-21T06:53:08.597Z"}
+{"event":"button-action","status":"success","code":16385,"targetMac":"D5:89:B2:13:FA:04","buttonId":0,"buttonHex":"00","buttonLabel":"-","actionFlag":1,"actionLabel":"Release","rawHex":"0001","rawBytes":[0,1],"ts":"2026-05-21T06:53:08.717Z"}
+{"event":"button-action","status":"success","code":16385,"targetMac":"D5:89:B2:13:FA:04","buttonId":1,"buttonHex":"01","buttonLabel":"A-1","actionFlag":0,"actionLabel":"Press","rawHex":"0100","rawBytes":[1,0],"ts":"2026-05-21T06:53:09.316Z"}
+{"event":"button-action","status":"success","code":16385,"targetMac":"D5:89:B2:13:FA:04","buttonId":1,"buttonHex":"01","buttonLabel":"A-1","actionFlag":1,"actionLabel":"Release","rawHex":"0101","rawBytes":[1,1],"ts":"2026-05-21T06:53:09.497Z"}
+{"event":"shift-complete","status":"success","code":16387,"targetMac":"D7:BA:AB:52:A0:E5","payloadValue":65567,"rawHex":"1F0001","rawBytes":[31,0,1],"ts":"2026-05-21T06:53:10.096Z"}
+```
+
+#### Observations from this trace
+
+1. **Battery on connect**: pod emits battery voltage (`2871 mV`, rawHex `370B` = `0x0B37` LE) immediately when session starts.
+2. **Spurious release of button 0x00 on connect** (ts +0.12 s after battery): pod sends a Release of buttonId `0x00` (`-`) with no preceding Press. Likely a power-on / reconnect reset signal from the pod firmware.
+3. **A-1 press/release** (ts +0.72 s / +0.9 s): user presses button A-1 (buttonId `0x01`). Hub forwards both Press (`rawHex 0100`) and Release (`rawHex 0101`) to app.
+4. **Shift-complete** (ts +1.5 s after battery, +0.6 s after release): hub reports shift finished. targetMac is **hub MAC** `D7:BA:AB:52:A0:E5`. Payload `1F 00 01` = 3 bytes LE value `0x01001F` = 65567. Byte breakdown unclear — `0x1F`=31 may be raw position, `0x01` may be gear index.
+
+#### Pod → Hub notification format (inferred)
+
+The hub forwards pod button-action events to the app verbatim with `targetMac = pod MAC`. This strongly implies the pod itself sends the same frame format including its own MAC:
+
+```
+[00 00] [01 40] [pod MAC 6 bytes LE] [buttonId 1 byte] [actionFlag 1 byte]
+```
+
+Similarly for battery:
+```
+[00 00] [00 40] [pod MAC 6 bytes LE] [mV 2 bytes LE]
+```
+
+This is the most important input for firmware implementation: pod must write these notification frames to the MSG characteristic.
+
+When a pod button is pressed → hub matches button map → hub shifts → hub emits `shift-complete` (0x4003) to app.
+
 ### Remaining unknowns (to be settled by experiment)
 
-- **Button notify payload format** — we know a notify happens; we don't know the bytes
+- **Button notify payload format** — ✅ **RESOLVED** (see trace above): `[buttonId] [actionFlag]` with the full frame `[00 00] [01 40] [pod MAC 6] [buttonId] [actionFlag]`
+- **Spurious button-0 Release on connect** — pod always emits a Release of buttonId 0x00 at connection time; unknown if this is intentional (e.g. "I'm alive" signal) or a firmware quirk; firmware should replicate it to stay compatible
+- **Shift-complete payload meaning** — `1F 00 01` observed after one shift; byte meanings unclear (raw encoder position? gear index?); need more samples at different gears
 - **How hub discovers the pod** — hypothesis A: hub scans for the BikeNet service UUID and connects to anything that advertises it; hypothesis B: hub uses manufacturer-specific advertisement data to filter device type; hypothesis C: something else entirely. We don't know yet.
 - **Connection parameters** — interval, MTU, etc.
 - **Whether manufacturer-specific advertisement data is even required** — the hub might just connect to anything advertising the BikeNet service UUID and figure out device type via GATT after connecting
 
 ---
 
+## Empirical findings — CLI probing of real pod (May 2026)
+
+### Architecture confirmed
+
+- **Pod** (`d5:89:b2:13:fa:04`, NXS MTB Pod) = handlebar **button unit** — has physical buttons, NO derailleur motor
+- **Hub** (`d7:ba:ab:52:a0:e5`, NXS eLink hub) = central unit — connected to derailleur mechanism, communicates with pod via BLE (hub = central, pod = peripheral), and with app/CLI via BLE (hub = peripheral)
+
+### Software pairing confirmed
+
+`hub set-bikenet` → `hub add-device <pod-mac>` works. Hub connects to pod and shows `● connected` in hub list. Physical button press on hub was **not** required.
+
+### Pod connection procedure — CLI only (no app required)
+
+Full sequence to connect a pod and get buttons working from scratch, empirically verified 2026-05-21:
+
+**One-time setup (new hub, or after factory reset only):**
+```
+node src/cli.ts hub set-bikenet --address <hub-mac>
+```
+> ⚠️ `set-bikenet` resets all hub state including any existing pod bonds. **Do not run this if the pod is already paired** — skip straight to step 2.
+
+**Step 1 — Add pod to hub:**
+```
+node src/cli.ts hub add-device --address <hub-mac> --timeout 15000 <pod-mac>
+```
+The hub scans for the pod by BLE local name `NXS MTB Pod` (not by service UUID) and bonds to it. Hub sends notification `0x8006` (new bond) or `0x8007` (reconnect if already bonded). Returns error `0x8003` (INVALID_STATE) if the pod is already in the hub's list — this is benign, proceed to step 3.
+
+Verify with:
+```
+node src/cli.ts hub list --address <hub-mac>
+```
+Pod should appear with `●` (connected).
+
+**Step 2 — Write button map:**
+```
+node src/cli.ts hub write-button-map --address <hub-mac> --use-captured
+```
+This writes the 7 button-map entries that map pod button codes to shift/tune actions. **Without this the hub silently ignores all pod button presses.** The `--use-captured` flag uses the entries read from the hub after original app pairing (pod `04FA13B289D5` ↔ hub `E5A052ABBAD7`); re-capture with `hub read-button-map` if using different hardware.
+
+**Verify:**
+Press a pod button — the derailleur should physically move. That's it.
+
+### Real pod state (read 2026-05-21)
+
+| Command | Result |
+|---------|--------|
+| `hub get-rear-cog` | 12-speed, positions 1–23 (odd), teeth 11–32 |
+| `hub get-motor-params` | stallDetection:2300, pwmFreq:50000, accel:30, overshiftDist:0.4, overshiftDelay:500, multishiftDelay:200 |
+| `hub get-position` | absolutePosition:3, gearPosition:2 (after one shift-down) |
+| `hub read-button-map` | **EMPTY** — mapByteLength:0, entryCount:0 |
+| `hub read-button-table` | **EMPTY** — entries:[] |
+
+### Why pod buttons don't trigger shifts — CONFIRMED
+
+**Before proper app pairing**: button map empty (`entryCount:0`), button table empty (`entries:[]`). Pod button presses silently ignored.
+
+**After proper app pairing** (user held hub button, paired via app UI): button map has 7 entries (`mapByteLength:112`), buttons work.
+
+### Button map (read after proper pairing, 2026-05-21)
+
+Pod `04FA13B289D5` ↔ hub `E5A052ABBAD7`. 7 entries, all action=Press:
+
+| index | button1 code | button1 label | function code | function |
+|-------|-------------|---------------|---------------|----------|
+| 0 | `00` | `-` | `0A` | Shift Up |
+| 1 | `06` | B | `0B` | Shift Down |
+| 2 | `0C` | C | `11` | Tune Mode |
+| 3 | `0D` | C-1 | `0A` | Shift Up |
+| 4 | `01` | A-1 | `0B` | Shift Down |
+| 5 | `12` | D | `0B` | Shift Down |
+| 6 | `02` | A-2 | `11` | Tune Mode |
+
+Button codes the pod emits: `0x00`, `0x01`, `0x02`, `0x06`, `0x0C`, `0x0D`, `0x12`. Labels (A-1, A-2, B, C, C-1, D) correspond to the pod's wired PORT_A/B/C/D inputs (from `Constants.java`). Two codes per port (e.g. A-1=`0x01`, A-2=`0x02`) likely = two buttons wired to that port connector.
+
+**What the firmware must do**: when a physical button is pressed, send a BLE notification on the MSG characteristic containing the button code. The hub matches it against the map and triggers the action. The exact notification payload format is still unknown — next step is to decode it from `PROTOCOL_NEW.md` or by capturing a button press via `hub monitor`.
+
+---
+
 ## Plan
 
+
 - [x] 1. **Hub CLI** — headless Node CLI wrapping the existing demo-node protocol/transport stack. Lets us drive the hub programmatically without the browser UI.
-- [ ] 2. **PC fake pod** — standalone Node app that acts as a BLE peripheral with the BikeNet GATT service. Hub connects to it; we log everything the hub writes. Only viable way to observe hub→pod wire format without hardware.
+- [x] 2. **PC fake pod** — standalone Node app that acts as a BLE peripheral with the BikeNet GATT service. Implemented and running on Mac via LaunchAgent. Hub→pod wire format still unknown (hub didn't connect to fake pod — macOS CoreBluetooth uses rotating random private addresses for peripheral mode; hub can't reconnect to a rotating address). Deprioritised in favour of direct CLI probing of the real pod.
 - [ ] 3. **nice!nano USB-only prototype** — once protocol is known, port to Zephyr on nice!nano. No buttons/LEDs/battery yet; events injected via USB serial. Proves the nRF52840 + Zephyr stack works end-to-end with the real hub.
 - [ ] 4. **Breadboard** — wire buttons and LiPo to nice!nano. Verify full hardware path.
 - [ ] 5. **Optimise** — tune BLE connection interval and sleep modes; verify battery life on LiPo.
@@ -176,6 +319,8 @@ Format unknown. Open questions:
 | `images/nicenano-schematic.png` | nice!nano v2 schematic — dev board used for firmware development |
 | `apk-extracted-project/PROTOCOL.md` | Full hub BLE protocol (old app) |
 | `apk-extracted-project-bikenet-new/PROTOCOL_NEW.md` | Updated protocol (Flutter app), button map details |
+
+> **Protocol reliability note**: Both `PROTOCOL.md` (old Android app) and `PROTOCOL_NEW.md` (new Flutter app) describe the **same hub firmware**. For features exercised by the old app (add-device, write-button-map, pod button notifications), `PROTOCOL.md` is the authoritative source — it was validated against real observed behaviour. For features the new app does not use (e.g. the new 16-byte button map entry format, `BLE_CMD_SET_FRONT_CONFIG`, etc.), `PROTOCOL_NEW.md` contains decompiler guesses that have never been exercised and may be wrong. When the two docs disagree on something the old app uses, trust `PROTOCOL.md`.
 | `ble-sniff/FS/data/misc/bluetooth/logs/btsnoop_hci.log` | Phone HCI capture (phone↔hub only) — limited use; does not contain hub↔pod traffic |
 | `demo-node/src/node/transport-noble.ts` | Noble BLE transport (reuse for CLI) |
 | `demo-node/src/node/app.ts` | BikeNetApp protocol wrapper |
