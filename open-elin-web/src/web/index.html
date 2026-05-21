@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenElin</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0b1116;
+        --panel: #141c24;
+        --panel-strong: #1a2430;
+        --panel-border: #223142;
+        --text: #e7edf5;
+        --muted: #98a6b5;
+        --accent: #35c28b;
+        --accent-strong: #1aa876;
+        --warn: #ffb454;
+        --danger: #ff7a7a;
+        --mono: Consolas, ui-monospace, SFMono-Regular, Menlo, monospace;
+        --sans: Roboto, "Segoe UI", system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      html {
+        scrollbar-gutter: stable;
+        overflow-y: scroll;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 20% 20%, #1b2a3a 0%, transparent 45%),
+          radial-gradient(circle at 80% 10%, #203042 0%, transparent 40%),
+          radial-gradient(circle at 50% 100%, #182433 0%, transparent 55%),
+          var(--bg);
+        font-family: var(--sans);
+      }
+    </style>
+  </head>
+  <body>
+    <openelin-app></openelin-app>
+    <script type="module" src="/index.ts"></script>
+  </body>
+</html>

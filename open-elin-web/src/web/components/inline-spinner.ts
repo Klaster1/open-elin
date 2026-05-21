@@ -1,0 +1,40 @@
+import { LitElement, css, html } from "lit";
+
+import { sharedStyles } from "../styles.ts";
+
+export class InlineSpinner extends LitElement {
+  static styles = [
+    sharedStyles,
+    css`
+      :host {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 0;
+        vertical-align: middle;
+      }
+
+      .inline-spinner {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        line-height: 0;
+        --size: 14px;
+      }
+    `,
+  ];
+
+  render() {
+    return html`<sl-spinner
+      class="inline-spinner"
+      aria-hidden="true"
+    ></sl-spinner>`;
+  }
+}
+
+if (!customElements.get("inline-spinner")) {
+  customElements.define("inline-spinner", InlineSpinner);
+}
+
+export {};

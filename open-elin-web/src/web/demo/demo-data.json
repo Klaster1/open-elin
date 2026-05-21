@@ -1,0 +1,23 @@
+{
+  "list": {
+    "entries": [
+      {
+        "mac": "D5:89:B2:13:FA:04",
+        "name": "NXS MTB Pod",
+        "deviceId": 10,
+        "isConnected": true,
+        "batteryVoltage": 3086,
+        "rssi": 178
+      }
+    ]
+  },
+  "shiftComplete": {
+    "up": { "rawHex": "BD0009" },
+    "down": { "rawHex": "D4000A" }
+  },
+  "batteryNotifications": [
+    { "targetMac": "02:11:22:33:44:55", "rawHex": "1D10" },
+    { "targetMac": "D5:89:B2:13:FA:04", "rawHex": "070C" },
+    { "targetMac": "D5:89:B2:13:FA:04", "rawHex": "0B0C" }
+  ]
+}
