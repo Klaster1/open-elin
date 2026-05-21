@@ -1,0 +1,21 @@
+# Not version controlled
+backup/
+decompilation/
+tools/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Environment
+.env
+.env.local
