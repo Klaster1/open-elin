@@ -17,7 +17,7 @@ A Node.js BLE peripheral that impersonates an NXS BikeNet pod. Runs on the **Mac
 
 | Question | Status | Experiment |
 |----------|--------|------------|
-| How does hub discover pods? | ✅ **RESOLVED** — hub scans by BLE local name `NXS MTB Pod` only. No service UUID, no manufacturer data required in advertisement. | Confirmed empirically 2026-05-21 |
+| How does hub discover pods (CLI flow)? | ✅ **RESOLVED** — `hub add-device <mac>` tells the hub to connect to a specific MAC address. Name/service UUID irrelevant. | Confirmed: real pod connected by MAC 2026-05-21 |
 | Button notify format (pod→hub)? | ✅ **RESOLVED** — `[00 00][01 40][pod MAC 6B LE][buttonId][actionFlag]` | Captured via `hub monitor` 2026-05-21 |
 | Battery notify format (pod→hub)? | ✅ **RESOLVED** — `[00 00][00 40][pod MAC 6B LE][mV LE16]` | Captured via `hub monitor` 2026-05-21 |
 | Does hub send a PIN unlock to the pod? | ❓ | Observe first write after connection |
@@ -39,7 +39,7 @@ A Node.js BLE peripheral that impersonates an NXS BikeNet pod. Runs on the **Mac
 
 **Smoke test verified** (`node src/smoke.ts`): device `84:2f:57:31:36:f3` advertising service UUID `A5C1C000-…` visible in nRF Connect. ✅
 
-> Note: the smoke test advertised service UUID with **no local name**. This is why the hub never connected — hub discovers pods by local name `NXS MTB Pod`, not by service UUID. Next run must set local name.
+> Note: the smoke test advertised service UUID with no local name. The hub never connected — but this was using auto-pairing mode (hub button held), not `hub add-device`. For the fake pod plan we use `hub add-device <mac>` so the advertisement content doesn't affect whether the hub connects.
 
 **Sync workflow** (PC → Mac):
 ```powershell
@@ -51,18 +51,18 @@ Run on Mac via SSH:
 ssh -i ~/.ssh/id_ed25519 klaster_1@192.168.1.34 "export PATH=/Users/klaster_1/node-v26.2.0-darwin-arm64/bin:/usr/local/bin:/usr/bin:/bin && cd ~/dev/open-elin-pc-pod && node src/smoke.ts"
 ```
 
-### Advertisement format — CONFIRMED
+### Advertisement format
 
-Hub discovers pods by **BLE local name only**. Empirically confirmed 2026-05-21: real pod `d5:89:b2:13:fa:04` advertises with no service UUID and no manufacturer data in its primary advertisement. Hub connects to it by scanning for local name `NXS MTB Pod`.
+`hub add-device <mac>` connects by MAC address — the hub dials the specific address we give it, regardless of what the peripheral is advertising. The fake pod only needs to be **connectable** (advertising so the hub can find and connect to it).
 
-Required advertisement:
+Use the same advertisement as the real pod (cleanest for compatibility):
 ```
-Local name:        NXS MTB Pod   ← REQUIRED, this is the only filter the hub uses
-Service UUIDs:     (none in primary adv)
+Local name:        NXS MTB Pod
+Service UUIDs:     (none in primary adv — real pod doesn't include it)
 Manufacturer data: (none)
 TX power:          0 dBm
 ```
-The BikeNet service UUID (`A5C1C000-…`) must still be present in the **GATT service**, just not in the advertisement packet.
+The BikeNet service UUID (`A5C1C000-…`) must be present in the **GATT service** definition.
 
 ---
 
@@ -107,7 +107,7 @@ All decoded frames are logged alongside the raw hex so that known opcodes are hu
 - [ ] `gatt.ts` — MSG characteristic (write + notify); PIN characteristic (write + notify); log all writes
 - [ ] `logger.ts` — JSON-line output: `{ts, char, raw_hex, decoded?}`
 - [ ] `main.ts` — wire up bleno, start advertising, handle connect/disconnect events, SIGINT cleanup
-- [ ] **Exp 1** — factory-reset hub (`hub set-bikenet`); run fake pod with name `NXS MTB Pod`; confirm hub connects via `hub list`
+- [ ] **Exp 1** — `hub set-bikenet`; `hub add-device <fake-pod-mac>`; confirm hub connects via `hub list`
 - [ ] **Exp 2** — log and analyse every write the hub sends immediately after connection
 - [ ] **Exp 3** — with hub connected to fake pod, run `hub shift-down / hub list` and observe what (if anything) the hub forwards to the pod
 - [ ] **Exp 4** — use the BikeNet app while hub is connected to fake pod; observe additional hub→pod traffic
@@ -132,8 +132,8 @@ Every characteristic write is emitted as a JSON line to stdout:
 
 ## Success criteria
 
-- [ ] Fake pod advertises with local name `NXS MTB Pod` (no service UUID, no manufacturer data)
-- [ ] Hub connects to fake pod after `hub set-bikenet` + `hub add-device` (no app required)
+- [ ] Fake pod is advertising and connectable
+- [ ] Hub connects to fake pod after `hub set-bikenet` + `hub add-device <fake-pod-mac>`
 - [ ] All hub→pod writes captured and logged in hex
 - [ ] At least the first hub→pod write decoded (opcode identified)
 - [ ] `BLE_MSG_BAT_V` notify sent from fake pod → hub accepted (battery reading updates in `hub list`)
@@ -150,7 +150,7 @@ Every characteristic write is emitted as a JSON line to stdout:
 
 ## Already resolved (no longer need fake pod for these)
 
-- **Hub discovery mechanism**: local name `NXS MTB Pod` only — confirmed 2026-05-21
+- **Hub connection mechanism (CLI flow)**: `hub add-device <mac>` connects by MAC address; name/service UUID in advertisement are irrelevant — confirmed 2026-05-21
 - **Button notify format**: `[00 00][01 40][pod MAC 6B LE][buttonId][actionFlag]` — captured via `hub monitor` 2026-05-21
 - **Battery notify format**: `[00 00][00 40][pod MAC 6B LE][mV LE16]` — captured via `hub monitor` 2026-05-21
 - **Spurious button-0 Release on connect**: pod always sends Release of buttonId `0x00` at connection; firmware must replicate

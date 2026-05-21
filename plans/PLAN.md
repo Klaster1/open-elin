@@ -125,7 +125,7 @@ Implication: during pairing the hub likely scans for pods and initiates the conn
 | **TX power level** | 0 dBm |
 | **Service data** | *(none)* |
 
-The BikeNet service UUID does **not** appear in the pod's advertisement packet. The hub must be discovering pods by local name (`NXS MTB Pod`), not by service UUID filtering. Confirmed by the failed experiment where a fake pod advertising service UUID but with name `open-elin-pod` was not connected to by the hub.
+The BikeNet service UUID does **not** appear in the pod's advertisement packet. When using `hub add-device <mac>` the hub connects by MAC address directly — advertisement content is irrelevant. How the hub discovers pods in its own auto-pairing mode (hub button held) is still unknown; the failed fake pod experiment (service UUID, name `open-elin-pod`) is inconclusive because macOS address rotation may have been the actual blocker.
 
 ### GATT services (confirmed via nRF Connect):
 - Service: `A5C1C000-CC20-BA91-0C1A-EF3F9E643D79`
