@@ -723,6 +723,15 @@ export class ProtocolCommands {
     return parseBasicResponse(response);
   }
 
+  async disconnectDevice(podMac: string): Promise<BasicResponse> {
+    const cmd = reverseCommand(AppCommand.DisconnectDevice);
+    const revHub = reverseMacAddress(this.device.address);
+    const revPod = reverseMacAddress(podMac);
+    const payload = hexToBuffer(cmd + revHub + revPod);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
+  }
+
   async blinkLed(): Promise<BasicResponse> {
     const payload = encodeCommandWithMac(
       AppCommand.BlinkLed,

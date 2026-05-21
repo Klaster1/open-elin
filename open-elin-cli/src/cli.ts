@@ -9,6 +9,7 @@ import process from "node:process";
 import * as agentContextCmd from "./agent-context.ts";
 import * as addDeviceCmd from "./commands/hub/add-device.ts";
 import * as blinkCmd from "./commands/hub/blink.ts";
+import * as disconnectDeviceCmd from "./commands/hub/disconnect-device.ts";
 import * as getMotorParamsCmd from "./commands/hub/get-motor-params.ts";
 import * as getPositionCmd from "./commands/hub/get-position.ts";
 import * as getRearCogCmd from "./commands/hub/get-rear-cog.ts";
@@ -39,6 +40,7 @@ const hubFlags = object("Connection", {
 // -- Hub subcommand parsers --
 const addDevParser    = merge(object({ type: constant("add-device"), podMac: argument(string({ metavar: "POD-MAC" })), waitForPod: withDefault(option("--wait-for-pod", integer({ min: 0, metavar: "SECS" })), 0) }), hubFlags);
 const removeDevParser = merge(object({ type: constant("remove-device"), podMac: argument(string({ metavar: "POD-MAC" })) }), hubFlags);
+const disconnectDevParser = merge(object({ type: constant("disconnect-device"), podMac: argument(string({ metavar: "POD-MAC" })) }), hubFlags);
 const setBikeNetParser = merge(object({ type: constant("set-bikenet") }), hubFlags);
 const listParser      = merge(object({ type: constant("list") }), hubFlags);
 const getParser     = merge(object({ type: constant("get"), mac: argument(string({ metavar: "MAC" })) }), hubFlags);
@@ -78,9 +80,10 @@ const monitorParser = merge(
 
 // Split into two groups to stay within or() arity limit.
 const hubGroup1 = or(
-  command("add-device",    addDevParser),
-  command("remove-device", removeDevParser),
-  command("set-bikenet",   setBikeNetParser),
+  command("add-device",         addDevParser),
+  command("remove-device",      removeDevParser),
+  command("disconnect-device",  disconnectDevParser),
+  command("set-bikenet",        setBikeNetParser),
   command("list",        listParser),
   command("get",         getParser),
   command("blink",       blinkParser),
@@ -132,6 +135,9 @@ switch (result.type) {
     break;
   case "remove-device":
     await removeDeviceCmd.run(result);
+    break;
+  case "disconnect-device":
+    await disconnectDeviceCmd.run(result);
     break;
   case "set-bikenet":
     await setBikeNetCmd.run(result);

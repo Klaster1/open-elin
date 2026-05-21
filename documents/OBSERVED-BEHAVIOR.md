@@ -2,7 +2,7 @@
 
 Protocol-level observations from real hardware: BLE advertisements, GATT profiles, notification frames, raw hex traces, button maps, hub configuration readouts. Computer-observable stuff only — for human-observable behavior (what you see when you press buttons), see `WHAT-YOU-SEE.md`.
 
-Last updated: 2026-05-21.
+Last updated: 2026-05-22.
 
 ---
 
@@ -150,6 +150,21 @@ Button codes the pod emits: `0x00`, `0x01`, `0x02`, `0x06`, `0x0C`, `0x0D`, `0x1
 Labels (A-1, A-2, B, C, C-1, D) correspond to PORT_A/B/C/D wiring. Two codes per port (e.g. A-1=`0x01`, A-2=`0x02`) = two buttons per port connector.
 
 **Without a button map written to the hub, button presses are silently ignored.** Confirmed: before app pairing, `entryCount:0` → no response to button presses.
+
+---
+
+## BLE_CMD_DISCONNECT_DEVICE (0x0007) — tested 2026-05-22
+
+**Command:** `hub disconnect-device --address D7:BA:AB:52:A0:E5 D5:89:B2:13:FA:04`
+
+**Observed:** Hub connected successfully (BLE GATT characteristics discovered), command payload sent, but the hub returned **no response** — command timed out waiting for a reply. After the attempt, `hub list` confirmed the pod was still listed as `isConnected: true`. The pod was in range throughout and continued functioning normally (button presses still triggered shifts).
+
+**Ruling out:** Pod-not-in-range and hub-disconnects-pod-before-ACK are both ruled out — the pod was live and the connection survived.
+
+**Remaining hypotheses:**
+- 0x0007 is fire-and-forget on the hub side (no ACK sent), unlike all other command opcodes.
+- 0x0007 is not implemented / silently ignored by this firmware version.
+- 0x0007 requires a precondition (e.g. a specific hub state or a prior command) before it takes effect.
 
 ---
 
