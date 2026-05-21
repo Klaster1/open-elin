@@ -1,5 +1,5 @@
 import { signal } from "@lit-labs/signals";
-import type { ButtonActionNotify } from "../../commands.ts";
+import type { ButtonActionNotify } from "open-elin-lib/commands";
 
 type PodMode = "shift" | "tune";
 
