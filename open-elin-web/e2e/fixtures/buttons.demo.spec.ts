@@ -98,3 +98,26 @@ test("buttons screen shows trigger types, supports add/remove triggers and orpha
   await expect(buttons.wiredBindings()).toHaveCount(3);
   await expect(buttons.orphanBindings()).toHaveCount(0);
 });
+
+test("pod diagram renders image and leader lines in mock GUI", async ({
+  page,
+}) => {
+  const landing = new LandingPageModel(page);
+
+  // Go to app
+  await landing.open();
+  await expect(landing.root()).toBeVisible();
+
+  // Start demo mode
+  await landing.startDemo();
+
+  // Assert pod diagram component is visible in mock GUI
+  const diagram = page.locator("pod-diagram");
+  await expect(diagram).toBeVisible();
+
+  // Assert pod image rendered inside diagram
+  await expect(diagram.locator("img")).toBeVisible();
+
+  // Assert 4 slot containers rendered (tune, up, down, pair)
+  await expect(diagram.locator(".pod-slot")).toHaveCount(4);
+});
