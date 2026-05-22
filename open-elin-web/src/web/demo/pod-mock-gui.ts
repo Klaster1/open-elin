@@ -1,10 +1,19 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, css, html, svg } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 
 import { demoHub, demoPod } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
 const podImageUrl = new URL("../images/pod.png", import.meta.url).href;
+
+// Photo-space targets for leader lines (% of image-wrap).
+type PodTarget = "tune" | "up" | "down" | "pair";
+const POD_TARGETS: Record<PodTarget, { x: number; y: number }> = {
+  tune: { x: 52, y: 37 },
+  up: { x: 76, y: 37 },
+  down: { x: 81, y: 75 },
+  pair: { x: 55, y: 65 },
+};
 
 export class PodMockGui extends SignalWatcher(LitElement) {
   static styles = [
@@ -34,6 +43,10 @@ export class PodMockGui extends SignalWatcher(LitElement) {
       }
 
       .pod-power {
+        position: absolute;
+        top: 58%;
+        left: 4%;
+        transform: translateY(-50%);
       }
 
       .pod-power::part(label) {
@@ -93,55 +106,70 @@ export class PodMockGui extends SignalWatcher(LitElement) {
         border-radius: 18px;
       }
 
+      .pod-leader-svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        overflow: visible;
+      }
+
+      .pod-leader-line {
+        stroke: rgba(140, 255, 200, 0.75);
+        stroke-width: 1.2;
+        stroke-dasharray: 2 2;
+        fill: none;
+      }
+
       .pod-button {
         position: absolute;
+        padding: 4px 10px;
         border-radius: 999px;
-        border: 2px solid rgba(76, 255, 196, 0.7);
-        background: rgba(76, 255, 196, 0.18);
-        box-shadow: 0 0 12px rgba(76, 255, 196, 0.25);
+        border: 1px solid rgba(76, 255, 196, 0.7);
+        background: rgba(8, 14, 22, 1);
+        color: rgba(170, 255, 220, 0.95);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
         cursor: pointer;
-        transform: translate(-50%, -50%);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
       }
 
       .pod-button:hover {
-        background: rgba(76, 255, 196, 0.28);
+        background: rgba(20, 50, 40, 1);
+        border-color: rgba(140, 255, 220, 0.9);
       }
 
       .pod-button:active {
-        transform: translate(-50%, -50%) scale(0.96);
+        transform: scale(0.96);
       }
 
       .pod-button-tune {
-        width: 44px;
-        height: 44px;
-        top: 37%;
-        left: 52%;
+        top: 4%;
+        left: 4%;
       }
 
       .pod-button-up {
-        width: 44px;
-        height: 44px;
-        top: 37%;
-        left: 76%;
+        top: 4%;
+        right: 4%;
       }
 
       .pod-button-down {
-        width: 44px;
-        height: 44px;
-        top: 75%;
-        left: 81%;
+        bottom: -2%;
+        right: 4%;
       }
 
       .pod-button-pair {
-        width: 44px;
-        height: 44px;
-        top: 65%;
-        left: 55%;
+        bottom: -2%;
+        left: 4%;
       }
 
       .pod-button-pair.pairing-mode {
         border-color: rgba(76, 200, 255, 0.9);
-        background: rgba(76, 200, 255, 0.2);
+        background: rgba(20, 40, 60, 1);
+        color: rgba(180, 230, 255, 1);
         box-shadow: 0 0 16px rgba(76, 200, 255, 0.5);
       }
 
@@ -150,12 +178,12 @@ export class PodMockGui extends SignalWatcher(LitElement) {
         inset: -3px;
         border-radius: 999px;
         border: 3px solid transparent;
-        border-top-color: rgba(76, 200, 255, 0.9);
         animation: none;
         pointer-events: none;
       }
 
       .pod-button-pair.holding .pair-progress {
+        border-top-color: rgba(76, 200, 255, 0.9);
         animation: pair-fill 6s linear forwards;
       }
 
@@ -167,15 +195,38 @@ export class PodMockGui extends SignalWatcher(LitElement) {
   ];
   private pressedButtons = new Set<"A" | "B" | "C" | "D">();
   private pairingHoldTimer: ReturnType<typeof setTimeout> | null = null;
+  private anchors: Record<PodTarget, { x: number; y: number }> = {
+    tune: POD_TARGETS.tune,
+    up: POD_TARGETS.up,
+    down: POD_TARGETS.down,
+    pair: POD_TARGETS.pair,
+  };
+  private resizeObserver?: ResizeObserver;
 
   render() {
     const isOnline = demoPod.state.get().online;
     const isPairing = demoHub.pairingWindow.get();
+    const isTuneMode = demoPod.state.get().mode === "tune";
+    const tuneLabel = isTuneMode ? "Shift" : "Tune";
+    const upLabel = isTuneMode ? "+0.1mm" : "Up";
+    const downLabel = isTuneMode ? "\u22120.1mm" : "Down";
     return html`
       <div class="pod-mock" role="group" aria-label="Pod controls">
         <div class="pod-mock-frame">
           <div class="pod-image-wrap">
-            <img src=${podImageUrl} alt="Pod controls" />
+            <img src=${podImageUrl} alt="Pod controls" @load=${this.measureAnchors} />
+            <svg
+              class="pod-leader-svg"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              ${(Object.keys(POD_TARGETS) as PodTarget[]).map((name) => {
+                const a = this.anchors[name];
+                const t = POD_TARGETS[name];
+                return svg`<line class="pod-leader-line" x1=${a.x} y1=${a.y} x2=${t.x} y2=${t.y} />`;
+              })}
+            </svg>
             <button
               class="pod-button pod-button-tune"
               type="button"
@@ -188,7 +239,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
               @keydown=${this.onTuneKeyDown}
               @keyup=${this.onTuneKeyUp}
               aria-label="Toggle tune"
-            ></button>
+            >${tuneLabel}</button>
             <button
               class="pod-button pod-button-up"
               type="button"
@@ -201,7 +252,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
               @keydown=${this.onShiftUpKeyDown}
               @keyup=${this.onShiftUpKeyUp}
               aria-label="Shift up"
-            ></button>
+            >${upLabel}</button>
             <button
               class="pod-button pod-button-down"
               type="button"
@@ -214,7 +265,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
               @keydown=${this.onShiftDownKeyDown}
               @keyup=${this.onShiftDownKeyUp}
               aria-label="Shift down"
-            ></button>
+            >${downLabel}</button>
             <button
               class="pod-button pod-button-pair ${isPairing ? "pairing-mode" : ""}"
               type="button"
@@ -226,10 +277,9 @@ export class PodMockGui extends SignalWatcher(LitElement) {
               @pointercancel=${this.onPairPointerUp}
               aria-label="Pair / Shift down (hold 6s to pair)"
             >
+              Pair
               <span class="pair-progress" aria-hidden="true"></span>
             </button>
-          </div>
-          <div class="pod-footer">
             <sl-switch
               class="pod-power"
               data-test-id="pod-power-switch"
@@ -238,6 +288,8 @@ export class PodMockGui extends SignalWatcher(LitElement) {
             >
               Power
             </sl-switch>
+          </div>
+          <div class="pod-footer">
             ${demoPod.podMac
               ? html`<div class="pod-mac-row" data-test-id="pod-mac">
                   <span class="pod-mac-label">MAC</span>
@@ -408,6 +460,46 @@ export class PodMockGui extends SignalWatcher(LitElement) {
       event.code === "Enter"
     );
   }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.resizeObserver = new ResizeObserver(() => this.measureAnchors());
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+  }
+
+  protected updated() {
+    const wrap = this.renderRoot.querySelector<HTMLElement>(".pod-image-wrap");
+    if (wrap && this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver.observe(wrap);
+    }
+    this.measureAnchors();
+  }
+
+  private measureAnchors = () => {
+    const wrap = this.renderRoot.querySelector<HTMLElement>(".pod-image-wrap");
+    if (!wrap) return;
+    const w = wrap.getBoundingClientRect();
+    if (w.width === 0 || w.height === 0) return;
+    let changed = false;
+    for (const name of Object.keys(POD_TARGETS) as PodTarget[]) {
+      const pill = this.renderRoot.querySelector<HTMLElement>(`.pod-button-${name}`);
+      if (!pill) continue;
+      const p = pill.getBoundingClientRect();
+      const x = ((p.left + p.width / 2) - w.left) / w.width * 100;
+      const y = ((p.top + p.height / 2) - w.top) / w.height * 100;
+      if (Math.abs(x - this.anchors[name].x) > 0.1 || Math.abs(y - this.anchors[name].y) > 0.1) {
+        this.anchors[name] = { x, y };
+        changed = true;
+      }
+    }
+    if (changed) this.requestUpdate();
+  };
 }
 
 if (!customElements.get("pod-mock-gui")) {
