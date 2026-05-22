@@ -133,13 +133,12 @@ test("pod diagram renders image and leader lines in mock GUI", async ({
   const podMock = page.locator("pod-mock-gui");
   await expect(podMock.locator(".pod-trigger-btn")).toHaveCount(3);
 
-  // Assert exactly 3 button groups (A, B, C) exist — no sub-code groups
+  // Assert exactly 3 wired button groups (A-2, A, A-1) — matching wired positions
+  await expect(podMock.getByTestId("pod-button-group-A-2")).toHaveCount(1);
   await expect(podMock.getByTestId("pod-button-group-A")).toHaveCount(1);
-  await expect(podMock.getByTestId("pod-button-group-B")).toHaveCount(1);
-  await expect(podMock.getByTestId("pod-button-group-C")).toHaveCount(1);
-  await expect(podMock.getByTestId("pod-button-group-A-1")).toHaveCount(0);
-  await expect(podMock.getByTestId("pod-button-group-A-2")).toHaveCount(0);
-  await expect(podMock.getByTestId("pod-button-group-C-1")).toHaveCount(0);
+  await expect(podMock.getByTestId("pod-button-group-A-1")).toHaveCount(1);
+  await expect(podMock.getByTestId("pod-button-group-B")).toHaveCount(0);
+  await expect(podMock.getByTestId("pod-button-group-C")).toHaveCount(0);
 });
 
 test("writeButtonMap round-trip reduces visible entries", async ({
@@ -191,35 +190,53 @@ test("configured trigger type executes correct function via mock pod", async ({ 
   await landing.startDemo();
   await expect(page).toHaveURL(device.deviceRouteMatcher());
 
-  // Navigate to cogs tab and assert initial gear is 11 (from hub-mock-data.json)
+  // Navigate to cogs tab and assert initial gear is 11
   await device.goToCogsTab();
   await expect(cogs.currentGearCard()).toHaveAttribute("data-gear-number", "11");
 
-  // Press button A on mock pod (default mapping: Press → Shift Up)
+  // Verify default: A (up) → Shift Up
   await page.getByTestId("pod-button-group-A").getByTestId("pod-trigger-press").click();
-
-  // Assert gear shifted up to 12
   await expect(cogs.currentGearCard()).toHaveAttribute("data-gear-number", "12");
 
-  // Go to buttons screen and add Double press → Shift Down on button A
+  // Verify default: A-1 (down) → Shift Down
+  await page.getByTestId("pod-button-group-A-1").getByTestId("pod-trigger-press").click();
+  await expect(cogs.currentGearCard()).toHaveAttribute("data-gear-number", "11");
+
+  // Verify default: A-2 (tune) → Tune Mode — shifts adjust tune instead of gear
+  await page.getByTestId("pod-button-group-A-2").getByTestId("pod-trigger-press").click();
+  await page.getByTestId("pod-button-group-A").getByTestId("pod-trigger-press").click();
+  await expect(cogs.currentGearCard()).toHaveAttribute("data-gear-number", "11");
+  // Toggle tune mode off so shift works again
+  await page.getByTestId("pod-button-group-A-2").getByTestId("pod-trigger-press").click();
+
+  // Go to buttons screen and remap all 3 wired buttons
   await device.goToButtonsTab();
-  await buttons.wiredButtonGroups().first().getByTestId("add-trigger").click();
-  await page.waitForTimeout(200);
-  await buttons.wiredBindings().nth(1).getByTestId("trigger-select").selectOption("02");
-  await page.waitForTimeout(500);
-  await buttons.wiredBindings().nth(1).getByTestId("function-select").selectOption("0B");
+
+  // Remap A: Shift Up → Shift Down
+  await buttons.wiredBindings().nth(0).getByTestId("function-select").selectOption("0B");
   await page.waitForTimeout(500);
 
-  // Double-press button A on mock pod (Double press → Shift Down)
-  await page.getByTestId("pod-button-group-A").getByTestId("pod-trigger-double").click();
+  // Remap A-1: Shift Down → Shift Up
+  await buttons.wiredBindings().nth(1).getByTestId("function-select").selectOption("0A");
+  await page.waitForTimeout(500);
 
-  // Navigate to cogs tab and verify gear shifted back down to 11
+  // Remap A-2: Tune Mode → Shift Up
+  await buttons.wiredBindings().nth(2).getByTestId("function-select").selectOption("0A");
+  await page.waitForTimeout(500);
+
+  // Navigate to cogs and verify all 3 remapped functions (gear starts at 11)
   await device.goToCogsTab();
   await expect(cogs.currentGearCard()).toHaveAttribute("data-gear-number", "11");
 
-  // Assert mock pod labels reflect configured mappings for button A
-  const buttonAGroup = page.getByTestId("pod-button-group-A");
-  await expect(buttonAGroup).toContainText("Shift Up");
-  await expect(buttonAGroup).toContainText("Shift Down");
-  await expect(buttonAGroup).toContainText("Double press");
+  // A now fires Shift Down → gear 10
+  await page.getByTestId("pod-button-group-A").getByTestId("pod-trigger-press").click();
+  await expect(cogs.currentGearCard()).toHaveAttribute("data-gear-number", "10");
+
+  // A-1 now fires Shift Up → gear 11
+  await page.getByTestId("pod-button-group-A-1").getByTestId("pod-trigger-press").click();
+  await expect(cogs.currentGearCard()).toHaveAttribute("data-gear-number", "11");
+
+  // A-2 now fires Shift Up → gear 12
+  await page.getByTestId("pod-button-group-A-2").getByTestId("pod-trigger-press").click();
+  await expect(cogs.currentGearCard()).toHaveAttribute("data-gear-number", "12");
 });

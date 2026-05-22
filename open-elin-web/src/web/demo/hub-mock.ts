@@ -252,4 +252,4 @@ function clampGear(value: number, max: number) {
 }
 
 export type HubState = ReturnType<HubMock["state"]["get"]>;
-export type { RearCogs, CurrentPosition };
+export type { CurrentPosition, RearCogs };

@@ -1,7 +1,7 @@
 import { SignalWatcher } from "@lit-labs/signals";
 import { LitElement, css, html, nothing } from "lit";
 
-import { ACTION_LABELS, FUNCTION_LABELS } from "open-elin-lib/commands";
+import { ACTION_LABELS, BUTTON_LABELS, FUNCTION_LABELS } from "open-elin-lib/commands";
 import { POD_MODELS } from "open-elin-lib/pod-models";
 import "../components/pod-diagram.ts";
 import { demoHub, demoPod } from "../store.ts";
@@ -9,20 +9,12 @@ import { sharedStyles } from "../styles.ts";
 
 const podModel = POD_MODELS["NXS MTB Pod"];
 
-// Physical button slots → PRIMARY button code (the first sub-code)
-const SLOT_BUTTON_CODES: Record<string, string> = {
-  up:   "00",  // A
-  down: "06",  // B
-  tune: "0C",  // C
-  pair: "12",  // D
-};
-
-const SLOT_POD_BUTTONS: Record<string, "A" | "B" | "C" | "D"> = {
-  up: "A",
-  down: "B",
-  tune: "C",
-  pair: "D",
-};
+// Map slot name → wired button code from pod model (by position index)
+function getWiredCode(slot: string): string | undefined {
+  const idx = podModel.buttonPositions.findIndex((p) => p.name === slot);
+  if (idx < 0 || idx >= podModel.wiredButtons.length) return undefined;
+  return podModel.wiredButtons[idx].toUpperCase();
+}
 
 const ACTION_TRIGGER_IDS: Record<string, string> = {
   "00": "pod-trigger-press",
@@ -271,24 +263,23 @@ export class PodMockGui extends SignalWatcher(LitElement) {
   }
 
   private renderSlotGroup(slot: string, buttonTable: any[]) {
-    const label = SLOT_POD_BUTTONS[slot] ?? slot;
-    const primaryCode = SLOT_BUTTON_CODES[slot];
-    const entries = primaryCode
+    const wiredCode = getWiredCode(slot);
+    const label = wiredCode ? (BUTTON_LABELS[wiredCode] ?? wiredCode) : slot;
+    const entries = wiredCode
       ? buttonTable.filter(
-          (e: any) => (e.button1?.code ?? "").toUpperCase() === primaryCode.toUpperCase(),
+          (e: any) => (e.button1?.code ?? "").toUpperCase() === wiredCode,
         )
       : [];
     return html`
       <div slot=${slot} class="pod-button-group" data-test-id="pod-button-group-${label}">
         <span class="pod-button-group-label">${label}</span>
-        ${this.renderTriggerEntries(slot, entries)}
+        ${this.renderTriggerEntries(wiredCode, entries)}
       </div>
     `;
   }
 
-  private renderTriggerEntries(slot: string, entries: any[]) {
-    const podButton = SLOT_POD_BUTTONS[slot];
-    if (!podButton || !entries.length) return nothing;
+  private renderTriggerEntries(wiredCode: string | undefined, entries: any[]) {
+    if (!wiredCode || !entries.length) return nothing;
 
     return entries.map((entry: any) => {
       const actionCode = entry.action?.code ?? "00";
@@ -302,7 +293,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
           class="pod-trigger-btn"
           type="button"
           data-test-id=${testId}
-          @click=${() => demoPod.fireAction(podButton, actionFlag)}
+          @click=${() => demoPod.fireByCode(wiredCode, actionFlag)}
           aria-label="${actionLabel}: ${fnLabel}"
         >${actionLabel}: ${fnLabel}</button>
       `;
@@ -316,7 +307,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
     const target = event.currentTarget as HTMLElement | null;
     target?.setPointerCapture(event.pointerId);
     this.pressedButtons.add("D");
-    demoPod.pressButtonDDown();
+    demoPod.fireByCode("12", 0);
     target?.classList.add("holding");
     this.pairingHoldTimer = setTimeout(() => {
       this.pairingHoldTimer = null;
@@ -337,7 +328,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
     if (this.pairingHoldTimer !== null) {
       clearTimeout(this.pairingHoldTimer);
       this.pairingHoldTimer = null;
-      demoPod.pressButtonDUp();
+      demoPod.fireByCode("12", 1);
     }
   }
 

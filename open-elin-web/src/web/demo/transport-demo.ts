@@ -480,6 +480,8 @@ export class DemoTransport implements ProtocolTransport {
     if (fnCode === "0A" || fnCode === "0B") {
       const direction = fnCode === "0A" ? "up" : "down";
       this.handleShift(this.getHubMac(), direction);
+    } else if (fnCode === "11") {
+      this.pod.toggleMode();
     }
   }
 

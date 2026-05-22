@@ -18,8 +18,6 @@ type PodStateShape = {
 
 type PodButtonActionEvent = ButtonActionNotify;
 
-type PodButton = "A" | "B" | "C" | "D";
-
 export class PodMock extends EventTarget {
   readonly state = signal<PodStateShape>({
     online: true,
@@ -59,95 +57,20 @@ export class PodMock extends EventTarget {
     this.updateState({ batteryLevel: millivolts });
   }
 
-  pressButtonA() {
-    this.emitButtonSequence("A");
-  }
-
-  pressButtonADown() {
-    this.emitButtonDown("A");
-  }
-
-  pressButtonAUp() {
-    this.emitButtonUp("A");
-  }
-
-  pressButtonB() {
-    this.emitButtonSequence("B");
-  }
-
-  pressButtonBDown() {
-    this.emitButtonDown("B");
-  }
-
-  pressButtonBUp() {
-    this.emitButtonUp("B");
-  }
-
-  pressButtonC() {
+  /** Fire a button action by hex code (e.g. "00", "01", "12") and action flag (0=press, 1=release, 2=double) */
+  fireByCode(buttonCodeHex: string, actionFlag: number) {
     if (!this.state.get().online) return;
-    this.toggleMode();
-    this.emitButtonAction(BUTTON_IDS.C, 0);
+    this.emitButtonAction(parseInt(buttonCodeHex, 16), actionFlag);
+  }
+
+  /** Press + release a button by hex code */
+  pressByCode(buttonCodeHex: string) {
+    if (!this.state.get().online) return;
+    const id = parseInt(buttonCodeHex, 16);
+    this.emitButtonAction(id, 0);
     setTimeout(() => {
-      this.emitButtonAction(BUTTON_IDS.C, 1);
+      this.emitButtonAction(id, 1);
     }, DEFAULT_RELEASE_DELAY_MS);
-  }
-
-  pressButtonCDown() {
-    if (!this.state.get().online) return;
-    this.toggleMode();
-    this.emitButtonAction(BUTTON_IDS.C, 0);
-  }
-
-  pressButtonCUp() {
-    this.emitButtonAction(BUTTON_IDS.C, 1);
-  }
-
-  pressButtonD() {
-    this.emitButtonSequence("D");
-  }
-
-  pressButtonDDown() {
-    this.emitButtonDown("D");
-  }
-
-  pressButtonDUp() {
-    this.emitButtonUp("D");
-  }
-
-  fireAction(button: PodButton, actionFlag: number) {
-    if (!this.state.get().online) return;
-    this.emitButtonAction(BUTTON_IDS[button], actionFlag);
-  }
-
-  doubleClickButton(button: PodButton) {
-    if (!this.state.get().online) return;
-    this.emitButtonAction(BUTTON_IDS[button], 2);
-  }
-
-  private emitButtonSequence(button: PodButton) {
-    const current = this.state.get();
-    if (!current.online) return;
-    const buttonId = BUTTON_IDS[button];
-    const releaseDelay =
-      current.mode === "tune"
-        ? TUNE_RELEASE_DELAY_MS
-        : DEFAULT_RELEASE_DELAY_MS;
-    this.emitButtonAction(buttonId, 0);
-    setTimeout(() => {
-      this.emitButtonAction(buttonId, 1);
-    }, releaseDelay);
-  }
-
-  private emitButtonDown(button: PodButton) {
-    if (!this.state.get().online) return;
-    const buttonId = BUTTON_IDS[button];
-    this.emitButtonAction(buttonId, 0);
-  }
-
-  private emitButtonUp(button: PodButton) {
-    if (!this.state.get().online) return;
-    const buttonId = BUTTON_IDS[button];
-    this.emitButtonAction(buttonId, 1);
   }
 
   private updateState(next: Partial<PodStateShape>) {
@@ -175,14 +98,6 @@ export class PodMock extends EventTarget {
 }
 
 const DEFAULT_RELEASE_DELAY_MS = 40;
-const TUNE_RELEASE_DELAY_MS = 800;
-
-const BUTTON_IDS: Record<PodButton, number> = {
-  A: 0,     // 0x00 — physical up / shift-up button
-  B: 0x06,  // 0x06 — physical B / shift-down button
-  C: 0x0C,  // 0x0C — C / tune button
-  D: 0x12,  // 0x12 — D / pair button
-};
 
 const ACTION_LABELS: Record<string, string> = {
   "00": "Press",

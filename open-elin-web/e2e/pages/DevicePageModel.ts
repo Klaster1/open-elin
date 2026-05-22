@@ -113,7 +113,7 @@ export class DevicePageModel {
   sidebarShiftDownButton(): Locator {
     return this.page
       .locator("pod-mock-gui")
-      .getByTestId("pod-button-group-B")
+      .getByTestId("pod-button-group-A-1")
       .getByTestId("pod-trigger-press");
   }
 
