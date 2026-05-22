@@ -5,6 +5,7 @@
   "description": "Cross-platform protocol library for NXS BikeNet (Node.js + browser)",
   "exports": {
     "./commands": "./src/commands.ts",
+    "./default-button-map": "./src/default-button-map.ts",
     "./protocol": "./src/protocol.ts"
   }
 }

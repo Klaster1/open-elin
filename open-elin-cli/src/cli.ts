@@ -26,6 +26,7 @@ import * as setRearCogCmd from "./commands/hub/set-rear-cog.ts";
 import * as shiftDownCmd from "./commands/hub/shift-down.ts";
 import * as shiftUpCmd from "./commands/hub/shift-up.ts";
 import * as writeButtonMapCmd from "./commands/hub/write-button-map.ts";
+import * as writeDefaultButtonMapCmd from "./commands/hub/write-default-button-map.ts";
 import * as scanCmd from "./commands/scan.ts";
 import { ExitCode } from "./exit-codes.ts";
 
@@ -61,6 +62,7 @@ const setRcParser   = merge(
 const readBmParser    = merge(object({ type: constant("read-button-map") }), hubFlags);
 const readBtParser    = merge(object({ type: constant("read-button-table") }), hubFlags);
 const writeBmParser   = merge(object({ type: constant("write-button-map"), entriesJson: optional(option("--entries-json", string({ metavar: "JSON" }))), useCaptured: option("--use-captured"), podMac: optional(option("--pod-mac", string({ metavar: "MAC" }))) }), hubFlags);
+const writeDefBmParser = merge(object({ type: constant("write-default-button-map"), podMac: option("--pod-mac", string({ metavar: "MAC" })) }), hubFlags);
 const getMotParser  = merge(object({ type: constant("get-motor-params") }), hubFlags);
 const setNameParser = merge(
   object({
@@ -98,7 +100,8 @@ const hubGroup2 = or(
   command("set-rear-cog",      setRcParser),
   command("read-button-map",   readBmParser),
   command("read-button-table", readBtParser),
-  command("write-button-map",  writeBmParser),
+  command("write-button-map",          writeBmParser),
+  command("write-default-button-map",  writeDefBmParser),
   command("get-motor-params",  getMotParser),
   command("set-name",          setNameParser),
   command("monitor",           monitorParser),
@@ -177,6 +180,9 @@ switch (result.type) {
     break;
   case "write-button-map":
     await writeButtonMapCmd.run(result);
+    break;
+  case "write-default-button-map":
+    await writeDefaultButtonMapCmd.run(result);
     break;
   case "get-motor-params":
     await getMotorParamsCmd.run(result);

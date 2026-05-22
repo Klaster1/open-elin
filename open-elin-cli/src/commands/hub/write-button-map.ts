@@ -1,22 +1,8 @@
 import type { ButtonMapEntry } from "open-elin-lib/commands";
+import { buildDefaultButtonMap } from "open-elin-lib/default-button-map";
 import { openHub } from "../../ble/connection.ts";
 import { ExitCode } from "../../exit-codes.ts";
 import { die, printJson, printLine } from "../../output.ts";
-
-// Captured from real pod D5:89:B2:13:FA:04 paired with hub D7:BA:AB:52:A0:E5
-const CAPTURED_ENTRIES: ButtonMapEntry[] = [
-  { podAddressHex: "04FA13B289D5", elinkAddressHex: "E5A052ABBAD7", button1: { code: "00" }, button2: { code: "00" }, action: { code: "00" }, function: { code: "0A" }, index: 0 },
-  { podAddressHex: "04FA13B289D5", elinkAddressHex: "E5A052ABBAD7", button1: { code: "06" }, button2: { code: "00" }, action: { code: "00" }, function: { code: "0B" }, index: 1 },
-  { podAddressHex: "04FA13B289D5", elinkAddressHex: "E5A052ABBAD7", button1: { code: "0C" }, button2: { code: "00" }, action: { code: "00" }, function: { code: "11" }, index: 2 },
-  { podAddressHex: "04FA13B289D5", elinkAddressHex: "E5A052ABBAD7", button1: { code: "0D" }, button2: { code: "00" }, action: { code: "00" }, function: { code: "0A" }, index: 3 },
-  { podAddressHex: "04FA13B289D5", elinkAddressHex: "E5A052ABBAD7", button1: { code: "01" }, button2: { code: "00" }, action: { code: "00" }, function: { code: "0B" }, index: 4 },
-  { podAddressHex: "04FA13B289D5", elinkAddressHex: "E5A052ABBAD7", button1: { code: "12" }, button2: { code: "00" }, action: { code: "00" }, function: { code: "0B" }, index: 5 },
-  { podAddressHex: "04FA13B289D5", elinkAddressHex: "E5A052ABBAD7", button1: { code: "02" }, button2: { code: "00" }, action: { code: "00" }, function: { code: "11" }, index: 6 },
-];
-
-function macToHexLE(mac: string): string {
-  return mac.split(":").reverse().map((b) => b.toUpperCase()).join("");
-}
 
 export interface WriteButtonMapOpts {
   address: string;
@@ -35,11 +21,10 @@ export async function run(opts: WriteButtonMapOpts): Promise<void> {
   let writeResult;
   try {
     if (opts.podMac) {
-      const podHex = macToHexLE(opts.podMac);
-      const hubHex = macToHexLE(opts.address);
-      entries = CAPTURED_ENTRIES.map((e) => ({ ...e, podAddressHex: podHex, elinkAddressHex: hubHex }));
+      entries = buildDefaultButtonMap(opts.podMac, opts.address);
     } else if (opts.useCaptured) {
-      entries = CAPTURED_ENTRIES;
+      // --use-captured: build default map for the real captured hardware MACs
+      entries = buildDefaultButtonMap("D5:89:B2:13:FA:04", "D7:BA:AB:52:A0:E5");
     } else if (opts.entriesJson) {
       // Use entries supplied by caller (from --entries-json flag)
       entries = JSON.parse(opts.entriesJson) as ButtonMapEntry[];

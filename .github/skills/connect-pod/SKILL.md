@@ -42,12 +42,10 @@ Pod should appear with connected status (`●`).
 ### Step 3 — Write button map
 
 ```
-npm run cli -- hub write-button-map --address <hub-mac> --use-captured
+npm run cli -- hub write-default-button-map --address <hub-mac> --pod-mac <pod-mac>
 ```
 
 This writes 7 button-map entries mapping pod button codes to shift/tune actions. **Without this the hub silently ignores all pod button presses.**
-
-The `--use-captured` flag uses entries from original app pairing (pod `04FA13B289D5` / hub `E5A052ABBAD7`). Re-capture with `hub read-button-map` if using different hardware.
 
 ### Step 4 — Verify
 

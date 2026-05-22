@@ -5,6 +5,7 @@ import {
     reverseCommand,
     reverseMacAddress,
 } from "./protocol.ts";
+import { buildDefaultButtonMap } from "./default-button-map.ts";
 
 export interface GetListEntry {
   mac: string;
@@ -730,6 +731,11 @@ export class ProtocolCommands {
     const payload = hexToBuffer(cmd + revHub + revPod);
     const response = await this.protocol.sendCommand(this.device, payload);
     return parseBasicResponse(response);
+  }
+
+  async writeDefaultButtonMap(podMac: string): Promise<BasicResponse> {
+    const entries = buildDefaultButtonMap(podMac, this.device.address);
+    return this.writeButtonMap(entries);
   }
 
   async blinkLed(): Promise<BasicResponse> {
