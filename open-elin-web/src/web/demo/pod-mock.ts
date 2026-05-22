@@ -18,7 +18,7 @@ type PodStateShape = {
 
 type PodButtonActionEvent = ButtonActionNotify;
 
-type PodButton = "A" | "B" | "C";
+type PodButton = "A" | "B" | "C" | "D";
 
 export class PodMock extends EventTarget {
   readonly state = signal<PodStateShape>({
@@ -102,6 +102,18 @@ export class PodMock extends EventTarget {
     this.emitButtonAction(BUTTON_IDS.C, 1);
   }
 
+  pressButtonD() {
+    this.emitButtonSequence("D");
+  }
+
+  pressButtonDDown() {
+    this.emitButtonDown("D");
+  }
+
+  pressButtonDUp() {
+    this.emitButtonUp("D");
+  }
+
   private emitButtonSequence(button: PodButton) {
     const current = this.state.get();
     if (!current.online) return;
@@ -159,6 +171,7 @@ const BUTTON_IDS: Record<PodButton, number> = {
   A: 1,
   B: 0,
   C: 2,
+  D: 0x12,
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -170,6 +183,7 @@ const BUTTON_LABELS: Record<string, string> = {
   "00": "-",
   "01": "A-1",
   "02": "A-2",
+  "12": "D",
 };
 
 function toHexByte(value: number) {

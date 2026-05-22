@@ -1,5 +1,7 @@
 import { signal } from "@lit-labs/signals";
 
+import { buildDefaultButtonMap } from "open-elin-lib/default-button-map";
+import { demoState } from "./demo-state.ts";
 import hubData from "./hub-mock-data.json";
 
 type HubData = typeof hubData;
@@ -17,9 +19,58 @@ export const HUB_MOCK_MAX_OFFSET = 250;
 
 export class HubMock {
   readonly state = signal<HubStateShape>(structuredClone(hubData));
+  readonly pairingWindow = signal(false);
+  private pairingWindowTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly minOffset = HUB_MOCK_MIN_OFFSET;
   private readonly maxOffset = HUB_MOCK_MAX_OFFSET;
   private readonly maxNameLength = 16;
+
+  reset() {
+    if (this.pairingWindowTimer !== null) {
+      clearTimeout(this.pairingWindowTimer);
+      this.pairingWindowTimer = null;
+    }
+    this.state.set(structuredClone(hubData));
+    demoState.clearDeviceEntries();
+    const gear1Offset = this.state.get().rearCogs.approximate[0] ?? 0;
+    this.updateState({
+      current: { gear: 1, offset: gear1Offset },
+    });
+    this.pairingWindow.set(true);
+    this.pairingWindowTimer = setTimeout(() => {
+      this.pairingWindow.set(false);
+      this.pairingWindowTimer = null;
+    }, 60_000);
+  }
+
+  pair(podMac: string) {
+    if (!this.pairingWindow.get()) return;
+    const hubMac = this.state.get().device.mac;
+    demoState.addDeviceEntry({
+      mac: podMac,
+      name: "NXS MTB Pod",
+      deviceId: 10,
+      isConnected: true,
+      batteryVoltage: 3000,
+      rssi: 178,
+    });
+    const entries = buildDefaultButtonMap(podMac, hubMac).map(
+      ({ index: _index, ...rest }) => ({
+        podAddressHex: rest.podAddressHex,
+        elinkAddressHex: rest.elinkAddressHex,
+        button1: { code: rest.button1.code, label: rest.button1.label ?? "" },
+        button2: { code: rest.button2.code, label: rest.button2.label ?? "" },
+        action: { code: rest.action.code, label: rest.action.label ?? "" },
+        function: { code: rest.function.code, label: rest.function.label ?? "" },
+      }),
+    );
+    this.updateState({ buttonTable: entries });
+    this.pairingWindow.set(false);
+    if (this.pairingWindowTimer !== null) {
+      clearTimeout(this.pairingWindowTimer);
+      this.pairingWindowTimer = null;
+    }
+  }
 
   getDevice() {
     return this.state.get().device;

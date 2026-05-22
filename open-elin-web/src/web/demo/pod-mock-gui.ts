@@ -1,7 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 
-import { demoPod } from "../store.ts";
+import { demoHub, demoPod } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
 const podImageUrl = new URL("../images/pod.png", import.meta.url).href;
@@ -86,12 +86,46 @@ export class PodMockGui extends SignalWatcher(LitElement) {
         top: 75%;
         left: 81%;
       }
+
+      .pod-button-pair {
+        width: 44px;
+        height: 44px;
+        top: 65%;
+        left: 55%;
+      }
+
+      .pod-button-pair.pairing-mode {
+        border-color: rgba(76, 200, 255, 0.9);
+        background: rgba(76, 200, 255, 0.2);
+        box-shadow: 0 0 16px rgba(76, 200, 255, 0.5);
+      }
+
+      .pod-button-pair .pair-progress {
+        position: absolute;
+        inset: -3px;
+        border-radius: 999px;
+        border: 3px solid transparent;
+        border-top-color: rgba(76, 200, 255, 0.9);
+        animation: none;
+        pointer-events: none;
+      }
+
+      .pod-button-pair.holding .pair-progress {
+        animation: pair-fill 6s linear forwards;
+      }
+
+      @keyframes pair-fill {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
     `,
   ];
-  private pressedButtons = new Set<"A" | "B" | "C">();
+  private pressedButtons = new Set<"A" | "B" | "C" | "D">();
+  private pairingHoldTimer: ReturnType<typeof setTimeout> | null = null;
 
   render() {
     const isOnline = demoPod.state.get().online;
+    const isPairing = demoHub.pairingWindow.get();
     return html`
       <div class="pod-mock" role="group" aria-label="Pod controls">
         <div class="pod-mock-frame">
@@ -143,6 +177,19 @@ export class PodMockGui extends SignalWatcher(LitElement) {
             @keyup=${this.onShiftDownKeyUp}
             aria-label="Shift down"
           ></button>
+          <button
+            class="pod-button pod-button-pair ${isPairing ? "pairing-mode" : ""}"
+            type="button"
+            data-test-id="pod-button-pair"
+            @click=${this.onIgnoreClick}
+            @pointerdown=${this.onPairPointerDown}
+            @pointerup=${this.onPairPointerUp}
+            @pointerleave=${this.onPairPointerUp}
+            @pointercancel=${this.onPairPointerUp}
+            aria-label="Pair / Shift down (hold 6s to pair)"
+          >
+            <span class="pair-progress" aria-hidden="true"></span>
+          </button>
         </div>
       </div>
     `;
@@ -189,6 +236,38 @@ export class PodMockGui extends SignalWatcher(LitElement) {
     this.onButtonKeyUp(event, "B", () => demoPod.pressButtonBUp());
   }
 
+  private onPairPointerDown(event: PointerEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.pressedButtons.has("D")) return;
+    const target = event.currentTarget as HTMLElement | null;
+    target?.setPointerCapture(event.pointerId);
+    this.pressedButtons.add("D");
+    demoPod.pressButtonDDown();
+    target?.classList.add("holding");
+    this.pairingHoldTimer = setTimeout(() => {
+      this.pairingHoldTimer = null;
+      target?.classList.remove("holding");
+      this.pressedButtons.delete("D");
+      demoHub.pair(demoPod.podMac);
+    }, 6000);
+  }
+
+  private onPairPointerUp(event: PointerEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!this.pressedButtons.has("D")) return;
+    const target = event.currentTarget as HTMLElement | null;
+    target?.releasePointerCapture(event.pointerId);
+    target?.classList.remove("holding");
+    this.pressedButtons.delete("D");
+    if (this.pairingHoldTimer !== null) {
+      clearTimeout(this.pairingHoldTimer);
+      this.pairingHoldTimer = null;
+      demoPod.pressButtonDUp();
+    }
+  }
+
   private onTunePointerDown(event: PointerEvent) {
     this.onPointerDown(event, "C", () => demoPod.pressButtonCDown());
   }
@@ -207,7 +286,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
 
   private onPointerDown(
     event: PointerEvent,
-    button: "A" | "B" | "C",
+    button: "A" | "B" | "C" | "D",
     action: () => void,
   ) {
     event.preventDefault();
@@ -221,7 +300,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
 
   private onPointerUp(
     event: PointerEvent,
-    button: "A" | "B" | "C",
+    button: "A" | "B" | "C" | "D",
     action: () => void,
   ) {
     event.preventDefault();
@@ -235,7 +314,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
 
   private onButtonKeyDown(
     event: KeyboardEvent,
-    button: "A" | "B" | "C",
+    button: "A" | "B" | "C" | "D",
     action: () => void,
   ) {
     if (!this.isPressKey(event) || event.repeat) return;
@@ -248,7 +327,7 @@ export class PodMockGui extends SignalWatcher(LitElement) {
 
   private onButtonKeyUp(
     event: KeyboardEvent,
-    button: "A" | "B" | "C",
+    button: "A" | "B" | "C" | "D",
     action: () => void,
   ) {
     if (!this.isPressKey(event)) return;

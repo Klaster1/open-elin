@@ -1,6 +1,7 @@
 import { SignalWatcher } from "@lit-labs/signals";
 import { LitElement, PropertyValues, css, html, nothing } from "lit";
 
+import "../demo/hub-mock-gui.ts";
 import "../demo/pod-mock-gui.ts";
 import { devicePages } from "../device-pages.ts";
 import { appActions, appState } from "../store.ts";
@@ -327,7 +328,7 @@ export class ShellDevice extends SignalWatcher(LitElement) {
               )}
             </nav>
           </div>
-          ${isDemo ? html`<pod-mock-gui></pod-mock-gui>` : html``}
+          ${isDemo ? html`<hub-mock-gui></hub-mock-gui><pod-mock-gui></pod-mock-gui>` : html``}
         </aside>
         <div class="content">${this.renderDevicePage(activePage)}</div>
       </section>

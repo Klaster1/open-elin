@@ -23,6 +23,15 @@ const DEFAULT_TRANSPORT_DELAYS: DemoTransportDelays = {
   batteryIntervalMs: 5000,
 };
 
+type ListEntry = {
+  mac: string;
+  name: string;
+  deviceId: number;
+  isConnected: boolean;
+  batteryVoltage: number;
+  rssi: number;
+};
+
 class DemoStateModel {
   readonly state = signal<DemoStateShape>({
     ...structuredClone(demoData),
@@ -32,6 +41,23 @@ class DemoStateModel {
   getPodMac() {
     const entries = this.state.get().list.entries;
     return entries.length ? entries[0].mac : "";
+  }
+
+  clearDeviceEntries() {
+    const current = this.state.get();
+    this.state.set({
+      ...current,
+      list: { ...current.list, entries: [] },
+    });
+  }
+
+  addDeviceEntry(entry: ListEntry) {
+    const current = this.state.get();
+    const entries = [...current.list.entries, entry];
+    this.state.set({
+      ...current,
+      list: { ...current.list, entries },
+    });
   }
 
   updatePodBatteryLevel(millivolts: number) {
