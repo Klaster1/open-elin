@@ -27,6 +27,42 @@ export class ButtonsPageModel {
     return this.page.locator('[data-test-id="device-buttons-mapping"]');
   }
 
+  podGroups(): Locator {
+    return this.page.getByTestId("pod-group");
+  }
+
+  podIndicator(): Locator {
+    return this.page.getByTestId("pod-indicator");
+  }
+
+  podIndicatorImage(): Locator {
+    return this.page.getByTestId("pod-indicator").locator("img");
+  }
+
+  wiredButtonGroups(): Locator {
+    return this.page.getByTestId("wired-button-group");
+  }
+
+  wiredBindings(): Locator {
+    return this.page.getByTestId("wired-binding");
+  }
+
+  orphanButtonGroups(): Locator {
+    return this.page.getByTestId("orphan-button-group");
+  }
+
+  orphanBindings(): Locator {
+    return this.page.getByTestId("orphan-binding");
+  }
+
+  removeBindingButtons(): Locator {
+    return this.page.getByTestId("remove-binding");
+  }
+
+  addTriggerButtons(): Locator {
+    return this.page.getByTestId("add-trigger");
+  }
+
   async clickRefresh() {
     await this.refreshButtonControl().click();
   }

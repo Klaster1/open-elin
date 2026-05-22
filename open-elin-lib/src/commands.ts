@@ -916,7 +916,7 @@ const FUNCTION_LABELS: Record<string, string> = {
 };
 
 const BUTTON_LABELS: Record<string, string> = {
-  "00": "-",
+  "00": "A",
   "01": "A-1",
   "02": "A-2",
   "03": "A-3",
