@@ -17,7 +17,6 @@ export class HubMockGui extends SignalWatcher(LitElement) {
       }
 
       .hub-mock-frame {
-        position: relative;
         width: 100%;
         max-width: 220px;
         padding: 12px;
@@ -25,6 +24,13 @@ export class HubMockGui extends SignalWatcher(LitElement) {
         background: #101922;
         border: 1px solid #253245;
         box-shadow: 0 22px 55px rgba(0, 0, 0, 0.55);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .hub-image-wrap {
+        position: relative;
       }
 
       .hub-mock img {
@@ -32,6 +38,28 @@ export class HubMockGui extends SignalWatcher(LitElement) {
         height: auto;
         display: block;
         border-radius: 18px;
+      }
+
+      .hub-mac-row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px;
+        font-family: var(--sl-font-mono, ui-monospace, monospace);
+        font-size: 12px;
+        color: #cfe3ff;
+      }
+
+      .hub-mac-label {
+        color: #7d93ad;
+        font-family: var(--sl-font-sans);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .hub-mac-row sl-copy-button {
+        --success-color: rgba(76, 255, 196, 0.9);
       }
 
       .hub-reset-button {
@@ -86,20 +114,34 @@ export class HubMockGui extends SignalWatcher(LitElement) {
 
   render() {
     const isPairing = demoHub.pairingWindow.get();
+    const hubMac = demoHub.state.get().device.mac;
     return html`
       <div class="hub-mock" role="group" aria-label="Hub controls">
         <div class="hub-mock-frame">
-          <img src=${hubImageUrl} alt="Hub" />
-          <button
-            class="hub-reset-button"
-            type="button"
-            data-test-id="hub-reset-button"
-            @click=${this.onResetClick}
-            aria-label="Factory reset hub"
-            title="Factory reset hub"
-          >
-            Reset
-          </button>
+          <div class="hub-image-wrap">
+            <img src=${hubImageUrl} alt="Hub" />
+            <button
+              class="hub-reset-button"
+              type="button"
+              data-test-id="hub-reset-button"
+              @click=${this.onResetClick}
+              aria-label="Factory reset hub"
+              title="Factory reset hub"
+            >
+              Reset
+            </button>
+          </div>
+          ${hubMac
+            ? html`<div class="hub-mac-row" data-test-id="hub-mac">
+                <span class="hub-mac-label">MAC</span>
+                <span data-test-id="hub-mac-value">${hubMac}</span>
+                <sl-copy-button
+                  value=${hubMac}
+                  copy-label="Copy hub MAC"
+                  data-test-id="hub-mac-copy"
+                ></sl-copy-button>
+              </div>`
+            : html``}
         </div>
         ${isPairing
           ? html`<div class="pairing-badge" role="status" aria-live="polite">Pairing window open</div>`

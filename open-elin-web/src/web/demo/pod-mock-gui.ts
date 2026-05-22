@@ -17,7 +17,6 @@ export class PodMockGui extends SignalWatcher(LitElement) {
       }
 
       .pod-mock-frame {
-        position: relative;
         width: 100%;
         max-width: 220px;
         padding: 12px;
@@ -25,13 +24,16 @@ export class PodMockGui extends SignalWatcher(LitElement) {
         background: #101922;
         border: 1px solid #253245;
         box-shadow: 0 22px 55px rgba(0, 0, 0, 0.55);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .pod-image-wrap {
+        position: relative;
       }
 
       .pod-power {
-        position: absolute;
-        left: 14px;
-        bottom: 12px;
-        z-index: 2;
       }
 
       .pod-power::part(label) {
@@ -39,6 +41,49 @@ export class PodMockGui extends SignalWatcher(LitElement) {
         font-weight: 600;
         font-size: 12px;
         letter-spacing: 0.01em;
+      }
+
+      .pod-footer {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+      }
+
+      .pod-mac-row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px;
+        font-family: var(--sl-font-mono, ui-monospace, monospace);
+        font-size: 12px;
+        color: #cfe3ff;
+      }
+
+      .pod-mac-label {
+        color: #7d93ad;
+        font-family: var(--sl-font-sans);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .pod-mac-row sl-copy-button {
+        --success-color: rgba(76, 255, 196, 0.9);
+      }
+
+      .pod-mac {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-family: var(--sl-font-mono, ui-monospace, monospace);
+        font-size: 12px;
+        color: #cfe3ff;
+        background: rgba(8, 14, 22, 0.6);
+        border: 1px solid #253245;
+        border-radius: 8px;
+        padding: 3px 6px;
       }
 
       .pod-mock img {
@@ -129,67 +174,82 @@ export class PodMockGui extends SignalWatcher(LitElement) {
     return html`
       <div class="pod-mock" role="group" aria-label="Pod controls">
         <div class="pod-mock-frame">
-          <sl-switch
-            class="pod-power"
-            data-test-id="pod-power-switch"
-            ?checked=${isOnline}
-            @sl-change=${this.onPowerToggle}
-          >
-            Power
-          </sl-switch>
-          <img src=${podImageUrl} alt="Pod controls" />
-          <button
-            class="pod-button pod-button-tune"
-            type="button"
-            data-test-id="pod-button-tune"
-            @click=${this.onIgnoreClick}
-            @pointerdown=${this.onTunePointerDown}
-            @pointerup=${this.onTunePointerUp}
-            @pointerleave=${this.onTunePointerUp}
-            @pointercancel=${this.onTunePointerUp}
-            @keydown=${this.onTuneKeyDown}
-            @keyup=${this.onTuneKeyUp}
-            aria-label="Toggle tune"
-          ></button>
-          <button
-            class="pod-button pod-button-up"
-            type="button"
-            data-test-id="pod-button-up"
-            @click=${this.onIgnoreClick}
-            @pointerdown=${this.onShiftUpPointerDown}
-            @pointerup=${this.onShiftUpPointerUp}
-            @pointerleave=${this.onShiftUpPointerUp}
-            @pointercancel=${this.onShiftUpPointerUp}
-            @keydown=${this.onShiftUpKeyDown}
-            @keyup=${this.onShiftUpKeyUp}
-            aria-label="Shift up"
-          ></button>
-          <button
-            class="pod-button pod-button-down"
-            type="button"
-            data-test-id="pod-button-down"
-            @click=${this.onIgnoreClick}
-            @pointerdown=${this.onShiftDownPointerDown}
-            @pointerup=${this.onShiftDownPointerUp}
-            @pointerleave=${this.onShiftDownPointerUp}
-            @pointercancel=${this.onShiftDownPointerUp}
-            @keydown=${this.onShiftDownKeyDown}
-            @keyup=${this.onShiftDownKeyUp}
-            aria-label="Shift down"
-          ></button>
-          <button
-            class="pod-button pod-button-pair ${isPairing ? "pairing-mode" : ""}"
-            type="button"
-            data-test-id="pod-button-pair"
-            @click=${this.onIgnoreClick}
-            @pointerdown=${this.onPairPointerDown}
-            @pointerup=${this.onPairPointerUp}
-            @pointerleave=${this.onPairPointerUp}
-            @pointercancel=${this.onPairPointerUp}
-            aria-label="Pair / Shift down (hold 6s to pair)"
-          >
-            <span class="pair-progress" aria-hidden="true"></span>
-          </button>
+          <div class="pod-image-wrap">
+            <img src=${podImageUrl} alt="Pod controls" />
+            <button
+              class="pod-button pod-button-tune"
+              type="button"
+              data-test-id="pod-button-tune"
+              @click=${this.onIgnoreClick}
+              @pointerdown=${this.onTunePointerDown}
+              @pointerup=${this.onTunePointerUp}
+              @pointerleave=${this.onTunePointerUp}
+              @pointercancel=${this.onTunePointerUp}
+              @keydown=${this.onTuneKeyDown}
+              @keyup=${this.onTuneKeyUp}
+              aria-label="Toggle tune"
+            ></button>
+            <button
+              class="pod-button pod-button-up"
+              type="button"
+              data-test-id="pod-button-up"
+              @click=${this.onIgnoreClick}
+              @pointerdown=${this.onShiftUpPointerDown}
+              @pointerup=${this.onShiftUpPointerUp}
+              @pointerleave=${this.onShiftUpPointerUp}
+              @pointercancel=${this.onShiftUpPointerUp}
+              @keydown=${this.onShiftUpKeyDown}
+              @keyup=${this.onShiftUpKeyUp}
+              aria-label="Shift up"
+            ></button>
+            <button
+              class="pod-button pod-button-down"
+              type="button"
+              data-test-id="pod-button-down"
+              @click=${this.onIgnoreClick}
+              @pointerdown=${this.onShiftDownPointerDown}
+              @pointerup=${this.onShiftDownPointerUp}
+              @pointerleave=${this.onShiftDownPointerUp}
+              @pointercancel=${this.onShiftDownPointerUp}
+              @keydown=${this.onShiftDownKeyDown}
+              @keyup=${this.onShiftDownKeyUp}
+              aria-label="Shift down"
+            ></button>
+            <button
+              class="pod-button pod-button-pair ${isPairing ? "pairing-mode" : ""}"
+              type="button"
+              data-test-id="pod-button-pair"
+              @click=${this.onIgnoreClick}
+              @pointerdown=${this.onPairPointerDown}
+              @pointerup=${this.onPairPointerUp}
+              @pointerleave=${this.onPairPointerUp}
+              @pointercancel=${this.onPairPointerUp}
+              aria-label="Pair / Shift down (hold 6s to pair)"
+            >
+              <span class="pair-progress" aria-hidden="true"></span>
+            </button>
+          </div>
+          <div class="pod-footer">
+            <sl-switch
+              class="pod-power"
+              data-test-id="pod-power-switch"
+              ?checked=${isOnline}
+              @sl-change=${this.onPowerToggle}
+            >
+              Power
+            </sl-switch>
+            ${demoPod.podMac
+              ? html`<div class="pod-mac-row" data-test-id="pod-mac">
+                  <span class="pod-mac-label">MAC</span>
+                  <span data-test-id="pod-mac-value">${demoPod.podMac}</span>
+                  <sl-copy-button
+                    value=${demoPod.podMac}
+                    copy-label="Copy pod MAC"
+                    data-test-id="pod-mac-copy"
+                  ></sl-copy-button>
+                </div>`
+              : html``}
+          </div>
         </div>
       </div>
     `;
