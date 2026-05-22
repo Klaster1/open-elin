@@ -121,3 +121,37 @@ test("pod diagram renders image and leader lines in mock GUI", async ({
   // Assert 4 slot containers rendered (tune, up, down, pair)
   await expect(diagram.locator(".pod-slot")).toHaveCount(4);
 });
+
+test("writeButtonMap round-trip reduces visible entries", async ({
+  page,
+  updateDemoHubState,
+}) => {
+  const landing = new LandingPageModel(page);
+  const device = new DevicePageModel(page);
+  const buttons = new ButtonsPageModel(page);
+
+  // Go to app
+  await landing.open();
+  await expect(landing.root()).toBeVisible();
+
+  // Start demo mode
+  await landing.startDemo();
+  await expect(page).toHaveURL(device.deviceRouteMatcher());
+
+  // Go to buttons screen
+  await device.goToButtonsTab();
+
+  // Assert 7 mapping cards visible (default map)
+  await expect(buttons.mappingCards()).toHaveCount(7);
+
+  // Seed hub with only 3 button table entries via mutator
+  await updateDemoHubState((draft) => {
+    draft.buttonTable = draft.buttonTable.slice(0, 3);
+  });
+
+  // Refresh to pick up seeded state
+  await buttons.clickRefresh();
+
+  // Assert 3 mapping cards visible after seed + refresh
+  await expect(buttons.mappingCards()).toHaveCount(3);
+});

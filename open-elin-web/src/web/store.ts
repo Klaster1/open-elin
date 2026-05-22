@@ -311,6 +311,7 @@ export const appActions = {
   setBikenet,
   addDevice,
   writeDefaultButtonMap,
+  writeButtonMap,
 };
 
 export function setActivePage(page: string) {
@@ -1066,6 +1067,29 @@ export async function writeDefaultButtonMap(podMac: string) {
   } catch (err) {
     appendLog(
       "Write default button map error",
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
+
+export async function writeButtonMap(
+  entries: import("open-elin-lib/commands").ButtonMapEntry[],
+) {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) {
+    appendLog("Connect to a hub first.");
+    return;
+  }
+  appendLog("Write button map...", { entryCount: entries.length });
+  try {
+    const response = await deviceCommands.writeButtonMap(entries);
+    appendLog("Write button map result", response ?? {});
+    if (response.status === "success") {
+      await readButtonTable();
+    }
+  } catch (err) {
+    appendLog(
+      "Write button map error",
       err instanceof Error ? err.message : err,
     );
   }

@@ -214,6 +214,10 @@ export class HubMock {
     this.updateState({ buttonTable: [] });
   }
 
+  setButtonTable(entries: HubStateShape["buttonTable"]) {
+    this.updateState({ buttonTable: entries });
+  }
+
   appendButtonTableEntry(entry: HubStateShape["buttonTable"][number]) {
     const current = this.state.get();
     this.updateState({ buttonTable: [...current.buttonTable, entry] });
