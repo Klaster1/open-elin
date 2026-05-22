@@ -17,6 +17,10 @@ import { DemoTransport } from "./demo/transport-demo.ts";
 import { WebBluetoothTransport } from "./transport-web.ts";
 
 export type StatusKind = "wait" | "warn" | "ok";
+export type LogSegment =
+  | { kind: "text"; value: string }
+  | { kind: "json"; value: unknown };
+export type LogEntry = { timestamp: string; segments: LogSegment[] };
 export type Gear = {
   gearNumber: number;
   offsetApproximate: number;
@@ -49,7 +53,7 @@ type StoreState = {
   adStatusKind: StatusKind;
   shiftStatusText: string;
   shiftStatusKind: StatusKind;
-  logLines: string[];
+  logEntries: LogEntry[];
   hubBatteryVoltage: number | null;
   listEntries: any[];
   motorParams: any | null;
@@ -81,7 +85,7 @@ const state = signal<StoreState>({
   adStatusKind: "wait",
   shiftStatusText: "Waiting for a shift-complete notification...",
   shiftStatusKind: "wait",
-  logLines: [],
+  logEntries: [],
   hubBatteryVoltage: null,
   listEntries: [],
   motorParams: null,
@@ -120,7 +124,7 @@ const adStatusText = field("adStatusText");
 const adStatusKind = field("adStatusKind");
 const shiftStatusText = field("shiftStatusText");
 const shiftStatusKind = field("shiftStatusKind");
-const logLines = field("logLines");
+const logEntries = field("logEntries");
 const hubBatteryVoltage = field("hubBatteryVoltage");
 const listEntries = field("listEntries");
 const motorParams = field("motorParams");
@@ -255,7 +259,7 @@ export const appState = {
   adStatusKind,
   shiftStatusText,
   shiftStatusKind,
-  logLines,
+  logEntries,
   hubBatteryVoltage,
   listEntries,
   motorParams,
@@ -728,13 +732,25 @@ function normalizeGear(gear: unknown): Gear | null {
 }
 
 function appendLog(...parts: Array<string | number | object>) {
-  const line = parts
-    .map((part) =>
-      typeof part === "string" ? part : JSON.stringify(part, null, 2),
-    )
-    .join(" ");
-  const next = [...logLines.get(), line];
-  logLines.set(next.slice(-400));
+  const segments: LogSegment[] = parts.map((part) =>
+    typeof part === "string"
+      ? { kind: "text" as const, value: part }
+      : { kind: "json" as const, value: part },
+  );
+  const entry: LogEntry = {
+    timestamp: formatLogTimestamp(new Date()),
+    segments,
+  };
+  const next = [...logEntries.get(), entry];
+  logEntries.set(next.slice(-400));
+}
+
+function formatLogTimestamp(date: Date) {
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  const ms = String(date.getMilliseconds()).padStart(3, "0");
+  return `${hh}:${mm}:${ss}.${ms}`;
 }
 
 function getActiveMacKey() {

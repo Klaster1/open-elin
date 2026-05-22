@@ -1,8 +1,8 @@
 import { SignalWatcher } from "@lit-labs/signals";
-import { LitElement, css, html } from "lit";
+import { LitElement, css, html, type TemplateResult } from "lit";
 import { createRef, ref, type Ref } from "lit/directives/ref.js";
 
-import { appState } from "../store.ts";
+import { appState, type LogEntry } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
 export class PageDeviceLog extends SignalWatcher(LitElement) {
@@ -56,6 +56,27 @@ export class PageDeviceLog extends SignalWatcher(LitElement) {
         flex: 1;
         min-height: 0;
       }
+
+      .log-timestamp {
+        color: var(--muted, #98a6b5);
+        opacity: 0.6;
+      }
+
+      .json-key {
+        color: #82aaff;
+      }
+      .json-string {
+        color: #c3e88d;
+      }
+      .json-number {
+        color: #f78c6c;
+      }
+      .json-bool {
+        color: #c792ea;
+      }
+      .json-null {
+        color: #ff5370;
+      }
     `,
   ];
 
@@ -63,7 +84,7 @@ export class PageDeviceLog extends SignalWatcher(LitElement) {
   private wasAtBottom = true;
 
   render() {
-    const logLines = appState.logLines.get();
+    const entries = appState.logEntries.get();
     return html`
       <div class="card" data-test-id="log">
         <div class="card-head">
@@ -80,9 +101,7 @@ export class PageDeviceLog extends SignalWatcher(LitElement) {
           role="log"
           aria-live="polite"
           aria-relevant="additions text"
-        >
-${logLines.join("\n")}</pre
-        >
+        >${entries.map((entry, index) => renderEntry(entry, index === 0))}</pre>
       </div>
     `;
   }
@@ -101,7 +120,7 @@ ${logLines.join("\n")}</pre
   }
 
   private clearLog() {
-    appState.logLines.set([]);
+    appState.logEntries.set([]);
   }
 
   private isAtBottom(element: HTMLElement) {
@@ -115,6 +134,72 @@ ${logLines.join("\n")}</pre
 
 if (!customElements.get("page-device-log")) {
   customElements.define("page-device-log", PageDeviceLog);
+}
+
+function renderEntry(entry: LogEntry, isFirst: boolean): TemplateResult {
+  const separator = isFirst ? "" : "\n";
+  return html`${separator}<span class="log-timestamp">[${entry.timestamp}]</span>${entry.segments.map(
+    (segment) => {
+      if (segment.kind === "json") {
+        return html` ${renderJsonValue(segment.value, 0)}`;
+      }
+      return html` ${segment.value}`;
+    },
+  )}`;
+}
+
+const INDENT = 2;
+
+function renderJsonValue(value: unknown, depth: number): TemplateResult {
+  if (value === null) {
+    return html`<span class="json-null">null</span>`;
+  }
+  if (typeof value === "boolean") {
+    return html`<span class="json-bool">${String(value)}</span>`;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value)
+      ? html`<span class="json-number">${String(value)}</span>`
+      : html`<span class="json-null">null</span>`;
+  }
+  if (typeof value === "string") {
+    return html`<span class="json-string">${JSON.stringify(value)}</span>`;
+  }
+  if (Array.isArray(value)) {
+    return renderJsonArray(value, depth);
+  }
+  if (typeof value === "object") {
+    return renderJsonObject(value as Record<string, unknown>, depth);
+  }
+  return html`<span class="json-null">null</span>`;
+}
+
+function renderJsonArray(arr: unknown[], depth: number): TemplateResult {
+  if (arr.length === 0) return html`[]`;
+  const pad = " ".repeat(INDENT * (depth + 1));
+  const closePad = " ".repeat(INDENT * depth);
+  const items = arr.map(
+    (item, i) =>
+      html`\n${pad}${renderJsonValue(item, depth + 1)}${i < arr.length - 1 ? "," : ""}`,
+  );
+  return html`[${items}\n${closePad}]`;
+}
+
+function renderJsonObject(
+  obj: Record<string, unknown>,
+  depth: number,
+): TemplateResult {
+  const keys = Object.keys(obj).filter(
+    (key) => obj[key] !== undefined && typeof obj[key] !== "function",
+  );
+  if (keys.length === 0) return html`{}`;
+  const pad = " ".repeat(INDENT * (depth + 1));
+  const closePad = " ".repeat(INDENT * depth);
+  const entries = keys.map(
+    (key, i) =>
+      html`\n${pad}<span class="json-key">${JSON.stringify(key)}</span>: ${renderJsonValue(obj[key], depth + 1)}${i < keys.length - 1 ? "," : ""}`,
+  );
+  return html`{${entries}\n${closePad}}`;
 }
 
 export {};
