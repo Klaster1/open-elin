@@ -104,6 +104,7 @@ export class DevicePageModel {
   sidebarShiftDownButton(): Locator {
     return this.page.locator("pod-mock-gui").getByRole("button", {
       name: "Shift down",
+      exact: true,
     });
   }
 

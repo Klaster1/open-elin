@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
 
 import { appActions, appState } from "../store.ts";
@@ -137,16 +137,29 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
   render() {
     const canSend = appState.connected.get() && Boolean(appState.mac.get());
     const buttonTable = appState.buttonTable.get();
+    const firstEntry = appState.listEntries.get()?.[0];
+    const firstPodMac: string | undefined = firstEntry?.mac;
     return html`
       <div class="card">
         <div class="card-head">
           <div class="card-head-row">
             <h2>Buttons</h2>
-            <refresh-button
-              ?disabled=${!canSend}
-              .loading=${this.loading}
-              @refresh-requested=${this.onReadButtonTable}
-            ></refresh-button>
+            <div style="display:flex;gap:8px;align-items:center;">
+              ${firstPodMac
+                ? html`<sl-button
+                    size="small"
+                    variant="default"
+                    data-test-id="device-buttons-write-default"
+                    ?disabled=${!canSend}
+                    @click=${() => this.onWriteDefault(firstPodMac)}
+                  >Write Default</sl-button>`
+                : nothing}
+              <refresh-button
+                ?disabled=${!canSend}
+                .loading=${this.loading}
+                @refresh-requested=${this.onReadButtonTable}
+              ></refresh-button>
+            </div>
           </div>
           <p class="hint">Current button-to-action mapping per pod.</p>
         </div>
@@ -173,6 +186,10 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
     } finally {
       this.loading = false;
     }
+  }
+
+  private async onWriteDefault(podMac: string) {
+    await appActions.writeDefaultButtonMap(podMac);
   }
 
   private renderMapping(entry: any, index: number) {

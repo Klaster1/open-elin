@@ -134,13 +134,19 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
 
   static properties = {
     loading: { type: Boolean, attribute: false },
+    addPodOpen: { type: Boolean, attribute: false },
+    addPodMac: { type: String, attribute: false },
   };
 
   declare loading: boolean;
+  declare addPodOpen: boolean;
+  declare addPodMac: string;
 
   constructor() {
     super();
     this.loading = false;
+    this.addPodOpen = false;
+    this.addPodMac = "";
   }
 
   connectedCallback() {
@@ -158,12 +164,21 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
         <div class="card-head">
           <div class="card-head-row">
             <h2>Device list</h2>
-            <refresh-button
-              data-test-id="device-list-refresh"
-              ?disabled=${!canList}
-              .loading=${this.loading}
-              @refresh-requested=${this.onGetList}
-            ></refresh-button>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <sl-button
+                size="small"
+                variant="default"
+                data-test-id="device-list-add-pod"
+                ?disabled=${!canList}
+                @click=${this.onAddPodOpen}
+              >Add Pod</sl-button>
+              <refresh-button
+                data-test-id="device-list-refresh"
+                ?disabled=${!canList}
+                .loading=${this.loading}
+                @refresh-requested=${this.onGetList}
+              ></refresh-button>
+            </div>
           </div>
           <p class="hint">Scan the hub for linked devices.</p>
         </div>
@@ -186,6 +201,26 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
               </div>
             `}
       </div>
+      <sl-dialog
+        data-test-id="add-pod-dialog"
+        label="Add Pod"
+        ?open=${this.addPodOpen}
+        @sl-request-close=${this.onAddPodClose}
+      >
+        <sl-input
+          data-test-id="add-pod-mac-input"
+          label="Pod MAC address"
+          placeholder="D5:89:B2:13:FA:04"
+          .value=${this.addPodMac}
+          @sl-input=${this.onAddPodMacInput}
+        ></sl-input>
+        <sl-button
+          slot="footer"
+          variant="primary"
+          data-test-id="add-pod-confirm"
+          @click=${this.onAddPodConfirm}
+        >Add</sl-button>
+      </sl-dialog>
     `;
   }
 
@@ -197,6 +232,26 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
     } finally {
       this.loading = false;
     }
+  }
+
+  private onAddPodOpen() {
+    this.addPodMac = "";
+    this.addPodOpen = true;
+  }
+
+  private onAddPodClose() {
+    this.addPodOpen = false;
+  }
+
+  private onAddPodMacInput(e: Event) {
+    const input = e.target as HTMLElement & { value: string };
+    this.addPodMac = input.value;
+  }
+
+  private async onAddPodConfirm() {
+    const mac = this.addPodMac.trim();
+    this.addPodOpen = false;
+    await appActions.addDevice(mac);
   }
 
   private renderEntry(entry: {

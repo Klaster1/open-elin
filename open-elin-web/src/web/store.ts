@@ -304,6 +304,9 @@ export const appActions = {
   removeCogProfile,
   applyCogProfile,
   writeSetupRearCogs,
+  setBikenet,
+  addDevice,
+  writeDefaultButtonMap,
 };
 
 export function setActivePage(page: string) {
@@ -994,6 +997,60 @@ export async function readButtonTable() {
   } catch (err) {
     appendLog(
       "Read button table error",
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
+
+export async function setBikenet() {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) {
+    appendLog("Connect to a hub first.");
+    return;
+  }
+  appendLog("Set BikeNet...");
+  try {
+    const response = await deviceCommands.setBikeNet();
+    appendLog("Set BikeNet result", response ?? {});
+  } catch (err) {
+    appendLog("Set BikeNet error", err instanceof Error ? err.message : err);
+  }
+}
+
+export async function addDevice(podMac: string) {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) {
+    appendLog("Connect to a hub first.");
+    return;
+  }
+  appendLog("Add device...", podMac);
+  try {
+    const response = await deviceCommands.addDevice(podMac);
+    appendLog("Add device result", response ?? {});
+    if (response.status === "success") {
+      await getList();
+    }
+  } catch (err) {
+    appendLog("Add device error", err instanceof Error ? err.message : err);
+  }
+}
+
+export async function writeDefaultButtonMap(podMac: string) {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) {
+    appendLog("Connect to a hub first.");
+    return;
+  }
+  appendLog("Write default button map...", podMac);
+  try {
+    const response = await deviceCommands.writeDefaultButtonMap(podMac);
+    appendLog("Write default button map result", response ?? {});
+    if (response.status === "success") {
+      await readButtonTable();
+    }
+  } catch (err) {
+    appendLog(
+      "Write default button map error",
       err instanceof Error ? err.message : err,
     );
   }

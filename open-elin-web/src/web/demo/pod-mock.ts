@@ -168,10 +168,10 @@ const DEFAULT_RELEASE_DELAY_MS = 40;
 const TUNE_RELEASE_DELAY_MS = 800;
 
 const BUTTON_IDS: Record<PodButton, number> = {
-  A: 1,
-  B: 0,
-  C: 2,
-  D: 0x12,
+  A: 0,     // 0x00 — physical up / shift-up button
+  B: 0x06,  // 0x06 — physical B / shift-down button
+  C: 0x0C,  // 0x0C — C / tune button
+  D: 0x12,  // 0x12 — D / pair button
 };
 
 const ACTION_LABELS: Record<string, string> = {
