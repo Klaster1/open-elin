@@ -19,6 +19,10 @@ export class DeviceListPageModel {
     return this.page.locator('[data-test-id="device-list-row"]');
   }
 
+  emptyState(): Locator {
+    return this.page.getByTestId("device-list-empty");
+  }
+
   firstRow(): Locator {
     return this.rows().first();
   }

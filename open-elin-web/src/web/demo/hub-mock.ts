@@ -35,6 +35,7 @@ export class HubMock {
     const gear1Offset = this.state.get().rearCogs.approximate[0] ?? 0;
     this.updateState({
       current: { gear: 1, offset: gear1Offset },
+      buttonTable: [],
     });
     this.pairingWindow.set(true);
     this.pairingWindowTimer = setTimeout(() => {

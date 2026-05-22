@@ -95,6 +95,14 @@ export class DevicePageModel {
     return this.page.getByTestId("device-disconnect-button");
   }
 
+  hubResetButton(): Locator {
+    return this.page.getByTestId("hub-reset-button");
+  }
+
+  async resetHubViaMockGui() {
+    await this.hubResetButton().click();
+  }
+
   sidebarShiftUpButton(): Locator {
     return this.page.locator("pod-mock-gui").getByRole("button", {
       name: "Shift up",

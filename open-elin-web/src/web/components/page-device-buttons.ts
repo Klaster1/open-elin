@@ -155,6 +155,7 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
                   >Write Default</sl-button>`
                 : nothing}
               <refresh-button
+                data-test-id="device-buttons-refresh"
                 ?disabled=${!canSend}
                 .loading=${this.loading}
                 @refresh-requested=${this.onReadButtonTable}
@@ -164,13 +165,22 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
           <p class="hint">Current button-to-action mapping per pod.</p>
         </div>
         ${buttonTable?.length
-          ? html`<div class="mapping-list" role="list">
+          ? html`<div
+              class="mapping-list"
+              role="list"
+              data-test-id="device-buttons-list"
+            >
               ${buttonTable.map((entry: any, index: number) =>
                 this.renderMapping(entry, index),
               )}
             </div>`
           : html`
-              <div class="empty-state" role="status" aria-live="polite">
+              <div
+                class="empty-state"
+                role="status"
+                aria-live="polite"
+                data-test-id="device-buttons-empty"
+              >
                 No button table loaded yet.
               </div>
             `}
@@ -202,7 +212,7 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
       button2 && button2 !== "-" ? `${button1} + ${button2}` : button1;
 
     return html`
-      <div class="mapping-card" role="listitem">
+      <div class="mapping-card" role="listitem" data-test-id="device-buttons-mapping">
         <div class="mapping-head">
           <div>
             <div class="mapping-title">${fnLabel}</div>

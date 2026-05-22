@@ -781,7 +781,7 @@ function updateApproximateGears(
     return prior
       ? {
           ...gear,
-          offsetPrecise: prior.offsetPrecise,
+          offsetPrecise: null,
           current: prior.current,
           teeth: mergedTeeth,
         }
@@ -863,11 +863,10 @@ export async function getList() {
   appendLog("Get list...");
   try {
     const response = await deviceCommands.getList();
-    if (response.status === "success" && response.entries?.length) {
-      listEntries.set(response.entries);
-      response.entries.forEach((entry, index) =>
-        appendLog({ index, ...entry }),
-      );
+    if (response.status === "success") {
+      const entries = response.entries ?? [];
+      listEntries.set(entries);
+      entries.forEach((entry, index) => appendLog({ index, ...entry }));
     }
     appendLog("Get list result", response ?? {});
   } catch (err) {

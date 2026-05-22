@@ -67,6 +67,16 @@ export class CogsPageModel {
     return this.page.locator('[data-test-id="cogs-gear-card"]');
   }
 
+  gearCardByNumber(gearNumber: number): Locator {
+    return this.page.locator(
+      `[data-test-id="cogs-gear-card"][data-gear-number="${gearNumber}"]`,
+    );
+  }
+
+  gearOffsetByNumber(gearNumber: number): Locator {
+    return this.gearCardByNumber(gearNumber).getByTestId("cogs-gear-offset");
+  }
+
   currentGearCard(): Locator {
     return this.page.locator(
       '[data-test-id="cogs-gear-card"][data-current="true"]',
