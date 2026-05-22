@@ -26,9 +26,11 @@ test.describe("Hub reset in demo mode", () => {
     await expect(deviceList.rows()).toHaveCount(1);
     await expect(deviceList.firstRowMac()).toHaveText("D5:89:B2:13:FA:04");
 
-    // Buttons: default button table (7 entries) loaded
+    // Buttons: default button table loaded (3 wired + 4 orphan bindings)
     await device.goToButtonsTab();
-    await expect(buttons.mappingCards()).toHaveCount(7);
+    await expect(buttons.podGroups()).toHaveCount(1);
+    await expect(buttons.wiredBindings()).toHaveCount(3);
+    await expect(buttons.orphanBindings()).toHaveCount(4);
 
     // Cogs: 12 gear cards, gear 11 is current with precise offset 21.10
     await device.goToCogsTab();
@@ -122,7 +124,7 @@ test.describe("Hub reset in demo mode", () => {
     // Buttons: refresh -> empty (button table cleared on hub)
     await device.goToButtonsTab();
     await buttons.clickRefresh();
-    await expect(buttons.mappingCards()).toHaveCount(0);
+    await expect(buttons.podGroups()).toHaveCount(0);
     await expect(buttons.emptyState()).toBeVisible();
 
     // Hub name: only a fresh connection re-reads the device name from the

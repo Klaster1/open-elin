@@ -114,6 +114,16 @@ export class PodMock extends EventTarget {
     this.emitButtonUp("D");
   }
 
+  fireAction(button: PodButton, actionFlag: number) {
+    if (!this.state.get().online) return;
+    this.emitButtonAction(BUTTON_IDS[button], actionFlag);
+  }
+
+  doubleClickButton(button: PodButton) {
+    if (!this.state.get().online) return;
+    this.emitButtonAction(BUTTON_IDS[button], 2);
+  }
+
   private emitButtonSequence(button: PodButton) {
     const current = this.state.get();
     if (!current.online) return;
@@ -177,6 +187,7 @@ const BUTTON_IDS: Record<PodButton, number> = {
 const ACTION_LABELS: Record<string, string> = {
   "00": "Press",
   "01": "Release",
+  "02": "Double press",
 };
 
 const BUTTON_LABELS: Record<string, string> = {

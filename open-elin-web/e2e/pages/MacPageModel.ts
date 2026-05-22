@@ -32,6 +32,6 @@ export class MacPageModel {
   }
 
   podShiftUpButton(): Locator {
-    return this.page.getByTestId("pod-button-up");
+    return this.page.getByTestId("pod-button-group-A").getByTestId("pod-trigger-press");
   }
 }

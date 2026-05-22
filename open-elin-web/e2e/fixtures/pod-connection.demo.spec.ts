@@ -55,7 +55,7 @@ test.describe("Pod connection in demo mode", () => {
 
     // Wait for button map to load (entries should appear)
     await expect.poll(
-      async () => page.locator("[role='listitem']").count(),
+      async () => page.getByTestId("wired-binding").count(),
       { timeout: 5000 },
     ).toBeGreaterThan(0);
 

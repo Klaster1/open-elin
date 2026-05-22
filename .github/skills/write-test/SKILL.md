@@ -1,6 +1,6 @@
 ---
 name: write-test
-description: Writes and refactors deterministic Playwright e2e tests for this repo using strict comment structure, test-id selectors, branch-free flows, and seeded demo setup.
+description: Writes and refactors deterministic Playwright e2e tests for this repo using strict comment structure, test-id selectors, branch-free flows, and seeded demo setup. Also governs test code embedded in implementation plans.
 ---
 
 # Write Test
@@ -30,7 +30,7 @@ Creates and updates end-to-end tests for the web app with strict, repeatable pat
 - Prefer branch-free deterministic navigation/state setup.
 - Assert in specs, not page models.
 - Page models expose interactions/read helpers only.
-- Use `data-test-id` selectors as first choice.
+- Use `page.getByTestId()` (configured for `data-test-id` attribute) as first choice. Never use `page.locator('[data-test-id="..."]')` — always use `getByTestId()`.
 - If selector needs internals and there is no `data-test-id`, add `data-test-id` in UI first; avoid brittle structure/style selectors.
 - Keep scope tight to the requested behavior; no unrelated assertions.
 - After editing tests or tested behavior, run full e2e suite with `npm run test:e2e` from `demo-node` and report results.

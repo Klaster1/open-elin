@@ -1,9 +1,59 @@
-import { LitElement, css, html, nothing } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
+import { LitElement, css, html, nothing } from "lit";
 
+import {
+    ACTION_LABELS,
+    BUTTON_LABELS,
+    FUNCTION_LABELS
+} from "open-elin-lib/commands";
+import type { PodModel } from "open-elin-lib/pod-models";
+import {
+    getPodModel,
+    isButtonWired,
+} from "open-elin-lib/pod-models";
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
+import "./pod-diagram.ts";
 import "./refresh-button.ts";
+
+interface ButtonGroup {
+  buttonCode: string;
+  buttonLabel: string;
+  entries: any[];
+}
+
+function groupByButton(entries: any[]): ButtonGroup[] {
+  const map = new Map<string, ButtonGroup>();
+  for (const entry of entries) {
+    const code = entry.button1?.code ?? "";
+    if (!map.has(code)) {
+      map.set(code, {
+        buttonCode: code,
+        buttonLabel: entry.button1?.label || code,
+        entries: [],
+      });
+    }
+    map.get(code)!.entries.push(entry);
+  }
+  return [...map.values()];
+}
+
+const ACTION_OPTIONS = [
+  { code: "00", label: "Press" },
+  { code: "01", label: "Release" },
+  { code: "02", label: "Double press" },
+];
+
+const FUNCTION_OPTIONS = [
+  { code: "0A", label: "Shift Up" },
+  { code: "0B", label: "Shift Down" },
+  { code: "0C", label: "Toggle" },
+  { code: "0D", label: "Seatpost Lock" },
+  { code: "0E", label: "Seatpost Unlock" },
+  { code: "0F", label: "Auto Up" },
+  { code: "10", label: "Auto Down" },
+  { code: "11", label: "Tune Mode" },
+];
 
 export class PageDeviceButtons extends SignalWatcher(LitElement) {
   static styles = [
@@ -35,6 +85,122 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
         color: var(--muted, #98a6b5);
         font-size: 13px;
         margin: 0;
+      }
+
+      .pod-group {
+        margin-bottom: 16px;
+      }
+
+      .pod-group-header {
+        font-size: 13px;
+        color: var(--muted, #98a6b5);
+        margin-bottom: 12px;
+        border-bottom: 1px solid #233143;
+        padding-bottom: 6px;
+      }
+
+      .button-groups {
+        display: grid;
+        gap: 10px;
+      }
+
+      .button-group {
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: #101822;
+        border: 1px solid #233143;
+      }
+
+      .button-group-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .button-group-label {
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .binding-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+      }
+
+      .binding-row select {
+        background: #0c1018;
+        color: #c0cad6;
+        border: 1px solid #2a3a4e;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 13px;
+        min-width: 100px;
+      }
+
+      .binding-arrow {
+        color: var(--muted, #98a6b5);
+        font-size: 14px;
+      }
+
+      .icon-btn {
+        background: none;
+        border: 1px solid #2a3a4e;
+        border-radius: 6px;
+        color: #c0cad6;
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 1;
+        padding: 2px 7px;
+      }
+
+      .icon-btn:hover {
+        background: rgba(88, 110, 134, 0.25);
+        border-color: #4a6a8e;
+      }
+
+      .pod-indicator {
+        max-width: 280px;
+        margin-bottom: 12px;
+        overflow: hidden;
+        border-radius: 18px;
+      }
+
+      .pod-indicator-label {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(140, 255, 200, 0.4);
+        background: rgba(8, 14, 22, 0.9);
+        color: rgba(170, 255, 220, 0.95);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+      }
+
+      .orphan-section {
+        margin-top: 16px;
+      }
+
+      .orphan-section-header {
+        font-size: 13px;
+        color: var(--muted, #98a6b5);
+        margin-bottom: 8px;
+      }
+
+      .empty-state {
+        margin-top: 16px;
+        padding: 18px;
+        border-radius: 12px;
+        border: 1px dashed #3a4a5c;
+        background: rgba(20, 30, 40, 0.6);
+        min-height: 140px;
+        display: flex;
+        align-items: center;
+        color: var(--muted, #98a6b5);
       }
 
       .mapping-list {
@@ -101,18 +267,6 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
         margin: 0;
         font-size: 14px;
       }
-
-      .empty-state {
-        margin-top: 16px;
-        padding: 18px;
-        border-radius: 12px;
-        border: 1px dashed #3a4a5c;
-        background: rgba(20, 30, 40, 0.6);
-        min-height: 140px;
-        display: flex;
-        align-items: center;
-        color: var(--muted, #98a6b5);
-      }
     `,
   ];
 
@@ -139,6 +293,15 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
     const buttonTable = appState.buttonTable.get();
     const firstEntry = appState.listEntries.get()?.[0];
     const firstPodMac: string | undefined = firstEntry?.mac;
+
+    // Group entries by pod MAC
+    const podGroups = new Map<string, any[]>();
+    for (const entry of buttonTable ?? []) {
+      const mac = entry.podAddressHex ?? "";
+      if (!podGroups.has(mac)) podGroups.set(mac, []);
+      podGroups.get(mac)!.push(entry);
+    }
+
     return html`
       <div class="card">
         <div class="card-head">
@@ -162,16 +325,12 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
               ></refresh-button>
             </div>
           </div>
-          <p class="hint">Current button-to-action mapping per pod.</p>
+          <p class="hint">Configure button-to-action mapping per pod.</p>
         </div>
-        ${buttonTable?.length
-          ? html`<div
-              class="mapping-list"
-              role="list"
-              data-test-id="device-buttons-list"
-            >
-              ${buttonTable.map((entry: any, index: number) =>
-                this.renderMapping(entry, index),
+        ${podGroups.size > 0
+          ? html`<div data-test-id="device-buttons-list">
+              ${[...podGroups.entries()].map(([mac, entries]) =>
+                this.renderPodGroup(mac, entries),
               )}
             </div>`
           : html`
@@ -188,11 +347,260 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
     `;
   }
 
+  private renderPodGroup(podMacHex: string, entries: any[]) {
+    const podName =
+      appState.listEntries.get()?.find((e: any) => {
+        const mac = e.mac
+          ?.split(":")
+          .reverse()
+          .join("")
+          .toUpperCase();
+        return mac === podMacHex.toUpperCase();
+      })?.name ?? "";
+    const model = getPodModel(podName);
+    const formattedMac = this.formatMac(podMacHex);
+
+    const wiredEntries = entries.filter((e) =>
+      isButtonWired(model, e.button1?.code ?? ""),
+    );
+    const orphanEntries = entries.filter(
+      (e) => !isButtonWired(model, e.button1?.code ?? ""),
+    );
+
+    const wiredGroups = groupByButton(wiredEntries);
+    const orphanGroups = groupByButton(orphanEntries);
+
+    return html`
+      <div class="pod-group" data-test-id="pod-group">
+        <div class="pod-group-header">
+          Pod: ${formattedMac}${model ? ` (${model.displayName})` : ""}
+        </div>
+        <div class="pod-indicator" data-test-id="pod-indicator">
+          <pod-diagram .positions=${this.getWiredPositions(model)}>
+            ${this.renderDiagramLabels(model)}
+          </pod-diagram>
+        </div>
+        ${wiredGroups.length > 0
+          ? html`<div class="button-groups">
+              ${wiredGroups.map((g) => this.renderButtonGroup(g, "wired", podMacHex))}
+            </div>`
+          : nothing}
+        ${orphanGroups.length > 0
+          ? html`<div class="orphan-section">
+              <div class="orphan-section-header">Orphan Bindings</div>
+              <div class="button-groups">
+                ${orphanGroups.map((g) => this.renderButtonGroup(g, "orphan", podMacHex))}
+              </div>
+            </div>`
+          : nothing}
+      </div>
+    `;
+  }
+
+  private renderButtonGroup(
+    group: ButtonGroup,
+    kind: "wired" | "orphan",
+    podMacHex: string,
+  ) {
+    const testIdGroup =
+      kind === "wired" ? "wired-button-group" : "orphan-button-group";
+    const testIdBinding =
+      kind === "wired" ? "wired-binding" : "orphan-binding";
+
+    const usedTriggers = group.entries.map(
+      (e: any) => e.action?.code ?? "",
+    );
+    const canAddTrigger = usedTriggers.length < 3;
+
+    return html`
+      <div class="button-group" data-test-id=${testIdGroup}>
+        <div class="button-group-header">
+          <span class="button-group-label">${group.buttonLabel}</span>
+          ${canAddTrigger
+            ? html`<button
+                class="icon-btn"
+                type="button"
+                title="Add trigger"
+                aria-label="Add trigger"
+                data-test-id="add-trigger"
+                @click=${() =>
+                  this.onAddTrigger(group.buttonCode, podMacHex)}
+              >+</button>`
+            : nothing}
+        </div>
+        ${group.entries.map(
+          (entry: any) => html`
+            <div class="binding-row" data-test-id=${testIdBinding}>
+              <select
+                data-test-id="trigger-select"
+                .value=${entry.action?.code ?? "00"}
+                @change=${(e: Event) =>
+                  this.onTriggerChange(e, entry, podMacHex)}
+              >
+                ${ACTION_OPTIONS.map(
+                  (opt) => html`
+                    <option
+                      value=${opt.code}
+                      ?selected=${opt.code === (entry.action?.code ?? "")}
+                    >
+                      ${opt.label}
+                    </option>
+                  `,
+                )}
+              </select>
+              <span class="binding-arrow">→</span>
+              <select
+                data-test-id="function-select"
+                .value=${entry.function?.code ?? "0A"}
+                @change=${(e: Event) =>
+                  this.onFunctionChange(e, entry, podMacHex)}
+              >
+                ${FUNCTION_OPTIONS.map(
+                  (opt) => html`
+                    <option
+                      value=${opt.code}
+                      ?selected=${opt.code ===
+                      (entry.function?.code ?? "")}
+                    >
+                      ${opt.label}
+                    </option>
+                  `,
+                )}
+              </select>
+              <button
+                class="icon-btn"
+                type="button"
+                title="Remove binding"
+                aria-label="Remove binding"
+                data-test-id="remove-binding"
+                @click=${() =>
+                  this.onRemoveBinding(entry, podMacHex)}
+              >×</button>
+            </div>
+          `,
+        )}
+      </div>
+    `;
+  }
+
+  // Wired buttons map 1:1 by index to physical positions (tune, up, down, …)
+  private getWiredPositions(model: PodModel | undefined) {
+    if (!model) return [];
+    const count = model.wiredButtons.length;
+    return (model.buttonPositions ?? []).slice(0, count);
+  }
+
+  private renderDiagramLabels(model: PodModel | undefined) {
+    if (!model) return nothing;
+    const positions = model.buttonPositions ?? [];
+    return model.wiredButtons.map((code, i) => {
+      if (i >= positions.length) return nothing;
+      const label = BUTTON_LABELS[code.toUpperCase()] ?? code;
+      return html`<span slot=${positions[i].name} class="pod-indicator-label">${label}</span>`;
+    });
+  }
+
+  private async onFunctionChange(event: Event, entry: any, podMacHex: string) {
+    const select = event.target as HTMLSelectElement;
+    await this.rebuildAndWrite(podMacHex, (entries) =>
+      entries.map((e) =>
+        e === entry
+          ? {
+              ...e,
+              function: {
+                code: select.value,
+                label: FUNCTION_LABELS[select.value] ?? select.value,
+              },
+            }
+          : e,
+      ),
+    );
+  }
+
+  private async onTriggerChange(event: Event, entry: any, podMacHex: string) {
+    const select = event.target as HTMLSelectElement;
+    await this.rebuildAndWrite(podMacHex, (entries) =>
+      entries.map((e) =>
+        e === entry
+          ? {
+              ...e,
+              action: {
+                code: select.value,
+                label: ACTION_LABELS[select.value] ?? select.value,
+              },
+            }
+          : e,
+      ),
+    );
+  }
+
+  private async onAddTrigger(buttonCode: string, podMacHex: string) {
+    await this.rebuildAndWrite(podMacHex, (entries) => {
+      const usedTriggers = entries
+        .filter((e: any) => e.button1?.code === buttonCode)
+        .map((e: any) => e.action?.code);
+      const nextTrigger = ["00", "01", "02"].find(
+        (t) => !usedTriggers.includes(t),
+      );
+      if (!nextTrigger) return entries;
+      const newEntry = {
+        podAddressHex: podMacHex,
+        elinkAddressHex: entries[0]?.elinkAddressHex ?? "",
+        button1: {
+          code: buttonCode,
+          label: BUTTON_LABELS[buttonCode] ?? buttonCode,
+        },
+        button2: { code: "00", label: "-" },
+        action: {
+          code: nextTrigger,
+          label: ACTION_LABELS[nextTrigger] ?? nextTrigger,
+        },
+        function: { code: "0A", label: "Shift Up" },
+      };
+      return [...entries, newEntry];
+    });
+  }
+
+  private async onRemoveBinding(entry: any, podMacHex: string) {
+    await this.rebuildAndWrite(podMacHex, (entries) =>
+      entries.filter((e) => e !== entry),
+    );
+  }
+
+  private async rebuildAndWrite(
+    podMacHex: string,
+    transform: (entries: any[]) => any[],
+  ) {
+    if (this.loading) return;
+    this.loading = true;
+    try {
+      const currentTable = appState.buttonTable.get() ?? [];
+      const podEntries = currentTable.filter(
+        (e: any) => (e.podAddressHex ?? "") === podMacHex,
+      );
+      const otherEntries = currentTable.filter(
+        (e: any) => (e.podAddressHex ?? "") !== podMacHex,
+      );
+      const updated = transform(podEntries);
+      const merged = [...otherEntries, ...updated].map((e: any, i: number) => ({
+        ...e,
+        index: i,
+      }));
+      await appActions.writeButtonMap(merged);
+    } finally {
+      this.loading = false;
+    }
+  }
+
   private async onReadButtonTable() {
     if (this.loading) return;
     this.loading = true;
     try {
-      await appActions.readButtonTable();
+      const needsList = !(appState.listEntries.get()?.length > 0);
+      await Promise.all([
+        appActions.readButtonTable(),
+        ...(needsList ? [appActions.getList()] : []),
+      ]);
     } finally {
       this.loading = false;
     }
@@ -200,38 +608,6 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
 
   private async onWriteDefault(podMac: string) {
     await appActions.writeDefaultButtonMap(podMac);
-  }
-
-  private renderMapping(entry: any, index: number) {
-    const pod = this.formatMac(entry?.podAddressHex);
-    const button1 = entry?.button1?.label || "-";
-    const button2 = entry?.button2?.label || "-";
-    const action = entry?.action?.label || "-";
-    const fnLabel = entry?.function?.label || "-";
-    const buttons =
-      button2 && button2 !== "-" ? `${button1} + ${button2}` : button1;
-
-    return html`
-      <div class="mapping-card" role="listitem" data-test-id="device-buttons-mapping">
-        <div class="mapping-head">
-          <div>
-            <div class="mapping-title">${fnLabel}</div>
-            <div class="mapping-subtitle">Pod ${pod || "--"}</div>
-          </div>
-          <div class="mapping-badge">#${index + 1}</div>
-        </div>
-        <dl class="mapping-grid">
-          <div>
-            <dt>Buttons</dt>
-            <dd>${buttons}</dd>
-          </div>
-          <div>
-            <dt>Action</dt>
-            <dd>${action}</dd>
-          </div>
-        </dl>
-      </div>
-    `;
   }
 
   private formatMac(hex?: string) {
@@ -248,4 +624,4 @@ if (!customElements.get("page-device-buttons")) {
   customElements.define("page-device-buttons", PageDeviceButtons);
 }
 
-export {};
+export { };

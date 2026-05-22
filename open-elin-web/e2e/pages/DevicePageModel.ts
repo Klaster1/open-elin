@@ -104,16 +104,17 @@ export class DevicePageModel {
   }
 
   sidebarShiftUpButton(): Locator {
-    return this.page.locator("pod-mock-gui").getByRole("button", {
-      name: "Shift up",
-    });
+    return this.page
+      .locator("pod-mock-gui")
+      .getByTestId("pod-button-group-A")
+      .getByTestId("pod-trigger-press");
   }
 
   sidebarShiftDownButton(): Locator {
-    return this.page.locator("pod-mock-gui").getByRole("button", {
-      name: "Shift down",
-      exact: true,
-    });
+    return this.page
+      .locator("pod-mock-gui")
+      .getByTestId("pod-button-group-B")
+      .getByTestId("pod-trigger-press");
   }
 
   async goToCogsTab() {

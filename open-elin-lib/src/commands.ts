@@ -1,3 +1,4 @@
+import { buildDefaultButtonMap } from "./default-button-map.ts";
 import type { TransportDevice } from "./protocol.ts";
 import {
     Protocol,
@@ -5,7 +6,6 @@ import {
     reverseCommand,
     reverseMacAddress,
 } from "./protocol.ts";
-import { buildDefaultButtonMap } from "./default-button-map.ts";
 
 export interface GetListEntry {
   mac: string;
@@ -898,13 +898,13 @@ function parseButtonMapEntries(buf: Uint8Array): ButtonMapEntry[] {
   return entries;
 }
 
-const ACTION_LABELS: Record<string, string> = {
+export const ACTION_LABELS: Record<string, string> = {
   "00": "Press",
   "01": "Release",
   "02": "Double press",
 };
 
-const FUNCTION_LABELS: Record<string, string> = {
+export const FUNCTION_LABELS: Record<string, string> = {
   "0A": "Shift Up",
   "0B": "Shift Down",
   "0C": "Toggle",
@@ -915,7 +915,7 @@ const FUNCTION_LABELS: Record<string, string> = {
   "11": "Tune Mode",
 };
 
-const BUTTON_LABELS: Record<string, string> = {
+export const BUTTON_LABELS: Record<string, string> = {
   "00": "A",
   "01": "A-1",
   "02": "A-2",

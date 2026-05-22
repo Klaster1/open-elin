@@ -145,11 +145,107 @@ Pod `04FA13B289D5` ↔ hub `E5A052ABBAD7`. 7 entries, all action=Press:
 | 5 | `0x12` | D | `0x0B` | Shift Down |
 | 6 | `0x02` | A-2 | `0x11` | Tune Mode |
 
-Button codes the pod emits: `0x00`, `0x01`, `0x02`, `0x06`, `0x0C`, `0x0D`, `0x12`.
+Button codes appearing **in the default map**: `0x00`, `0x01`, `0x02`, `0x06`, `0x0C`, `0x0D`, `0x12`.
+
+Button codes **actually emitted by this pod** (verified 2026-05-22 — see next section): only `0x00`, `0x01`, `0x02`. The other four (`0x06 B`, `0x0C C`, `0x0D C-1`, `0x12 D`) are inert — the default map ships them to cover multi-switch pod variants that don't exist on our hardware.
 
 Labels (A-1, A-2, B, C, C-1, D) correspond to PORT_A/B/C/D wiring. Two codes per port (e.g. A-1=`0x01`, A-2=`0x02`) = two buttons per port connector.
 
+### Button code → port address space `[inferred from BUTTON_LABELS in decompiled app]`
+
+Each port gets a block of 6 codes: one base code plus sub-buttons `-1` through `-5`. The `-` label (`0x00`) sits before the first port range.
+
+| Range         | Codes           | Port | Labels                              | This pod? |
+|---------------|-----------------|------|-------------------------------------|-----------|
+| `0x00`        | `0x00`          | —    | `-` (base / direction button)       | **yes** — emits on physical press |
+| `0x01–0x05`   | `0x01`–`0x05`   | A    | A-1, A-2, A-3, A-4, A-5            | **yes** — A-1 (direction), A-2 (mode toggle) confirmed; A-3 through A-5 never observed |
+| `0x06–0x0B`   | `0x06`–`0x0B`   | B    | B, B-1, B-2, B-3, B-4, B-5         | no — no switches on port B |
+| `0x0C–0x11`   | `0x0C`–`0x11`   | C    | C, C-1, C-2, C-3, C-4, C-5         | no — no switches on port C |
+| `0x12–0x17`   | `0x12`–`0x17`   | D    | D, D-1, D-2, D-3, D-4, D-5         | no — no switches on port D |
+
+Total address space: 24 codes (`0x00`–`0x17`). The hub's default map only populates 7 of these (one per port base + one or two sub-buttons), but a custom map could assign any code in this range.
+
+The pod PCB has connector pads for ports A–D but only port A has switches soldered on our `NXS MTB Pod`. A multi-button pod (road, gravel) would populate additional ports and emit codes from their ranges.
+
 **Without a button map written to the hub, button presses are silently ignored.** Confirmed: before app pairing, `entryCount:0` → no response to button presses.
+
+---
+
+## Button Behavior — physical buttons, modes, and effects (verified 2026-05-22)
+
+Captured by subscribing to `Button action` + `Shift complete` + `Position` notifications and pressing each physical button on the real pod in a known sequence (shift down/up, toggle tune, nudge ±, toggle back).
+
+**Codes emitted by this pod (only these three):**
+
+| Byte | Label | Physical role             | Action notifications |
+|------|-------|---------------------------|----------------------|
+| `0x00` | `-`   | direction button (paired with `0x01`) | press + release |
+| `0x01` | `A-1` | direction button (paired with `0x00`) | press + release |
+| `0x02` | `A-2` | mode toggle (shift ↔ tune)            | press + release |
+
+**Hub-side interpretation depends on mode:**
+
+| Mode  | `A-1` (`0x01`) | `-` (`0x00`) | `A-2` (`0x02`) |
+|-------|---------------|--------------|----------------|
+| shift | shift one gear, `gearPosition` changes by 1 | shift one gear, opposite direction | toggle to tune mode, **no** `Shift complete` emitted |
+| tune  | nudge motor offset by small amount; `gearPosition` unchanged | nudge opposite direction; `gearPosition` unchanged | toggle back to shift mode, no `Shift complete` |
+
+**Mode is hub-side state.** The pod sends the same byte regardless of mode. `A-2` press only flips the hub's internal `tune-mode` flag; it never triggers a `Shift complete`. (`Shift complete` is emitted on every shift-mode direction press and every tune-mode nudge press, but never on a mode toggle.)
+
+**Action byte:** the low byte of `rawHex` is `00` for press and `01` for release. Both are transmitted on every physical press; the hub acts on the press. Example: `rawHex: "0100"` = A-1 press, `"0101"` = A-1 release.
+
+**Tune-mode step size:** in one capture, `A-1` (held 124 ms) moved the raw `Shift complete` payload by +1 unit, while `-` (held 248 ms) moved it by −4 units. This suggests hold-to-repeat semantics in tune mode rather than a fixed step per tap, but the per-press step has not been isolated yet — one more capture with brief taps would confirm.
+
+**Implication for the default map:** of the 7 default-map rows, only 3 are exercised by this pod (the rows for `0x00 → Shift Up`, `0x01 → Shift Down`, `0x02 → Tune Mode`). The remaining 4 rows (`0x06 B → Shift Down`, `0x0C C → Tune Mode`, `0x0D C-1 → Shift Up`, `0x12 D → Shift Down`) are inert — the hub maps them dutifully but the pod never sends those codes. This is why the "Buttons" screen appears to list the same action twice: each duplicate row is a fallback for a button this pod doesn't have.
+
+**Direction labelling:** the hub function names ("Shift Up" / "Shift Down") don't necessarily line up with bike-convention "harder/easier gear" or with the displayed `gearPosition` direction — observed `A-1` (`0x01 → Shift Down` per map) caused `gearPosition` 7 → 8, while `-` (`0x00 → Shift Up`) caused 8 → 7. So "Shift Down" function = `gearPosition += 1`, "Shift Up" function = `gearPosition -= 1` for this hub/cog combination. Whether that corresponds to upshift or downshift mechanically depends on the rear cog ordering and is not encoded in the protocol — it's just a convention.
+
+### Raw trace (2026-05-22T09:23–09:24 local)
+
+Performed sequence: (1) shift up/down in shift mode, (2) press `A-2` to toggle into tune mode, (3) tweak with `A-1` and `-`, (4) press `A-2` to toggle back.
+
+```
+[09:23:53.864] Button action { buttonLabel: "A-1", actionLabel: "Press",   rawHex: "0100" }
+[09:23:53.983] Button action { buttonLabel: "A-1", actionLabel: "Release", rawHex: "0101" }
+[09:23:55.062] Shift complete { payloadValue: 458903, rawHex: "970007" }
+[09:23:55.782] Position      { absolutePosition: 15,   gearPosition: 8 }
+
+[09:23:55.784] Button action { buttonLabel: "-",   actionLabel: "Press",   rawHex: "0000" }
+[09:23:55.785] Button action { buttonLabel: "-",   actionLabel: "Release", rawHex: "0001" }
+[09:23:56.322] Shift complete { payloadValue: 393347, rawHex: "830006" }
+[09:23:56.682] Position      { absolutePosition: 13.2, gearPosition: 7 }
+
+# --- A-2 press: silent toggle into tune mode (no Shift complete) ---
+[09:24:04.064] Button action { buttonLabel: "A-2", actionLabel: "Press",   rawHex: "0200" }
+[09:24:04.122] Button action { buttonLabel: "A-2", actionLabel: "Release", rawHex: "0201" }
+
+# --- A-1 in tune mode: nudge, gearPosition unchanged ---
+[09:24:06.524] Button action { buttonLabel: "A-1", actionLabel: "Press",   rawHex: "0100" }
+[09:24:06.642] Shift complete { payloadValue: 393348, rawHex: "840006" }
+[09:24:06.648] Button action { buttonLabel: "A-1", actionLabel: "Release", rawHex: "0101" }
+[09:24:06.763] Position      { absolutePosition: 13.2, gearPosition: 7 }
+
+# --- "-" in tune mode: nudge opposite direction, gearPosition unchanged ---
+[09:24:07.902] Button action { buttonLabel: "-",   actionLabel: "Press",   rawHex: "0000" }
+[09:24:08.142] Shift complete { payloadValue: 393344, rawHex: "800006" }
+[09:24:08.150] Button action { buttonLabel: "-",   actionLabel: "Release", rawHex: "0001" }
+[09:24:08.383] Position      { absolutePosition: 12.8, gearPosition: 7 }
+
+# --- A-2 press: silent toggle back to shift mode ---
+[09:24:11.505] Button action { buttonLabel: "A-2", actionLabel: "Press",   rawHex: "0200" }
+[09:24:11.516] Button action { buttonLabel: "A-2", actionLabel: "Release", rawHex: "0201" }
+```
+
+`payloadValue` of `Shift complete` is the same 3 bytes as the position `rawHex`, parsed LE — i.e. it's the absolute motor position, not a per-shift delta:
+
+| Event                | `rawHex`   | payload (LE u24) | hex     | abs  | gear |
+|----------------------|------------|------------------|---------|------|------|
+| A-1 in shift         | `970007`   | 458903           | 0x070097 | 15.0 | 8    |
+| `-` in shift         | `830006`   | 393347           | 0x060083 | 13.2 | 7    |
+| A-1 in tune  (+1)    | `840006`   | 393348           | 0x060084 | 13.2 | 7    |
+| `-` in tune  (−4)    | `800006`   | 393344           | 0x060080 | 12.8 | 7    |
+
+So one shift-mode press = ±1 in the high byte (gear index) + larger reset of the low bytes; one tune-mode press = small change in the low bytes only. Same byte code (`0x00` / `0x01`) from the pod, completely different motor behavior based on the hub-side tune flag.
 
 ---
 

@@ -466,26 +466,20 @@ export class DemoTransport implements ProtocolTransport {
     const podMac = this.getPodMac();
     if (!podMac) return;
     const buttonHex = buttonId.toString(16).padStart(2, "0").toUpperCase();
+    const actionHex = actionFlag.toString(16).padStart(2, "0").toUpperCase();
     const buttonTable = this.hub.getButtonTable();
     const entry = buttonTable.find(
       (e) =>
         e.button1.code.toUpperCase() === buttonHex &&
-        e.action.code.toUpperCase() === "00" &&
-        e.podAddressHex.toUpperCase() === podMac.split(":").reverse().join("").toUpperCase(),
+        e.action.code.toUpperCase() === actionHex &&
+        e.podAddressHex.toUpperCase() ===
+          podMac.split(":").reverse().join("").toUpperCase(),
     );
     if (!entry) return;
     const fnCode = entry.function.code.toUpperCase();
-    const mode = this.pod.state.get().mode;
-    // 0x0A = Shift Up, 0x0B = Shift Down (trigger on Release in shift mode, on Press in tune mode)
     if (fnCode === "0A" || fnCode === "0B") {
       const direction = fnCode === "0A" ? "up" : "down";
-      if (mode === "tune" && actionFlag === 0) {
-        this.handleShift(this.getHubMac(), direction);
-        return;
-      }
-      if (mode === "shift" && actionFlag === 1) {
-        this.handleShift(this.getHubMac(), direction);
-      }
+      this.handleShift(this.getHubMac(), direction);
     }
   }
 

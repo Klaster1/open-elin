@@ -16,7 +16,7 @@ export const POD_MODELS: Record<string, PodModel> = {
   "NXS MTB Pod": {
     name: "NXS MTB Pod",
     displayName: "MTB Pod",
-    wiredButtons: ["00", "01", "02"],
+    wiredButtons: ["02", "00", "01"],
     buttonPositions: [
       { name: "tune", anchorPct: { x: 52, y: 37 }, cssClass: "pod-button-tune" },
       { name: "up",   anchorPct: { x: 76, y: 37 }, cssClass: "pod-button-up" },
