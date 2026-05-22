@@ -7,7 +7,7 @@ import { sharedStyles } from "../styles.ts";
 const hubImageUrl = new URL("../images/hub.png", import.meta.url).href;
 
 // Photo-space target for the reset leader line (% of image-wrap).
-const RESET_TARGET = { x: 70, y: 18 } as const;
+const RESET_TARGET = { x: 76.5, y: 17 } as const;
 
 export class HubMockGui extends SignalWatcher(LitElement) {
   static styles = [
