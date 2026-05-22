@@ -14,6 +14,7 @@ type MessageHandler = (data: Uint8Array) => void;
 type DemoShiftComplete = { rawHex: string };
 
 const DEMO_RESPONSE_CODE = 0x8000;
+const DEMO_STATUS_INVALID_STATE = 0x8003;
 const DEMO_STATUS_INVALID_PARAM = 0x8002;
 const DEMO_BATTERY_CODE = 0x4000;
 const DEMO_BUTTON_ACTION_CODE = 0x4001;
@@ -21,11 +22,6 @@ const DEMO_BUTTON_TABLE_CODE = 0x4002;
 const DEMO_SHIFT_COMPLETE_CODE = 0x4003;
 
 const TUNE_STEP = 0.2;
-
-const BUTTON_SHIFT_MAP: Record<number, "up" | "down"> = {
-  1: "up",
-  0: "down",
-};
 
 export class DemoTransport implements ProtocolTransport {
   private msgHandler: MessageHandler | null = null;
@@ -102,6 +98,15 @@ export class DemoTransport implements ProtocolTransport {
     switch (opcode) {
       case 0x0000:
         this.queueResponse(device.address, this.buildListPayload());
+        return;
+      case 0x0001:
+        this.handleAddDevice(payload, device.address);
+        return;
+      case 0x0002:
+        this.handleRemoveDevice(payload, device.address);
+        return;
+      case 0x0005:
+        this.queueResponse(device.address);
         return;
       case 0x0015:
         this.queueResponse(
@@ -180,6 +185,9 @@ export class DemoTransport implements ProtocolTransport {
           );
         }
         return;
+      case 0x0014:
+        this.handleWriteButtonMap(payload, device.address);
+        return;
       case 0x0004:
       default:
         this.queueResponse(device.address);
@@ -197,6 +205,68 @@ export class DemoTransport implements ProtocolTransport {
     setTimeout(() => {
       this.emitFrame(responseCode, targetMac, payload);
     }, delayMs);
+  }
+
+  private handleAddDevice(payload: Uint8Array, targetMac: string) {
+    // payload: [opcode 2B][hub-mac 6B LE][pod-mac 6B LE]
+    if (payload.length < 14) {
+      this.queueResponse(targetMac, undefined, undefined, DEMO_STATUS_INVALID_PARAM);
+      return;
+    }
+    const podMacLE = this.bytesToHex(payload.slice(8, 14));
+    const podMac = podMacLE.match(/.{2}/g)!.reverse().join(":").toUpperCase();
+    const existing = demoState.state.get().list.entries;
+    if (existing.some((e) => e.mac.toUpperCase() === podMac.toUpperCase())) {
+      this.queueResponse(targetMac, undefined, undefined, DEMO_STATUS_INVALID_STATE);
+      return;
+    }
+    demoState.addDeviceEntry({ mac: podMac, name: "NXS MTB Pod", deviceId: 10, isConnected: true, batteryVoltage: 3000, rssi: 178 });
+    this.queueResponse(targetMac);
+  }
+
+  private handleRemoveDevice(payload: Uint8Array, targetMac: string) {
+    // payload: [opcode 2B][hub-mac 6B LE][pod-mac 6B LE]
+    if (payload.length < 14) {
+      this.queueResponse(targetMac, undefined, undefined, DEMO_STATUS_INVALID_PARAM);
+      return;
+    }
+    const podMacLE = this.bytesToHex(payload.slice(8, 14));
+    const podMac = podMacLE.match(/.{2}/g)!.reverse().join(":").toUpperCase();
+    demoState.removeDeviceEntry(podMac);
+    this.queueResponse(targetMac);
+  }
+
+  private handleWriteButtonMap(payload: Uint8Array, targetMac: string) {
+    // Two sub-command types: sub-opcode 0x00 = size header, 0x01 = entry
+    // payload: [opcode 2B][hub-mac 6B LE][sub-opcode 1B][data...]
+    if (payload.length < 9) {
+      this.queueResponse(targetMac, undefined, undefined, DEMO_STATUS_INVALID_PARAM);
+      return;
+    }
+    const subOpcode = payload[8];
+    if (subOpcode === 0x00) {
+      // size header — just ACK
+      this.hub.clearButtonTable();
+      this.queueResponse(targetMac);
+      return;
+    }
+    if (subOpcode === 0x01) {
+      // entry: [pod-mac 6B LE][hub-mac 6B LE][btn1 1B][btn2 1B][action 1B][fn 1B]
+      if (payload.length < 25) {
+        this.queueResponse(targetMac, undefined, undefined, DEMO_STATUS_INVALID_PARAM);
+        return;
+      }
+      const podHex = this.bytesToHex(payload.slice(9, 15));
+      const hubHex = this.bytesToHex(payload.slice(15, 21));
+      const btn1 = payload[21].toString(16).padStart(2, "0").toUpperCase();
+      const btn2 = payload[22].toString(16).padStart(2, "0").toUpperCase();
+      const action = payload[23].toString(16).padStart(2, "0").toUpperCase();
+      const fn = payload[24].toString(16).padStart(2, "0").toUpperCase();
+      this.hub.appendButtonTableEntry({ podAddressHex: podHex, elinkAddressHex: hubHex, button1: { code: btn1, label: "" }, button2: { code: btn2, label: "" }, action: { code: action, label: "" }, function: { code: fn, label: "" } });
+      this.queueResponse(targetMac);
+      return;
+    }
+    this.queueResponse(targetMac, undefined, undefined, DEMO_STATUS_INVALID_PARAM);
   }
 
   private applyRename(payload: Uint8Array) {
@@ -393,15 +463,29 @@ export class DemoTransport implements ProtocolTransport {
   }
 
   private handlePodButtonAction(buttonId: number, actionFlag: number) {
-    const direction = BUTTON_SHIFT_MAP[buttonId];
-    if (!direction) return;
+    const podMac = this.getPodMac();
+    if (!podMac) return;
+    const buttonHex = buttonId.toString(16).padStart(2, "0").toUpperCase();
+    const buttonTable = this.hub.getButtonTable();
+    const entry = buttonTable.find(
+      (e) =>
+        e.button1.code.toUpperCase() === buttonHex &&
+        e.action.code.toUpperCase() === "00" &&
+        e.podAddressHex.toUpperCase() === podMac.split(":").reverse().join("").toUpperCase(),
+    );
+    if (!entry) return;
+    const fnCode = entry.function.code.toUpperCase();
     const mode = this.pod.state.get().mode;
-    if (mode === "tune" && actionFlag === 0) {
-      this.handleShift(this.getHubMac(), direction);
-      return;
-    }
-    if (mode === "shift" && actionFlag === 1) {
-      this.handleShift(this.getHubMac(), direction);
+    // 0x0A = Shift Up, 0x0B = Shift Down (trigger on Release in shift mode, on Press in tune mode)
+    if (fnCode === "0A" || fnCode === "0B") {
+      const direction = fnCode === "0A" ? "up" : "down";
+      if (mode === "tune" && actionFlag === 0) {
+        this.handleShift(this.getHubMac(), direction);
+        return;
+      }
+      if (mode === "shift" && actionFlag === 1) {
+        this.handleShift(this.getHubMac(), direction);
+      }
     }
   }
 

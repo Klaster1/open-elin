@@ -208,6 +208,15 @@ export class HubMock {
     const current = this.state.get();
     this.state.set({ ...current, ...next });
   }
+
+  clearButtonTable() {
+    this.updateState({ buttonTable: [] });
+  }
+
+  appendButtonTableEntry(entry: HubStateShape["buttonTable"][number]) {
+    const current = this.state.get();
+    this.updateState({ buttonTable: [...current.buttonTable, entry] });
+  }
 }
 
 function buildRearCogBytes(values: number[], teeth?: number[]) {

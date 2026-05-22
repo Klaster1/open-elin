@@ -60,6 +60,14 @@ class DemoStateModel {
     });
   }
 
+  removeDeviceEntry(mac: string) {
+    const current = this.state.get();
+    const entries = current.list.entries.filter(
+      (e) => e.mac.toUpperCase() !== mac.toUpperCase(),
+    );
+    this.state.set({ ...current, list: { ...current.list, entries } });
+  }
+
   updatePodBatteryLevel(millivolts: number) {
     const podMac = this.getPodMac();
     if (!podMac) return;
