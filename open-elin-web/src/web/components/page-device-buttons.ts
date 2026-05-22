@@ -105,30 +105,51 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
       }
 
       .button-group {
-        padding: 12px 14px;
+        padding: 8px 14px;
         border-radius: 12px;
         background: #101822;
         border: 1px solid #233143;
-      }
-
-      .button-group-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        margin-bottom: 8px;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: start;
+        gap: 0 12px;
       }
 
       .button-group-label {
         font-size: 15px;
         font-weight: 600;
+        grid-column: 1;
+        grid-row: 1;
+        align-self: center;
+        white-space: nowrap;
+        min-width: 2.5em;
+      }
+
+      .button-group-bindings {
+        grid-column: 2;
+        grid-row: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .button-group-add {
+        grid-column: 3;
+        grid-row: 1;
+        align-self: center;
       }
 
       .binding-row {
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 4px 0;
+        min-height: 28px;
+      }
+
+      .binding-row .binding-placeholder {
+        color: var(--muted, #98a6b5);
+        font-size: 13px;
+        font-style: italic;
       }
 
       .binding-row select {
@@ -138,6 +159,9 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
         border-radius: 6px;
         padding: 4px 8px;
         font-size: 13px;
+        line-height: 1.2;
+        box-sizing: border-box;
+        height: 28px;
         min-width: 100px;
       }
 
@@ -367,7 +391,7 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
       (e) => !isButtonWired(model, e.button1?.code ?? ""),
     );
 
-    const wiredGroups = groupByButton(wiredEntries);
+    const wiredGroups = this.buildWiredGroups(model, wiredEntries);
     const orphanGroups = groupByButton(orphanEntries);
 
     return html`
@@ -414,21 +438,10 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
 
     return html`
       <div class="button-group" data-test-id=${testIdGroup}>
-        <div class="button-group-header">
-          <span class="button-group-label">${group.buttonLabel}</span>
-          ${canAddTrigger
-            ? html`<button
-                class="icon-btn"
-                type="button"
-                title="Add trigger"
-                aria-label="Add trigger"
-                data-test-id="add-trigger"
-                @click=${() =>
-                  this.onAddTrigger(group.buttonCode, podMacHex)}
-              >+</button>`
-            : nothing}
-        </div>
-        ${group.entries.map(
+        <span class="button-group-label">${group.buttonLabel}</span>
+        <div class="button-group-bindings">
+        ${group.entries.length > 0
+          ? group.entries.map(
           (entry: any) => html`
             <div class="binding-row" data-test-id=${testIdBinding}>
               <select
@@ -478,9 +491,46 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
               >×</button>
             </div>
           `,
-        )}
+        )
+          : html`<div class="binding-row"><span class="binding-placeholder">No bindings</span></div>`}
+        </div>
+        ${canAddTrigger
+          ? html`<button
+              class="icon-btn button-group-add"
+              type="button"
+              title="Add trigger"
+              aria-label="Add trigger"
+              data-test-id="add-trigger"
+              @click=${() =>
+                this.onAddTrigger(group.buttonCode, podMacHex)}
+            >+</button>`
+          : nothing}
       </div>
     `;
+  }
+
+  private buildWiredGroups(model: PodModel | undefined, wiredEntries: any[]): ButtonGroup[] {
+    if (!model) return groupByButton(wiredEntries);
+    const entryGroups = groupByButton(wiredEntries);
+    const seen = new Set(entryGroups.map((g) => g.buttonCode));
+    for (const code of model.wiredButtons) {
+      const upper = code.toUpperCase();
+      if (!seen.has(upper)) {
+        entryGroups.push({
+          buttonCode: upper,
+          buttonLabel: BUTTON_LABELS[upper] ?? upper,
+          entries: [],
+        });
+      }
+    }
+    // Sort by model wired order
+    const order = model.wiredButtons.map((c) => c.toUpperCase());
+    entryGroups.sort((a, b) => {
+      const ia = order.indexOf(a.buttonCode);
+      const ib = order.indexOf(b.buttonCode);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+    return entryGroups;
   }
 
   // Wired buttons map 1:1 by index to physical positions (tune, up, down, …)

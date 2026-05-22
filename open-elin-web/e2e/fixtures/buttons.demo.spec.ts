@@ -36,20 +36,20 @@ test("buttons screen shows trigger types, supports add/remove triggers and orpha
   await expect(diagramLabels.nth(1)).toHaveText("A");
   await expect(diagramLabels.nth(2)).toHaveText("A-1");
 
-  // Assert 3 wired button groups (A, A-1, A-2)
+  // Assert 3 wired button groups (A-2, A, A-1) — sorted by physical position
   await expect(buttons.wiredButtonGroups()).toHaveCount(3);
-  await expect(buttons.wiredButtonGroups().nth(0)).toContainText("A");
-  await expect(buttons.wiredButtonGroups().nth(1)).toContainText("A-1");
-  await expect(buttons.wiredButtonGroups().nth(2)).toContainText("A-2");
+  await expect(buttons.wiredButtonGroups().nth(0)).toContainText("A-2");
+  await expect(buttons.wiredButtonGroups().nth(1)).toContainText("A");
+  await expect(buttons.wiredButtonGroups().nth(2)).toContainText("A-1");
 
   // Assert 3 wired bindings — each button has 1 trigger (Press)
   await expect(buttons.wiredBindings()).toHaveCount(3);
   await expect(buttons.wiredBindings().nth(0)).toContainText("Press");
-  await expect(buttons.wiredBindings().nth(0)).toContainText("Shift Up");
+  await expect(buttons.wiredBindings().nth(0)).toContainText("Tune Mode");
   await expect(buttons.wiredBindings().nth(1)).toContainText("Press");
-  await expect(buttons.wiredBindings().nth(1)).toContainText("Shift Down");
+  await expect(buttons.wiredBindings().nth(1)).toContainText("Shift Up");
   await expect(buttons.wiredBindings().nth(2)).toContainText("Press");
-  await expect(buttons.wiredBindings().nth(2)).toContainText("Tune Mode");
+  await expect(buttons.wiredBindings().nth(2)).toContainText("Shift Down");
 
   // Assert 4 orphan bindings — all show Press trigger
   await expect(buttons.orphanBindings()).toHaveCount(4);
@@ -61,11 +61,11 @@ test("buttons screen shows trigger types, supports add/remove triggers and orpha
   // Assert refresh button is visible
   await expect(buttons.refreshButton()).toBeVisible();
 
-  // Add a new trigger to button A (click add-trigger on first wired group)
+  // Add a new trigger to button A-2 (click add-trigger on first wired group)
   await buttons.wiredButtonGroups().first().getByTestId("add-trigger").click();
   await page.waitForTimeout(200);
 
-  // Assert 4 wired bindings now (new Release→Shift Up added to button A)
+  // Assert 4 wired bindings now (new Release→Shift Up added to button A-2)
   await expect(buttons.wiredBindings()).toHaveCount(4);
 
   // Change new binding's function to Toggle
@@ -82,7 +82,7 @@ test("buttons screen shows trigger types, supports add/remove triggers and orpha
   await expect(buttons.wiredBindings().nth(1)).toContainText("Release");
   await expect(buttons.wiredBindings().nth(1)).toContainText("Toggle");
 
-  // Remove the Release trigger from button A
+  // Remove the Release trigger from button A-2
   await buttons.wiredBindings().nth(1).getByTestId("remove-binding").click();
   await page.waitForTimeout(200);
 
@@ -105,6 +105,43 @@ test("buttons screen shows trigger types, supports add/remove triggers and orpha
   await buttons.clickRefresh();
   await expect(buttons.wiredBindings()).toHaveCount(3);
   await expect(buttons.orphanBindings()).toHaveCount(0);
+});
+
+test("removing all bindings from a wired button keeps the group visible", async ({ page }) => {
+  const landing = new LandingPageModel(page);
+  const device = new DevicePageModel(page);
+  const buttons = new ButtonsPageModel(page);
+
+  // Setup
+  await landing.open();
+  await landing.startDemo();
+  await device.goToButtonsTab();
+  await expect(buttons.wiredButtonGroups()).toHaveCount(3);
+  await expect(buttons.wiredBindings()).toHaveCount(3);
+
+  // Remove the only binding from button A (first wired group)
+  await buttons.wiredButtonGroups().first().getByTestId("remove-binding").click();
+  await page.waitForTimeout(200);
+
+  // Assert wired group still visible with "No bindings" placeholder
+  await expect(buttons.wiredButtonGroups()).toHaveCount(3);
+  await expect(buttons.wiredButtonGroups().first()).toContainText("No bindings");
+  await expect(buttons.wiredBindings()).toHaveCount(2);
+
+  // Assert add-trigger button still present on the empty group
+  await expect(buttons.wiredButtonGroups().first().getByTestId("add-trigger")).toBeVisible();
+
+  // Add a binding back
+  await buttons.wiredButtonGroups().first().getByTestId("add-trigger").click();
+  await page.waitForTimeout(200);
+
+  // Assert binding is restored
+  await expect(buttons.wiredBindings()).toHaveCount(3);
+  await expect(buttons.wiredButtonGroups().first()).not.toContainText("No bindings");
+
+  // Refresh to confirm round-trip
+  await buttons.clickRefresh();
+  await expect(buttons.wiredBindings()).toHaveCount(3);
 });
 
 test("pod diagram renders image and leader lines in mock GUI", async ({
@@ -212,15 +249,15 @@ test("configured trigger type executes correct function via mock pod", async ({ 
   // Go to buttons screen and remap all 3 wired buttons
   await device.goToButtonsTab();
 
-  // Remap A: Shift Up → Shift Down
+  // Remap A-2: Tune Mode → Shift Down
   await buttons.wiredBindings().nth(0).getByTestId("function-select").selectOption("0B");
   await page.waitForTimeout(500);
 
-  // Remap A-1: Shift Down → Shift Up
-  await buttons.wiredBindings().nth(1).getByTestId("function-select").selectOption("0A");
+  // Remap A: Shift Up → Shift Down
+  await buttons.wiredBindings().nth(1).getByTestId("function-select").selectOption("0B");
   await page.waitForTimeout(500);
 
-  // Remap A-2: Tune Mode → Shift Up
+  // Remap A-1: Shift Down → Shift Up
   await buttons.wiredBindings().nth(2).getByTestId("function-select").selectOption("0A");
   await page.waitForTimeout(500);
 
@@ -236,7 +273,7 @@ test("configured trigger type executes correct function via mock pod", async ({ 
   await page.getByTestId("pod-button-group-A-1").getByTestId("pod-trigger-press").click();
   await expect(cogs.currentGearCard()).toHaveAttribute("data-gear-number", "11");
 
-  // A-2 now fires Shift Up → gear 12
+  // A-2 now fires Shift Down → gear 10
   await page.getByTestId("pod-button-group-A-2").getByTestId("pod-trigger-press").click();
-  await expect(cogs.currentGearCard()).toHaveAttribute("data-gear-number", "12");
+  await expect(cogs.currentGearCard()).toHaveAttribute("data-gear-number", "10");
 });
