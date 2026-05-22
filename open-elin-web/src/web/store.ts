@@ -309,6 +309,7 @@ export const appActions = {
   applyCogProfile,
   writeSetupRearCogs,
   setBikenet,
+  calibrate,
   addDevice,
   writeDefaultButtonMap,
   writeButtonMap,
@@ -1030,6 +1031,21 @@ export async function setBikenet() {
     appendLog("Set BikeNet result", response ?? {});
   } catch (err) {
     appendLog("Set BikeNet error", err instanceof Error ? err.message : err);
+  }
+}
+
+export async function calibrate() {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) {
+    appendLog("Connect to a hub first.");
+    return;
+  }
+  appendLog("Calibrate...");
+  try {
+    const response = await deviceCommands.calibrate();
+    appendLog("Calibrate result", response ?? {});
+  } catch (err) {
+    appendLog("Calibrate error", err instanceof Error ? err.message : err);
   }
 }
 

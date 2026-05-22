@@ -345,11 +345,28 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
   render() {
     const canSend = appState.connected.get() && Boolean(appState.mac.get());
     const buttonTable = appState.buttonTable.get();
-    const firstEntry = appState.listEntries.get()?.[0];
-    const firstPodMac: string | undefined = firstEntry?.mac;
+    const listEntries = appState.listEntries.get() ?? [];
+    const hubMac = appState.mac.get() ?? "";
 
-    // Group entries by pod MAC
+    // Build pod groups: seed from device list, then overlay button mappings.
+    // This ensures pods without button mappings still appear.
     const podGroups = new Map<string, any[]>();
+
+    // Seed from device list — convert colon MAC (D5:89:B2:13:FA:04) to
+    // reversed hex (04FA13B289D5) to match button table format.
+    // Skip the hub itself (it's not a pod).
+    for (const dev of listEntries) {
+      if (!dev.mac) continue;
+      const hexMac = dev.mac
+        .split(":")
+        .reverse()
+        .join("")
+        .toUpperCase();
+      if (hexMac === hubMac.replace(/:/g, "").toUpperCase()) continue;
+      if (!podGroups.has(hexMac)) podGroups.set(hexMac, []);
+    }
+
+    // Overlay button table entries
     for (const entry of buttonTable ?? []) {
       const mac = entry.podAddressHex ?? "";
       if (!podGroups.has(mac)) podGroups.set(mac, []);
@@ -362,13 +379,13 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
           <div class="card-head-row">
             <h2>Buttons</h2>
             <div style="display:flex;gap:8px;align-items:center;">
-              ${firstPodMac
+              ${podGroups.size > 0
                 ? html`<sl-button
                     size="small"
                     variant="default"
                     data-test-id="device-buttons-write-default"
                     ?disabled=${!canSend}
-                    @click=${() => this.onWriteDefault(firstPodMac)}
+                    @click=${() => this.onWriteDefault([...podGroups.keys()][0])}
                   >Write Default</sl-button>`
                 : nothing}
               <refresh-button
@@ -634,9 +651,12 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
         (t) => !usedTriggers.includes(t),
       );
       if (!nextTrigger) return entries;
+      const hubMac = appState.mac.get() ?? "";
+      const elinkHex = entries[0]?.elinkAddressHex
+        || hubMac.split(":").reverse().join("").toUpperCase();
       const newEntry = {
         podAddressHex: podMacHex,
-        elinkAddressHex: entries[0]?.elinkAddressHex ?? "",
+        elinkAddressHex: elinkHex,
         button1: {
           code: buttonCode,
           label: BUTTON_LABELS[buttonCode] ?? buttonCode,
@@ -687,10 +707,9 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
     if (this.loading) return;
     this.loading = true;
     try {
-      const needsList = !(appState.listEntries.get()?.length > 0);
       await Promise.all([
         appActions.readButtonTable(),
-        ...(needsList ? [appActions.getList()] : []),
+        appActions.getList(),
       ]);
     } finally {
       this.loading = false;

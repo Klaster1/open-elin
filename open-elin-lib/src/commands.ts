@@ -706,6 +706,12 @@ export class ProtocolCommands {
     return parseBasicResponse(response);
   }
 
+  async calibrate(): Promise<BasicResponse> {
+    const payload = encodeCommandWithMac(AppCommand.Calibrate, this.device.address);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
+  }
+
   async addDevice(podMac: string): Promise<BasicResponse> {
     const cmd = reverseCommand(AppCommand.AddDevice);
     const revHub = reverseMacAddress(this.device.address);

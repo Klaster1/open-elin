@@ -28,28 +28,50 @@ import _bleio
 HUB_MAC_LE = bytes([0xe5, 0xa0, 0x52, 0xab, 0xba, 0xd7])  # d7:ba:ab:52:a0:e5 reversed LE
 
 DEVICE_NAME    = "NXS MTB Pod"
-# Button IDs per hub button map (--use-captured template):
-#   0x0D → fn:0A (Shift Up)    0x06 → fn:0B (Shift Down)
-BTN_SHIFT_UP   = 0x0D
-BTN_SHIFT_DOWN = 0x06
+# Button IDs matching real NXS MTB Pod:
+#   0x00 → slot "-" (Shift Up in default map)
+#   0x01 → slot "A-1" (Shift Down in default map)
+BTN_SHIFT_UP   = 0x00
+BTN_SHIFT_DOWN = 0x01
 DEBOUNCE_S     = 0.05
 NUM_GEARS      = 12
 SHIFT_TIMEOUT  = 1.2   # s — flip direction if no ShiftComplete within this time
+BATTERY_MV     = 3000  # fake battery voltage (USB-powered, report a fixed value)
 
 # ── Advertisement data ────────────────────────────────────────────────────────
 def _ad(ad_type, data):
     """Pack one AD record: [length][type][data]."""
     return bytes([len(data) + 1, ad_type]) + bytes(data)
 
-# Manufacturer specific: company 0xDE98 (LE) + device type 0x08/0x01 + hub MAC LE
-_MFR = struct.pack("<H", 0xDE98) + b"\x08\x01" + HUB_MAC_LE
+# Service UUID (128-bit, LE byte order) for BikeNet GATT service
+_SVC_UUID_LE = bytes([
+    0x79, 0x3D, 0x64, 0x9E, 0x3F, 0xEF, 0x1A, 0x0C,
+    0x91, 0xBA, 0x20, 0xCC, 0x00, 0xC0, 0xC1, 0xA5,
+])
 
-# Total must stay ≤ 31 bytes. Name=13 B + Mfr=12 B = 25 B — OK.
-# Service UUID AD record (18 B) is omitted; hub connects by MAC so it's not needed.
-ADV_DATA = (
-    _ad(0x09, DEVICE_NAME.encode()) +   # Complete Local Name  (13 B)
-    _ad(0xFF, _MFR)                     # Manufacturer Specific Data (12 B)
-)
+def _build_adv_data(own_mac_le: bytes) -> tuple:
+    """Build (adv_data, scan_response) matching the real NXS MTB Pod.
+
+    Real pod raw advertisement (49 B total, split across adv + scan response):
+      Flags(3) + Name(14) + ServiceUUID(18) + Manufacturer(14) = 49 B
+    Legacy BLE limit is 31 B per packet, so we split:
+      adv_data:      Flags(3) + ServiceUUID(18) + Manufacturer(14) = 35 B — still over,
+    Actual real pod likely uses:
+      adv_data:      Flags(3) + Manufacturer(14) + Name(14) = 31 B
+      scan_response: ServiceUUID(18) = 18 B
+    """
+    # Manufacturer specific: company 0xDE98 (LE) + device bytes + own MAC + trailing 0x00
+    mfr = struct.pack("<H", 0xDE98) + b"\x0A\x10" + own_mac_le + b"\x00"
+
+    adv = (
+        _ad(0x01, b"\x06") +                    # Flags: LE General Discoverable + BR/EDR Not Supported (3 B)
+        _ad(0xFF, mfr) +                         # Manufacturer Specific Data (14 B)
+        _ad(0x09, DEVICE_NAME.encode())           # Complete Local Name (14 B)
+    )  # total 31 B
+
+    scan_rsp = _ad(0x07, _SVC_UUID_LE)            # 128-bit Service UUID (18 B)
+
+    return adv, scan_rsp
 
 # ── GATT service ──────────────────────────────────────────────────────────────
 # CircuitPython 9.x nRF52840: Service takes only uuid (no characteristics kwarg).
@@ -108,10 +130,27 @@ def mac_le() -> bytes:
     return bytes(adapter.address.address_bytes)
 
 def send_button(btn_id: int, action: int = 0) -> None:
-    """Send a button-press notification to the hub via MSG characteristic."""
+    """Send a button notification to the hub via MSG characteristic.
+    action: 0 = press, 1 = release."""
     payload = b"\x01\x40" + mac_le() + bytes([btn_id, action])
-    print(f"→ button 0x{btn_id:02X}  payload {payload.hex()}")
+    print(f"→ button 0x{btn_id:02X}  action={action}  payload {payload.hex()}")
     msg_char.value = payload
+
+def send_battery(mv: int = BATTERY_MV) -> None:
+    """Send battery voltage notification (opcode 0x4000)."""
+    payload = b"\x00\x40" + mac_le() + struct.pack("<H", mv)
+    print(f"→ battery {mv} mV  payload {payload.hex()}")
+    msg_char.value = payload
+
+def send_press_release(btn_id: int) -> None:
+    """Send a press then release event (for serial triggers)."""
+    send_button(btn_id, 0)   # press
+    time.sleep(0.05)
+    send_button(btn_id, 1)   # release
+
+def _cur_shift_btn() -> int:
+    """Return the button code for the current shift direction."""
+    return BTN_SHIFT_UP if _shift_dir else BTN_SHIFT_DOWN
 
 def send_shift() -> None:
     """Send shift in current bounce direction; arms the ShiftComplete timeout."""
@@ -119,12 +158,13 @@ def send_shift() -> None:
     btn_id = BTN_SHIFT_UP if _shift_dir else BTN_SHIFT_DOWN
     label  = "UP" if _shift_dir else "DOWN"
     print(f"→ SHIFT {label}  gear={_cur_gear}")
-    send_button(btn_id)
+    send_press_release(btn_id)
     _shift_time = time.monotonic()
 
 def start_adv() -> None:
+    adv_data, scan_rsp = _build_adv_data(mac_le())
     print(f"Advertising '{DEVICE_NAME}'  addr={adapter.address}")
-    adapter.start_advertising(bytes(ADV_DATA), connectable=True, interval=0.1)
+    adapter.start_advertising(bytes(adv_data), scan_response=bytes(scan_rsp), connectable=True, interval=0.1)
     blink(2)
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
@@ -156,6 +196,7 @@ while True:
         _was_connected = True
         _last_pin_val = None
         _last_msg_val = None
+        _last_battery = 0  # force immediate send
         # Check CCCD subscription on MSG and PIN chars
         try:
             print(f"  msg_char descriptors: {list(msg_char.descriptors)}")
@@ -166,7 +207,7 @@ while True:
         print(f"  adapter.connections = {adapter.connections}")
     led.value = True
 
-    # CharacteristicBuffer path
+    # CharacteristicBuffer path — PIN exchange triggers battery report
     n = pin_buf.in_waiting
     if n:
         data = pin_buf.read(n)
@@ -210,22 +251,27 @@ while True:
     except Exception:
         pass
 
-    # Physical button (P0_17, active-low) → shift up
+    # Physical button (P0_17, active-low) → shift
     cur = btn.value
     if not cur and _btn_prev:           # falling edge = press
         time.sleep(DEBOUNCE_S)
         if not btn.value:               # debounce confirmed
-            send_shift()
+            send_button(_cur_shift_btn(), 0)  # press
+            _shift_time = time.monotonic()
+    elif cur and not _btn_prev:         # rising edge = release
+        time.sleep(DEBOUNCE_S)
+        if btn.value:                   # debounce confirmed
+            send_button(_cur_shift_btn(), 1)  # release
     _btn_prev = cur
 
     # Serial triggers (for testing without physical button)
     if usb_cdc.console and usb_cdc.console.in_waiting:
         ch = usb_cdc.console.read(1)
         if ch in (b'u', b'b'):
-            send_button(BTN_SHIFT_UP)
+            send_press_release(BTN_SHIFT_UP)
             blink(3, 0.05)
         elif ch == b'd':
-            send_button(BTN_SHIFT_DOWN)
+            send_press_release(BTN_SHIFT_DOWN)
             blink(2, 0.05)
 
     # Shift timeout → no ShiftComplete received, assume we hit a gear limit
@@ -234,5 +280,11 @@ while True:
         _shift_dir  = not _shift_dir
         label = "UP" if _shift_dir else "DOWN"
         print(f"  shift timeout → flipped direction to {label}")
+
+    # Periodic battery report every 5 seconds
+    now = time.monotonic()
+    if now - _last_battery >= 5:
+        _last_battery = now
+        send_battery()
 
     time.sleep(0.02)

@@ -1,5 +1,5 @@
-import { LitElement, css, html } from "lit";
 import { SignalWatcher, signal } from "@lit-labs/signals";
+import { LitElement, css, html } from "lit";
 
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
@@ -15,6 +15,8 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
   private profileRenameDialogValue = signal("");
   private profileRenameDialogError = signal("");
   private profileRenameTarget = signal("");
+  private moveDialogOpen = signal(false);
+  private moveDialogValue = signal("");
 
   static styles = [
     sharedStyles,
@@ -450,6 +452,12 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
             @click=${this.onGetPosition}
             >Get position</sl-button
           >
+          <sl-button
+            data-test-id="cogs-move-to"
+            ?disabled=${controlsDisabled}
+            @click=${this.openMoveDialog}
+            >Move to position</sl-button
+          >
         </div>
         <div class="absolute-controls" data-test-id="cogs-absolute-controls">
           ${this.renderAbsoluteControls(controlsDisabled, gearList)}
@@ -457,6 +465,39 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
         ${this.renderCogControls(controlsDisabled, gearList)}
         ${this.renderProfilesSection(controlsDisabled, gearList, profiles)}
       </div>
+      <sl-dialog
+        data-test-id="cogs-move-dialog"
+        label="Move to position"
+        ?open=${this.moveDialogOpen.get()}
+        @sl-request-close=${this.onMoveDialogRequestClose}
+      >
+        <sl-input
+          data-test-id="cogs-move-dialog-input"
+          label="Target position (0–25)"
+          type="number"
+          min="0"
+          max="25"
+          step="0.1"
+          .value=${this.moveDialogValue.get()}
+          @sl-input=${this.onMoveDialogInput}
+        ></sl-input>
+        <div slot="footer" class="dialog-actions">
+          <sl-button
+            data-test-id="cogs-move-dialog-cancel"
+            class="dialog-cancel"
+            @click=${this.closeMoveDialog}
+          >
+            Cancel
+          </sl-button>
+          <sl-button
+            data-test-id="cogs-move-dialog-confirm"
+            variant="primary"
+            @click=${this.confirmMove}
+          >
+            Move
+          </sl-button>
+        </div>
+      </sl-dialog>
       <sl-dialog
         data-test-id="cogs-profile-dialog"
         label="Save profile"
@@ -1045,10 +1086,36 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
     if (appState.cogsProfileWriteInProgress.get()) return;
     appActions.removeCogProfile(name);
   }
+
+  private openMoveDialog = () => {
+    this.moveDialogValue.set("");
+    this.moveDialogOpen.set(true);
+  };
+
+  private closeMoveDialog = () => {
+    this.moveDialogOpen.set(false);
+  };
+
+  private onMoveDialogRequestClose() {
+    this.closeMoveDialog();
+  }
+
+  private onMoveDialogInput(event: Event) {
+    const target = event.target as HTMLInputElement | null;
+    this.moveDialogValue.set(target?.value ?? "");
+  }
+
+  private async confirmMove() {
+    const raw = parseFloat(this.moveDialogValue.get());
+    if (!Number.isFinite(raw)) return;
+    const clamped = Math.min(25, Math.max(0, raw));
+    this.moveDialogOpen.set(false);
+    await appActions.absoluteMove(clamped);
+  }
 }
 
 if (!customElements.get("page-device-cogs")) {
   customElements.define("page-device-cogs", PageDeviceCogs);
 }
 
-export {};
+export { };

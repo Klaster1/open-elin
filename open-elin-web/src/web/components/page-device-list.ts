@@ -1,5 +1,5 @@
-import { LitElement, css, html } from "lit";
 import { SignalWatcher } from "@lit-labs/signals";
+import { LitElement, css, html } from "lit";
 
 import { appActions, appState } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
@@ -167,6 +167,20 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
             <div style="display:flex;gap:8px;align-items:center;">
               <sl-button
                 size="small"
+                variant="primary"
+                data-test-id="device-list-set-bikenet"
+                ?disabled=${!canList}
+                @click=${this.onSetBikenet}
+              >Set BikeNet</sl-button>
+              <sl-button
+                size="small"
+                variant="default"
+                data-test-id="device-list-calibrate"
+                ?disabled=${!canList}
+                @click=${this.onCalibrate}
+              >Calibrate</sl-button>
+              <sl-button
+                size="small"
                 variant="default"
                 data-test-id="device-list-add-pod"
                 ?disabled=${!canList}
@@ -232,6 +246,15 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
     } finally {
       this.loading = false;
     }
+  }
+
+  private async onSetBikenet() {
+    await appActions.setBikenet();
+    await this.onGetList();
+  }
+
+  private async onCalibrate() {
+    await appActions.calibrate();
   }
 
   private onAddPodOpen() {
@@ -312,4 +335,4 @@ if (!customElements.get("page-device-list")) {
   customElements.define("page-device-list", PageDeviceList);
 }
 
-export {};
+export { };

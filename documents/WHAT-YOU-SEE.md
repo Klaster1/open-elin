@@ -70,3 +70,19 @@ When you reset the hub (hold button 10 s):
 - This is the default config after hub reset — set via app or CLI, not intrinsic to the hardware.
 
 ---
+
+## Motor / Cable
+
+- Clockwise shaft rotation → pulls cable shuttle in (retracts cable).
+- Counterclockwise shaft rotation → pushes cable shuttle out (extends cable).
+
+## Troubleshooting
+
+## If stuck at 203mm retraction
+
+1. Unscrew shaft lid with 2mm hex
+2. Use 3mm flat screwdriver to place shuttle roughly at cable slot
+3. Run homing
+4. Maybe run drive calibration
+
+Symptom: shuttle all the way in, cable anchor touching gears
