@@ -30,6 +30,7 @@ test.describe("Hub reset in demo mode", () => {
     await device.goToButtonsTab();
     await expect(buttons.podGroups()).toHaveCount(1);
     await expect(buttons.wiredBindings()).toHaveCount(3);
+    await buttons.openOrphanSection();
     await expect(buttons.orphanBindings()).toHaveCount(4);
 
     // Cogs: 12 gear cards, gear 11 is current with precise offset 21.10

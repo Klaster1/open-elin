@@ -89,14 +89,16 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
 
       .pod-group {
         margin-bottom: 16px;
+        background: #0c1420;
+        border: 1px solid #233143;
+        border-radius: 14px;
+        padding: 14px 16px;
       }
 
       .pod-group-header {
         font-size: 13px;
         color: var(--muted, #98a6b5);
         margin-bottom: 12px;
-        border-bottom: 1px solid #233143;
-        padding-bottom: 6px;
       }
 
       .button-groups {
@@ -209,10 +211,16 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
         margin-top: 16px;
       }
 
-      .orphan-section-header {
+      .orphan-section summary {
         font-size: 13px;
         color: var(--muted, #98a6b5);
+        cursor: pointer;
         margin-bottom: 8px;
+        user-select: none;
+      }
+
+      .orphan-section summary:hover {
+        color: #c0cad6;
       }
 
       .empty-state {
@@ -397,7 +405,7 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
     return html`
       <div class="pod-group" data-test-id="pod-group">
         <div class="pod-group-header">
-          Pod: ${formattedMac}${model ? ` (${model.displayName})` : ""}
+          ${model ? `${model.displayName}: ` : "Pod: "}${formattedMac}
         </div>
         <div class="pod-indicator" data-test-id="pod-indicator">
           <pod-diagram .positions=${this.getWiredPositions(model)}>
@@ -410,12 +418,12 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
             </div>`
           : nothing}
         ${orphanGroups.length > 0
-          ? html`<div class="orphan-section">
-              <div class="orphan-section-header">Orphan Bindings</div>
+          ? html`<details class="orphan-section" data-test-id="orphan-section">
+              <summary>Orphan Bindings (${orphanEntries.length})</summary>
               <div class="button-groups">
                 ${orphanGroups.map((g) => this.renderButtonGroup(g, "orphan", podMacHex))}
               </div>
-            </div>`
+            </details>`
           : nothing}
       </div>
     `;

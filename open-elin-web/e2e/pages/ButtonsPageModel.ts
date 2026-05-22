@@ -47,12 +47,26 @@ export class ButtonsPageModel {
     return this.page.getByTestId("wired-binding");
   }
 
+  orphanSection(): Locator {
+    return this.page.getByTestId("orphan-section");
+  }
+
   orphanButtonGroups(): Locator {
     return this.page.getByTestId("orphan-button-group");
   }
 
   orphanBindings(): Locator {
     return this.page.getByTestId("orphan-binding");
+  }
+
+  async openOrphanSection() {
+    const details = this.orphanSection();
+    if (await details.count() > 0) {
+      const isOpen = await details.getAttribute("open");
+      if (isOpen === null) {
+        await details.locator("summary").click();
+      }
+    }
   }
 
   removeBindingButtons(): Locator {

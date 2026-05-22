@@ -51,7 +51,8 @@ test("buttons screen shows trigger types, supports add/remove triggers and orpha
   await expect(buttons.wiredBindings().nth(2)).toContainText("Press");
   await expect(buttons.wiredBindings().nth(2)).toContainText("Shift Down");
 
-  // Assert 4 orphan bindings — all show Press trigger
+  // Assert 4 orphan bindings — all show Press trigger (open details first)
+  await buttons.openOrphanSection();
   await expect(buttons.orphanBindings()).toHaveCount(4);
   await expect(buttons.orphanBindings().first()).toContainText("Press");
 
@@ -90,6 +91,7 @@ test("buttons screen shows trigger types, supports add/remove triggers and orpha
   await expect(buttons.wiredBindings()).toHaveCount(3);
 
   // Remove all 4 orphan bindings one at a time
+  await buttons.openOrphanSection();
   for (let i = 0; i < 4; i++) {
     await buttons.orphanBindings().first().getByTestId("remove-binding").click();
     await page.waitForTimeout(200);
@@ -199,6 +201,7 @@ test("writeButtonMap round-trip reduces visible entries", async ({
 
   // Assert 7 bindings visible (3 wired + 4 orphan in default map)
   await expect(buttons.wiredBindings()).toHaveCount(3);
+  await buttons.openOrphanSection();
   await expect(buttons.orphanBindings()).toHaveCount(4);
 
   // Seed hub with only 3 button table entries via mutator
@@ -212,6 +215,7 @@ test("writeButtonMap round-trip reduces visible entries", async ({
   // Assert 3 bindings visible after seed + refresh (only first 3 entries)
   // First 3 entries from hub-mock-data: button 00 (wired), 06 (orphan), 0C (orphan)
   await expect(buttons.wiredBindings()).toHaveCount(1);
+  await buttons.openOrphanSection();
   await expect(buttons.orphanBindings()).toHaveCount(2);
 });
 
