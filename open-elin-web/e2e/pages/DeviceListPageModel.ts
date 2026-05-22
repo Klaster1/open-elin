@@ -54,4 +54,24 @@ export class DeviceListPageModel {
   async clickRefresh() {
     await this.refreshButtonControl().click();
   }
+
+  addPodButton(): Locator {
+    return this.page.getByTestId("device-list-add-pod");
+  }
+
+  addPodDialog(): Locator {
+    return this.page.getByTestId("add-pod-dialog");
+  }
+
+  addPodMacInput(): Locator {
+    return this.page.getByTestId("add-pod-mac-input");
+  }
+
+  addPodMacInputControl(): Locator {
+    return this.addPodMacInput().locator("input");
+  }
+
+  addPodConfirmButton(): Locator {
+    return this.page.getByTestId("add-pod-confirm");
+  }
 }

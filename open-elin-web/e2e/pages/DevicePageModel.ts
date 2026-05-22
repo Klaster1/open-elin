@@ -4,7 +4,7 @@ export class DevicePageModel {
   constructor(private readonly page: Page) {}
 
   deviceRouteMatcher() {
-    return /\/device\/[A-F0-9-]+\/(setup|log|cogs|list|motor)$/;
+    return /\/device\/[A-F0-9-]+\/(setup|log|cogs|list|motor|buttons)$/;
   }
 
   setupRouteMatcher() {
@@ -41,6 +41,18 @@ export class DevicePageModel {
 
   motorTabLink(): Locator {
     return this.page.getByTestId("device-nav-motor");
+  }
+
+  buttonsRouteMatcher() {
+    return /\/device\/[A-F0-9-]+\/buttons$/;
+  }
+
+  buttonsTabLink(): Locator {
+    return this.page.getByTestId("device-nav-buttons");
+  }
+
+  async goToButtonsTab() {
+    await this.buttonsTabLink().click();
   }
 
   logTabLink(): Locator {
