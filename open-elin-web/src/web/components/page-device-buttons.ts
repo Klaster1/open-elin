@@ -93,6 +93,7 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
         border: 1px solid #233143;
         border-radius: 14px;
         padding: 14px 16px;
+        container-type: inline-size;
       }
 
       .pod-group-header {
@@ -115,6 +116,7 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
         grid-template-columns: auto 1fr auto;
         align-items: start;
         gap: 0 12px;
+        max-width: 430px;
       }
 
       .button-group-label {
@@ -189,10 +191,28 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
       }
 
       .pod-indicator {
-        max-width: 280px;
         margin-bottom: 12px;
-        overflow: hidden;
-        border-radius: 18px;
+      }
+
+      .slot-tune {
+        position: relative;
+        z-index: 3;
+        width: fit-content;
+        left: -10%;
+      }
+
+      .slot-up {
+        position: relative;
+        z-index: 2;
+        width: fit-content;
+        right: -10%;
+      }
+
+      .slot-down {
+        position: relative;
+        z-index: 2;
+        width: fit-content;
+        top: 20px
       }
 
       .pod-indicator-label {
@@ -209,6 +229,8 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
 
       .orphan-section {
         margin-top: 16px;
+        position: relative;
+        z-index: 4;
       }
 
       .orphan-section summary {
@@ -409,14 +431,9 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
         </div>
         <div class="pod-indicator" data-test-id="pod-indicator">
           <pod-diagram .positions=${this.getWiredPositions(model)}>
-            ${this.renderDiagramLabels(model)}
+            ${this.renderSlottedBindings(model, wiredGroups, podMacHex)}
           </pod-diagram>
         </div>
-        ${wiredGroups.length > 0
-          ? html`<div class="button-groups">
-              ${wiredGroups.map((g) => this.renderButtonGroup(g, "wired", podMacHex))}
-            </div>`
-          : nothing}
         ${orphanGroups.length > 0
           ? html`<details class="orphan-section" data-test-id="orphan-section">
               <summary>Orphan Bindings (${orphanEntries.length})</summary>
@@ -546,6 +563,22 @@ export class PageDeviceButtons extends SignalWatcher(LitElement) {
     if (!model) return [];
     const count = model.wiredButtons.length;
     return (model.buttonPositions ?? []).slice(0, count);
+  }
+
+  private renderSlottedBindings(
+    model: PodModel | undefined,
+    wiredGroups: ButtonGroup[],
+    podMacHex: string,
+  ) {
+    if (!model) return wiredGroups.map((g) => this.renderButtonGroup(g, "wired", podMacHex));
+    const positions = this.getWiredPositions(model);
+    return wiredGroups.map((g, i) => {
+      if (i >= positions.length) return this.renderButtonGroup(g, "wired", podMacHex);
+      const slotClass = `slot-${positions[i].name}`;
+      return html`<div slot=${positions[i].name} class=${slotClass}>
+        ${this.renderButtonGroup(g, "wired", podMacHex)}
+      </div>`;
+    });
   }
 
   private renderDiagramLabels(model: PodModel | undefined) {

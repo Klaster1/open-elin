@@ -29,14 +29,7 @@ test("buttons screen shows trigger types, supports add/remove triggers and orpha
   // Assert pod indicator image visible
   await expect(buttons.podIndicatorImage()).toBeVisible();
 
-  // Assert pod diagram shows 3 wired button labels at tune, up, down positions
-  const diagramLabels = buttons.podIndicator().locator(".pod-indicator-label");
-  await expect(diagramLabels).toHaveCount(3);
-  await expect(diagramLabels.nth(0)).toHaveText("A-2");
-  await expect(diagramLabels.nth(1)).toHaveText("A");
-  await expect(diagramLabels.nth(2)).toHaveText("A-1");
-
-  // Assert 3 wired button groups (A-2, A, A-1) — sorted by physical position
+  // Assert 3 wired button groups (A-2, A, A-1) — slotted into pod diagram positions
   await expect(buttons.wiredButtonGroups()).toHaveCount(3);
   await expect(buttons.wiredButtonGroups().nth(0)).toContainText("A-2");
   await expect(buttons.wiredButtonGroups().nth(1)).toContainText("A");

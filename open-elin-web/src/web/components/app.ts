@@ -1,14 +1,14 @@
-import { LitElement, css, html } from "lit";
-import { SignalWatcher } from "@lit-labs/signals";
 import { Router } from "@lit-labs/router";
+import { SignalWatcher } from "@lit-labs/signals";
+import { LitElement, css, html } from "lit";
 
-import {
-  appActions,
-  appState,
-  isValidMac,
-  setShiftMacListener,
-} from "../store.ts";
 import hubData from "../demo/hub-mock-data.json";
+import {
+    appActions,
+    appState,
+    isValidMac,
+    setShiftMacListener,
+} from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
 function serializeMacForRoute(value: string) {
@@ -29,7 +29,7 @@ export class App extends SignalWatcher(LitElement) {
     sharedStyles,
     css`
       .app {
-        max-width: 1100px;
+        max-width: 1440px;
         margin: 0 auto;
         padding: 40px 28px 60px;
         display: flex;
@@ -205,4 +205,4 @@ if (!customElements.get("openelin-app")) {
   );
 }
 
-export {};
+export { };
