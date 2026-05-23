@@ -86,8 +86,13 @@ All notifications use the same frame format on the MSG characteristic:
 
 ### Shift-complete — opcode `0x4003`
 
-- Emitted by the **hub** (targetMac = hub MAC) when a shift finishes.
-- Observed payload: `1F 00 01` (3 bytes). Byte meaning unclear — `0x1F`=31 may be raw position, `0x01` may be gear index. Need more samples at different gears.
+- Emitted by the **hub** as a notification on the **hub's** MSG characteristic (targetMac = hub MAC). The CLI/app receives this by subscribing to the hub's MSG notifications — it is NOT observed as a hub→pod write.
+- Whether the hub also writes ShiftComplete to the **pod's** MSG characteristic is **unverified** — see "Hub → Pod Communication" section below.
+- Payload: 3 bytes. High byte (byte 10 in the full frame) = **0-indexed gear number**. Confirmed by cross-referencing with Position notifications:
+  - `1F 00 01` → gear index 1 → gearPosition 2
+  - `97 00 07` → gear index 7 → gearPosition 8
+  - `83 00 06` → gear index 6 → gearPosition 7
+- Low two bytes (`1F 00`, `97 00`, `83 00`, `84 00`, `80 00`) appear to encode an absolute motor position. In tune mode, only these bytes change (small deltas); in shift mode, the high byte changes by ±1 and the low bytes reset to a new position.
 
 ---
 
@@ -302,15 +307,33 @@ The hub finds the pod by **BLE local name** (`NXS MTB Pod`), not by service UUID
 
 ---
 
+## Hub → Pod Communication (unverified)
+
+The hub acts as BLE central to the pod. All confirmed observations are of the **hub→app** direction (CLI subscribes to the hub's MSG characteristic and receives notifications). The **hub→pod** direction — whether the hub writes data to the pod's MSG or PIN characteristics — has never been directly captured.
+
+**What we know:**
+- The hub writes to the pod's **PIN** characteristic during pairing (observed: CirPy receives PIN data via `pin_buf`/`pin_char.value` and responds with ACK `0x01`).
+- The hub presumably writes **something** to the pod after connection setup (connection bonding, CCCD subscription). But no protocol-level data has been captured for this.
+
+**What we DON'T know:**
+- Whether the hub writes ShiftComplete (`0x4003`) to the pod's MSG characteristic after a shift. The CirPy code includes a parser for this ([code.py lines 238–250](../open-elin-firmware-python/code.py)), but it has **never been observed to fire**. No `← MSG (val)` or `← MSG (buf)` log line containing ShiftComplete data has been recorded.
+- Whether the hub writes any other commands to the pod.
+- Whether the hub relays app commands (e.g. position queries, config changes) to the pod.
+
+**CirPy's direction-flipping mechanism:** The CirPy fake pod uses a **1.2-second timeout** as the primary direction-flip mechanism. If no ShiftComplete arrives within 1.2s of a button press, it assumes a gear limit was hit and reverses direction. This timeout path is the **only confirmed working mechanism** — the ShiftComplete parsing path may be dead code.
+
+**How to verify:** Flash firmware with USB serial logging, perform shifts, and check the serial output for `← MSG` lines. If the hub writes ShiftComplete to the pod, you'd see frames starting with `03 40` on the pod's MSG characteristic.
+
+---
+
 ## Open Questions (things NOT yet observed)
 
-- Hub↔pod wire format: what the hub sends to the pod over MSG/PIN characteristics
+- Hub→pod wire format: **does the hub write ShiftComplete (0x4003) to the pod's MSG characteristic?** (see section above)
 - Whether the hub relays any app commands to the pod
 - Connection parameters (interval, MTU)
 - What triggers the pod to send `BLE_MSG_BAT_V` (on connect only? periodic? threshold?)
 - Button sensing mechanism (ADC resistor ladder? digital GPIO?)
 - Whether the pod tracks any state (e.g. tune mode) or all state lives on the hub
-- Shift-complete payload byte meanings (`1F 00 01`)
 - How the hub discovers pods in its own auto-pairing mode (hub button held)
 - Whether manufacturer-specific advertisement data is required
 - PIN auth behavior (default `0000`, never enforced — but not tested what happens with wrong PIN)

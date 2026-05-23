@@ -42,3 +42,4 @@ Open-source replacement firmware and tools for the NXS BikeNet wireless electron
 - Protocol docs in `documents/` are the source of truth; `decompilation/` is raw reference
 - When asked to plan, write a plan file directly to `plans/YYYY-MM-DD-<name>.md` — no brainstorming skill, no design doc, just the plan
 - Plans must use red/green TDD: write the failing test first, run it to confirm it fails, then write the minimal implementation to make it pass, then run the test to confirm it passes. Every task that produces code must follow this cycle.
+- When completing a plan step, change `- [ ]` to `- [✅]` in the plan file to mark it done

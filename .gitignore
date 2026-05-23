@@ -9,7 +9,10 @@ node_modules/
 # Build output
 dist/
 build/
+target/
 *.tsbuildinfo
+*.bin
+*.uf2
 
 # OS / editor
 .DS_Store

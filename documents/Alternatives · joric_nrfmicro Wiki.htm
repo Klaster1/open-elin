@@ -1,0 +1,144 @@
+
+<div class="markdown-heading"><h3 class="heading-element">SuperMini NRF52840</h3><a id="user-content-supermini-nrf52840" class="anchor" aria-label="Permalink: SuperMini NRF52840" href="#supermini-nrf52840"><svg data-component="Octicon" class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a></div>
+<ul>
+<li><strong>This is the best nRFMicro replacement, has ESD decoupling, and costs only $3. I strongly recommend buying it.</strong></li>
+<li>
+<strong>New!</strong> There's a reverse-engineered open-source version here: <a href="https://github.com/sasodoma/nrf52840-promicro">https://github.com/sasodoma/nrf52840-promicro</a> (via <a href="https://github.com/joric/nrfmicro/issues/80">#80</a>)</li>
+<li>You may prefer <a class="internal present" href="https://github.com/joric/nrfmicro/wiki/Alternatives#nicenano-v2">nice!nano v2</a> (similar schematics), but it's not cheap ($25): <a href="https://nicekeyboards.com/nice-nano" rel="nofollow">https://nicekeyboards.com/nice-nano</a>
+</li>
+</ul>
+<details>
+<summary>This is the best value, but may have reliability issues (click to expand)</summary>
+<hr>
+<p><strong>SuperMini Reliability Issues</strong></p>
+<p><em>I've purchased plenty of <a href="https://github.com/joric/nrfmicro/wiki/Alternatives#supermini-nrf52840">Supermini boards</a>
+ that I use for development but I would never trust them for use on a 
+real keyboard. The working theory is that they're so cheap because 
+they're using salvaged parts. You're essentially playing Russian 
+roulette with whether they'll be functional on arrival, and whether 
+they'll fail unexpectedly in the future. I ordered a couple last week 
+and they came with chips that were manufactured in 2018 (evident by the 
+18XXXX on the third line of the chip).</em></p>
+<p><em>On this particular unit, the current leak has been fixed. Another
+ unit from a few weeks ago still had the same leak problem. Generally 
+you don't know which batch your order is coming from.</em></p>
+<p><em>Many people have also observed issues with the 32.768kHz crystal.
+ If you recognize that the crystal is problematic, it's easy to fix with
+ a <a href="https://zmk.dev/docs/troubleshooting/connection-issues#mitigating-a-faulty-oscillator" rel="nofollow">small firmware change</a>.
+ However the issue there is that when it's not working, there aren't 
+obvious signs that it's the crystal aside from being told by someone 
+here on Discord.</em></p>
+<p>-- <a href="https://discord.com/channels/719497620560543766/763848253996793856/1288510756249407564" rel="nofollow">@xudongz</a> (ZMK Discord)</p>
+<hr>
+</details>
+<p>AKA "ProMicro NRF52840" (<a href="https://www.nologo.tech/product/otherboard/NRF52840.html" rel="nofollow">since 28 Sep 2023</a>).
+ Uses ceramic antenna. Features ESD protection chip, battery charger 
+(LTH7R or TP4054 in SOT-23-6), external 3.3V LDO with EN pin (<a href="https://www.reddit.com/r/ErgoMechKeyboards/comments/16q5b2c/supermini_nrf52840_a_6_nicenano_20_compatible_mcu/k3pj764" rel="nofollow">ME6217C33M5G</a>, marked J2WD). Works in ZMK as nice_nano_v2.</p>
+<ul>
+<li>Wiki: <a href="http://wiki.icbbuy.com/doku.php?id=developmentboard:nrf52840" rel="nofollow">http://wiki.icbbuy.com/doku.php?id=developmentboard:nrf52840</a>
+</li>
+<li>Also from this manufacturer: <a class="internal present" href="https://github.com/joric/nrfmicro/wiki/Alternatives#supermini-nrf52840-zero">SuperMini NRF52840 Zero</a>, <a class="internal present" href="https://github.com/joric/nrfmicro/wiki/Alternatives#nrf52840-core-board">nRF52840 Core Board</a>
+</li>
+<li>Stores: <a href="https://item.taobao.com/item.htm?spm=a21dvs.23580594.0.0.1d293d0dUkJbBi&amp;ft=t&amp;id=729260528560" rel="nofollow">Taobao</a> |  <a href="https://www.aliexpress.us/item/1005006035267231.html?gatewayAdapt=glo2usa" rel="nofollow">Aliexpress (official)</a> | <a href="https://aliexpress.com/wholesale?SearchText=tenstar+nrf52840" rel="nofollow">Aliexpress (TENSTAR) (red boards recommended)</a> | <a href="https://aliexpress.com/wholesale?SearchText=supermini+nrf52840" rel="nofollow">Aliexpress (search)</a>
+</li>
+<li>Blacklisted stores: <a href="https://aliexpress.com/item/1005006343285322.html" rel="nofollow">WCMCU</a> and <a href="https://aliexpress.com/item/1005007383270623.html" rel="nofollow">A+A+A</a> - sell wrong (1.2mm PCB) connectors - [<a href="https://t.me/klavaorgwork/716705" rel="nofollow">1</a>] (30 pcs batch), [<a href="https://t.me/klavaorgwork/712443" rel="nofollow">2</a>], [<a href="https://discord.com/channels/719497620560543766/1157825408130101349/1344675564857983090" rel="nofollow">3</a>].</li>
+</ul>
+<p><strong>Features</strong></p>
+<ul>
+<li>Supports charger boost jumper (100mA to 300mA) on the back side (0R resistor, 0402 footprint).</li>
+<li>Supports <a href="https://github.com/joric/nrfmicro/wiki/Sockets#spring-pin-headers">Japanese con-through spring pins</a> and they hold pretty well. (<a href="https://github-production-user-asset-6210df.s3.amazonaws.com/852547/275974277-5cc21074-9c02-4236-a2ba-24789eba6d81.jpg" rel="nofollow">photo</a>) (<a href="https://github-production-user-asset-6210df.s3.amazonaws.com/852547/276197738-43bc9e0d-7ce6-426c-8fa6-b85e37c6c367.mp4" rel="nofollow">video</a>). Through-hole diameter is 0.9 мм.</li>
+<li>Supports VCC cutoff control (set P0.13 to low to turn VCC off).</li>
+</ul>
+<p><strong>Issues</strong></p>
+<ul>
+<li>
+<del>Higher leak than nin/nrfmicro, 700uA with VCC off vs 20uA. (wrong pull-up resistor, see <a href="https://www.reddit.com/r/crkbd/comments/16teax1/supermini_nrf52840_development_board_compatible/" rel="nofollow">reddit</a>)</del> (<a href="https://discord.com/channels/719497620560543766/1157825408130101349/1228533671972311060" rel="nofollow">factory-fixed in Apr 2024</a>).</li>
+<li>LED colors are swapped, RED is Bluetooth (user LED), BLUE is charger, should be vice-versa. Still an issue in 2026.</li>
+<li>Voltage divider (0.24) is unpopulated. VDDH switches to 5V so there's no way to measure battery on charging (see <a href="https://github.com/joric/nrfmicro/issues/80">#80</a>).</li>
+<li>Some late batches use regular silicon diodes instead of schottky diodes (60 uA leak instead of 4 uA), see <a href="https://github.com/joric/nrfmicro/issues/85">#85</a>.</li>
+</ul>
+<p><strong>Pictures</strong></p>
+<p><img src="Alternatives%20%C2%B7%20joric_nrfmicro%20Wiki_files/68747470733a2f2f6769746875622d70726f64756374696f6e2d7573_005.jpg" alt="SuperMini-top-view" data-canonical-src="https://github-production-user-asset-6210df.s3.amazonaws.com/852547/295010223-f64d5df7-c4ed-48b8-a9a8-abf54e014791.jpg"></p>
+<p><img src="Alternatives%20%C2%B7%20joric_nrfmicro%20Wiki_files/422181946-8fc50cbb-536a-4185-a960-727f5324044a.png" alt="supermini-pin-diagram" content-type-secured-asset="image/png"></p>
+<p><em>There's also <a href="https://github.com/user-attachments/assets/4567656d-e718-477b-ab04-8e05fe615093">pinout</a> by <a href="https://github.com/pdcook">@pdcook</a>, see <a href="https://github.com/pdcook/nRFMicro-Arduino-Core">https://github.com/pdcook/nRFMicro-Arduino-Core</a>, also see <a href="https://github.com/joric/nrfmicro/issues/77">#77</a> - pin naming issue</em></p>
+<div class="markdown-heading"><h4 class="heading-element">SuperMini Schematics</h4><a id="user-content-supermini-schematics" class="anchor" aria-label="Permalink: SuperMini Schematics" href="#supermini-schematics"><svg data-component="Octicon" class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a></div>
+<p>Official schematics (2024-09-29, from <a href="https://chat.nologo.tech/d/80/14" rel="nofollow">https://chat.nologo.tech/d/80/14</a>):</p>
+<p><img src="Alternatives%20%C2%B7%20joric_nrfmicro%20Wiki_files/371870355-d7677766-b7f8-4553-a797-351a2c46f49b.jpg" alt="O1CN01dX5XEt1lwSylaBst7_!!3009214883" content-type-secured-asset="image/jpeg"></p>
+<div class="markdown-heading"><h4 class="heading-element">SuperMini Issue Fixes</h4><a id="user-content-supermini-issue-fixes" class="anchor" aria-label="Permalink: SuperMini Issue Fixes" href="#supermini-issue-fixes"><svg data-component="Octicon" class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a></div>
+<p>Earlier batches had 5.6K pull-up resistor. Setting the power pin to GND resulted in 700 uA leak (n!n schematics for reference):</p>
+<p><img src="Alternatives%20%C2%B7%20joric_nrfmicro%20Wiki_files/68747470733a2f2f6769746875622d70726f64756374696f6e2d7573_002.png" alt="image" data-canonical-src="https://github-production-user-asset-6210df.s3.amazonaws.com/852547/275300159-61df41cd-d453-45be-ab43-694896cd5dce.png"></p>
+<p>Why the resistor leaks? Because (and only) when VCC-cutoff is enabled (POWER_PIN is set to GND), it shorts VDDH and GND.</p>
+<p>You can desolder resistor on the picture AND/OR replace it with 10M. 
+It works fine without the resistor (it's there to pull VCC control pin 
+up when it is uninitialized, so it mostly matters during boot time). 
+Desoldering or replacing the resistor brings quiescent current from over
+ 700uA to under 20uA. Later (post-April-2024) batches already have it 
+replaced with 10M.</p>
+<div class="markdown-heading"><h4 class="heading-element">Seller's description and pictures</h4><a id="user-content-sellers-description-and-pictures" class="anchor" aria-label="Permalink: Seller's description and pictures" href="#sellers-description-and-pictures"><svg data-component="Octicon" class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a></div>
+<p><img src="Alternatives%20%C2%B7%20joric_nrfmicro%20Wiki_files/68747470733a2f2f6769746875622d70726f64756374696f6e2d75736572.jpg" alt="Sbd991c4c0fa24292818ae72e4d1f8cb6g" data-canonical-src="https://github-production-user-asset-6210df.s3.amazonaws.com/852547/295010700-fceee5d3-37af-42c8-9759-53afc24bb667.jpg"></p>
+<p>High resolution photos of the board:</p>
+<ul>
+<li><a href="https://imgur.com/a/WVsA1NP" rel="nofollow">https://imgur.com/a/WVsA1NP</a></li>
+<li><a href="https://imgur.com/a/s3ZNuny" rel="nofollow">https://imgur.com/a/s3ZNuny</a></li>
+</ul>
+<div class="markdown-heading"><h4 class="heading-element">Non-essential issues and updates</h4><a id="user-content-non-essential-issues-and-updates" class="anchor" aria-label="Permalink: Non-essential issues and updates" href="#non-essential-issues-and-updates"><svg data-component="Octicon" class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a></div>
+<ul>
+<li>August 2024 revision has a new LDO. It's either RT9013-33GB or TP2028-3.3YN5G.</li>
+</ul>
+<table role="table">
+<thead>
+<tr>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img src="Alternatives%20%C2%B7%20joric_nrfmicro%20Wiki_files/362898664-565312c2-2e82-47ea-9d84-0697b55f38a4.jpg" alt="photo_2024-08-30_02-22-27" content-type-secured-asset="image/jpeg"></td>
+<td><img src="Alternatives%20%C2%B7%20joric_nrfmicro%20Wiki_files/362898681-41629ddb-07e7-40d5-962f-004e80d23a8b.jpg" alt="-2147483648_-213062" content-type-secured-asset="image/jpeg"></td>
+<td><img src="Alternatives%20%C2%B7%20joric_nrfmicro%20Wiki_files/362899405-405f3af7-8ce2-4953-b4ee-e36011abca44.jpg" alt="photo_2024-08-30_02-25-08" content-type-secured-asset="image/jpeg"></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>April 2024 revision has 10M pull-up resistor, no leak issues anymore (see <a href="https://discord.com/channels/719497620560543766/1157825408130101349/1228533671972311060" rel="nofollow">ZMK discord</a>)</li>
+</ul>
+<p>It's possible to reduce leak by replacing the pull-up resistor. Old revision reused 5.6K CC resistors to save on parts, see <a href="https://t.me/devAlphaSierra/460" rel="nofollow">https://t.me/devAlphaSierra/460</a> (also see ZMK discord <a href="https://discord.com/channels/719497620560543766/1157825408130101349/1168742350680494101" rel="nofollow">here</a>).</p>
+<p>It is about 3.6V/5.6K ~ 0.650 mA just from this resistor alone. 10M 
+resistor works too (lower current, same voltage) it only affects gate 
+saturation time (t=R*C), which is negligent (picoseconds), leak will be 
+3.6V/10M ~ 0.36 uA.</p>
+<p>Piece of the original schematics (<a href="https://discord.com/channels/719497620560543766/1157825408130101349/1175776962644557864" rel="nofollow">discord</a>, <a href="https://chat.nologo.tech/d/80/5" rel="nofollow">forum</a>), it's the original resolution:</p>
+<p><img src="Alternatives%20%C2%B7%20joric_nrfmicro%20Wiki_files/68747470733a2f2f6769746875622d70726f64756374696f6e2d75736572.png" alt="image" data-canonical-src="https://github-production-user-asset-6210df.s3.amazonaws.com/852547/284975845-05560237-1097-4598-8443-7dacbcd23dd2.png"></p>
+<p>The pinout is the same as Nice!nano V2, but with a different (LTH7R) 
+Li-Po charger. Nice!nano uses BQ24072 and when it charges, VDDH is 
+battery voltage +0.2V so it raises as battery charges, Supermini voltage
+ may differ.</p>
+<p>Got my 2 boards November 30, 2023 (<a href="https://github-production-user-asset-6210df.s3.amazonaws.com/852547/286828912-f2f975de-7e36-4639-a282-04576a979515.jpg" rel="nofollow">image</a>). Shipping took 19 days. Link is dead by now, use Aliexpress search. <em>"ProMicro"
+ and "NRF52840" silk on the back. Bootloader shows NICENANO label on 
+double reset, looks like stock nicenano bootloader. LEDs are swapped 
+(Red is bluetooth, Blue is charging). 5.6K pull-up resistor between 
+power pin and VDDH.</em></p>
+<p>Also colors are messed up. Rapid blinking is charger LED (supposed to be red), slow blinking is user LED (supposed to be blue <a href="https://github.com/joric/nrfmicro/assets/852547/4e38f0fe-e59a-4019-854e-fe07597272c2">video</a>). You could swap the LEDs using a hotplate or a soldering iron, preserving the polarity.</p>
+<div class="markdown-heading"><h4 class="heading-element">Reballing</h4><a id="user-content-reballing" class="anchor" aria-label="Permalink: Reballing" href="#reballing"><svg data-component="Octicon" class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a></div>
+<p>You can try reballing and re-soldering dead MCUs with 0.2 mm balls and a soldering fan</p>
+<p><img src="Alternatives%20%C2%B7%20joric_nrfmicro%20Wiki_files/467171958-f0018bfa-7cf3-4b0a-86de-aa67d7dd9d87.jpg" alt="photo_2025-07-16_23-23-17 (2)" content-type-secured-asset="image/jpeg"></p>
+<p><em>If you happen to get defective Chainnano chips and you have 
+enough free time or just want the challenge, you can revive them by 
+replacing the controller.</em></p>
+<p><em>These didn’t die from detachment or a dead bootloader — the chips themselves failed.</em></p>
+<p><em>The controller itself costs around 70 rubles, not including 
+shipping. It’s soldered with 0.2 mm balls. You flash the NiceNano 
+bootloader onto it, and off you go.</em></p>
+<p><em>It takes about 30 minutes per chip if you’re casually working on 
+it while listening to a podcast or something. I used leftover balls from
+ a Lancet for the center.</em></p>
+<p><em>Ideally, if you’re doing this more than once, it makes sense to 
+order a stencil from JLCPCB or similar — the package is unique, and you 
+won’t find such a stencil readily available.</em></p>
+<p>-- <a href="https://t.me/klavaorgwork/796569" rel="nofollow">Telegram</a></p>
+<ul>
+<li>Cheap nRF52840 MCUs to replace: <a href="https://aliexpress.com/wholesale?SearchText=nrf52840+qiaa" rel="nofollow">https://aliexpress.com/wholesale?SearchText=nrf52840+qiaa</a>
+</li>
+</ul>
