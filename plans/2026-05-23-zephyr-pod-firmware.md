@@ -54,7 +54,7 @@ open-elin-firmware-c/
 - Create: `open-elin-firmware-c/Dockerfile`
 - Create: `open-elin-firmware-c/build.ps1`
 
-- [ ] **Step 1: Create the Dockerfile**
+- [✅] **Step 1: Create the Dockerfile**
 
 ```dockerfile
 # open-elin-firmware-c/Dockerfile
@@ -89,7 +89,7 @@ ENTRYPOINT ["bash", "-c", "\
 
 > **Why bake it in?** The Zephyr source tree + modules are ~2 GB. Baking them into the image means `docker run` is a pure build step — no network, no volume management, no `west init` at build time.
 
-- [ ] **Step 2: Build the Docker image**
+- [✅] **Step 2: Build the Docker image**
 
 One-time step (~10 min, downloads Zephyr + builds verification sample):
 
@@ -100,7 +100,7 @@ docker build -t nxs-zephyr .
 
 Expected: image builds successfully, blinky sample compiles and is cleaned up.
 
-- [ ] **Step 3: Create `build.ps1` — one-liner wrapper**
+- [✅] **Step 3: Create `build.ps1` — one-liner wrapper**
 
 ```powershell
 # open-elin-firmware-c/build.ps1
@@ -124,7 +124,7 @@ if (Test-Path "$appDir\firmware.uf2") {
 }
 ```
 
-- [ ] **Step 4: Create `flash.ps1` — Flash script**
+- [✅] **Step 4: Create `flash.ps1` — Flash script**
 
 ```powershell
 # open-elin-firmware-c/flash.ps1
@@ -172,7 +172,7 @@ Write-Host "Done! Board will reboot into new firmware." -ForegroundColor Green
 - Create: `open-elin-firmware-c/boards/adafruit_feather_nrf52840.overlay`
 - Create: `open-elin-firmware-c/src/main.c`
 
-- [ ] **Step 1: Create `CMakeLists.txt`**
+- [✅] **Step 1: Create `CMakeLists.txt`**
 
 ```cmake
 # open-elin-firmware-c/CMakeLists.txt
@@ -185,7 +185,7 @@ target_sources(app PRIVATE
 )
 ```
 
-- [ ] **Step 2: Create `prj.conf`**
+- [✅] **Step 2: Create `prj.conf`**
 
 ```ini
 # open-elin-firmware-c/prj.conf
@@ -205,7 +205,7 @@ CONFIG_LOG_DEFAULT_LEVEL=3
 CONFIG_GPIO=y
 ```
 
-- [ ] **Step 3: Create devicetree overlay for SuperMini**
+- [✅] **Step 3: Create devicetree overlay for SuperMini**
 
 The Feather has LED0 on P1.15. SuperMini has it on P0.15 (active HIGH).
 
@@ -224,7 +224,7 @@ The Feather has LED0 on P1.15. SuperMini has it on P0.15 (active HIGH).
 };
 ```
 
-- [ ] **Step 4: Create minimal `main.c` — blink LED**
+- [✅] **Step 4: Create minimal `main.c` — blink LED**
 
 ```c
 /* open-elin-firmware-c/src/main.c */
@@ -248,7 +248,7 @@ int main(void)
 }
 ```
 
-- [ ] **Step 5: Build**
+- [✅] **Step 5: Build**
 
 ```powershell
 cd open-elin-firmware-c
@@ -257,7 +257,7 @@ cd open-elin-firmware-c
 
 Expected: `firmware.uf2` created successfully.
 
-- [ ] **Step 6: Flash and verify**
+- [✅] **Step 6: Flash and verify**
 
 Enter bootloader (short RST to GND twice), then:
 
@@ -284,7 +284,7 @@ git commit -m "feat(firmware-c): zephyr project skeleton + LED blink (UF2)"
 - Modify: `open-elin-firmware-c/prj.conf`
 - Modify: `open-elin-firmware-c/src/main.c`
 
-- [ ] **Step 1: Add USB + console config to prj.conf**
+- [✅] **Step 1: Add USB + console config to prj.conf**
 
 Append to `prj.conf`:
 
@@ -304,7 +304,7 @@ CONFIG_USB_CDC_ACM=y
 CONFIG_USB_CDC_ACM_LOG_LEVEL_OFF=y
 ```
 
-- [ ] **Step 2: Update main.c with USB init and logging**
+- [✅] **Step 2: Update main.c with USB init and logging**
 
 Replace `main.c`:
 
@@ -345,7 +345,7 @@ int main(void)
 }
 ```
 
-- [ ] **Step 3: Build and flash**
+- [✅] **Step 3: Build and flash**
 
 ```powershell
 .\build.ps1
@@ -353,7 +353,7 @@ int main(void)
 .\flash.ps1
 ```
 
-- [ ] **Step 4: Verify USB serial output**
+- [✅] **Step 4: Verify USB serial output**
 
 Open a serial terminal (PuTTY, `mode COM<N>`, or VS Code Serial Monitor) on the new COM port. Expected output:
 
@@ -385,7 +385,7 @@ git commit -am "feat(firmware-c): USB CDC serial logging"
 - Create: `open-elin-firmware-c/tests/Makefile`
 - Modify: `open-elin-firmware-c/CMakeLists.txt` (add protocol.c to sources)
 
-- [ ] **Step 1: Write the test file**
+- [✅] **Step 1: Write the test file**
 
 ```c
 /* open-elin-firmware-c/tests/test_protocol.c */
@@ -473,7 +473,7 @@ int main(void)
 }
 ```
 
-- [ ] **Step 2: Write the header**
+- [✅] **Step 2: Write the header**
 
 ```c
 /* open-elin-firmware-c/src/protocol.h */
@@ -539,7 +539,7 @@ int protocol_parse_shift_complete(const uint8_t *data, size_t len,
 #endif /* PROTOCOL_H */
 ```
 
-- [ ] **Step 3: Write the Makefile for host tests**
+- [✅] **Step 3: Write the Makefile for host tests**
 
 ```makefile
 # open-elin-firmware-c/tests/Makefile
@@ -558,7 +558,7 @@ clean:
 .PHONY: test clean
 ```
 
-- [ ] **Step 4: Run tests — verify they fail (won't compile, protocol.c doesn't exist)**
+- [✅] **Step 4: Run tests — verify they fail (won't compile, protocol.c doesn't exist)**
 
 ```powershell
 cd open-elin-firmware-c/tests
@@ -567,7 +567,7 @@ make test
 
 Expected: compilation fails — `protocol.c` doesn't exist yet.
 
-- [ ] **Step 5: Implement protocol.c**
+- [✅] **Step 5: Implement protocol.c**
 
 ```c
 /* open-elin-firmware-c/src/protocol.c */
@@ -607,7 +607,7 @@ int protocol_parse_shift_complete(const uint8_t *data, size_t len,
 }
 ```
 
-- [ ] **Step 6: Run tests — verify all pass**
+- [✅] **Step 6: Run tests — verify all pass**
 
 ```powershell
 cd open-elin-firmware-c/tests
@@ -626,7 +626,7 @@ Running protocol tests...
 All 6 tests passed.
 ```
 
-- [ ] **Step 7: Add protocol.c to CMakeLists.txt**
+- [✅] **Step 7: Add protocol.c to CMakeLists.txt**
 
 ```cmake
 target_sources(app PRIVATE
@@ -652,7 +652,7 @@ git commit -m "feat(firmware-c): protocol frame encoding with host tests"
 - Modify: `open-elin-firmware-c/prj.conf`
 - Modify: `open-elin-firmware-c/src/main.c`
 
-- [ ] **Step 1: Add BLE config to prj.conf**
+- [✅] **Step 1: Add BLE config to prj.conf**
 
 Append to `prj.conf`:
 
@@ -668,7 +668,7 @@ CONFIG_BT_GAP_AUTO_UPDATE_CONN_PARAMS=y
 CONFIG_BT_MAX_CONN=1
 ```
 
-- [ ] **Step 2: Update main.c with BLE advertising**
+- [✅] **Step 2: Update main.c with BLE advertising**
 
 Replace `main.c`:
 
@@ -778,7 +778,7 @@ int main(void)
 }
 ```
 
-- [ ] **Step 3: Build and flash**
+- [✅] **Step 3: Build and flash**
 
 ```powershell
 .\build.ps1
@@ -786,7 +786,7 @@ int main(void)
 .\flash.ps1
 ```
 
-- [ ] **Step 4: Verify advertisement**
+- [✅] **Step 4: Verify advertisement**
 
 From a phone (nRF Connect app) or the CLI:
 
@@ -815,7 +815,7 @@ git commit -am "feat(firmware-c): BLE advertising as NXS MTB Pod"
 - Modify: `open-elin-firmware-c/prj.conf`
 - Modify: `open-elin-firmware-c/src/main.c`
 
-- [ ] **Step 1: Add GATT config to prj.conf**
+- [✅] **Step 1: Add GATT config to prj.conf**
 
 Append to `prj.conf`:
 
@@ -825,7 +825,7 @@ CONFIG_BT_GATT_DYNAMIC_DB=n
 CONFIG_BT_ATT_TX_COUNT=4
 ```
 
-- [ ] **Step 2: Create gatt.h**
+- [✅] **Step 2: Create gatt.h**
 
 ```c
 /* open-elin-firmware-c/src/gatt.h */
@@ -854,7 +854,7 @@ void gatt_set_pin_write_cb(gatt_write_cb_t cb);
 #endif /* GATT_H */
 ```
 
-- [ ] **Step 3: Create gatt.c**
+- [✅] **Step 3: Create gatt.c**
 
 ```c
 /* open-elin-firmware-c/src/gatt.c */
@@ -949,7 +949,7 @@ int gatt_notify_msg(const uint8_t *data, size_t len)
 }
 ```
 
-- [ ] **Step 4: Add gatt.c to CMakeLists.txt**
+- [✅] **Step 4: Add gatt.c to CMakeLists.txt**
 
 ```cmake
 target_sources(app PRIVATE
@@ -959,7 +959,7 @@ target_sources(app PRIVATE
 )
 ```
 
-- [ ] **Step 5: Update main.c — add PIN exchange handler**
+- [✅] **Step 5: Update main.c — add PIN exchange handler**
 
 Add after the `#include` lines in `main.c`:
 
@@ -985,25 +985,14 @@ static void on_pin_write(const uint8_t *data, uint16_t len)
 
 > **Note:** The attr index for PIN CCC may need adjustment depending on how BT_GATT_SERVICE_DEFINE lays out attributes. Check at runtime with logging if PIN notifications don't work.
 
-- [ ] **Step 6: Build, flash, and verify**
+- [✅] **Step 6: Build, flash, and verify**
 
 ```powershell
 .\build.ps1
 .\flash.ps1
 ```
 
-Verify with the CLI:
-
-```powershell
-npm run cli -- hub monitor
-```
-
-The hub should discover the pod's GATT service and perform the PIN exchange. Expected log output on the serial console:
-
-```
-<inf> gatt: <- PIN ...
-<inf> main: PIN exchange received (N bytes) -> ACK 0x01
-```
+Verified via direct BLE connection from PC. PIN exchange: wrote 4 bytes → received ACK `0x01` notification. MSG notifications received (battery + button events).
 
 - [ ] **Step 7: Commit**
 
@@ -1021,7 +1010,7 @@ git commit -am "feat(firmware-c): GATT service with MSG + PIN characteristics"
 - Modify: `open-elin-firmware-c/src/main.c`
 - Modify: `open-elin-firmware-c/prj.conf`
 
-- [ ] **Step 1: Add UART polling config to prj.conf**
+- [✅] **Step 1: Add UART polling config to prj.conf**
 
 Already have `CONFIG_SERIAL=y` and `CONFIG_UART_CONSOLE=y`. Add:
 
@@ -1030,7 +1019,7 @@ Already have `CONFIG_SERIAL=y` and `CONFIG_UART_CONSOLE=y`. Add:
 CONFIG_UART_INTERRUPT_DRIVEN=y
 ```
 
-- [ ] **Step 2: Add serial input handling + button notifications to main.c**
+- [✅] **Step 2: Add serial input handling + button notifications to main.c**
 
 Add to `main.c` after existing includes:
 
@@ -1104,14 +1093,9 @@ Replace the main loop (`while (1) { k_sleep(K_FOREVER); }`) with:
     }
 ```
 
-- [ ] **Step 3: Build, flash, and verify**
+- [✅] **Step 3: Build, flash, and verify**
 
-```powershell
-.\build.ps1
-.\flash.ps1
-```
-
-Open a serial terminal, send 'u' or 'd'. Check with `npm run cli -- hub monitor` that button notifications appear on the hub.
+Verified via direct BLE connection: serial `u` → BTN 0x00 PRESS+RELEASE, serial `d` → BTN 0x01 PRESS+RELEASE. Battery reports every 5s.
 
 - [ ] **Step 4: Commit**
 
@@ -1128,7 +1112,7 @@ git commit -am "feat(firmware-c): serial button triggers + battery reporting"
 **Files:**
 - Modify: `open-elin-firmware-c/src/main.c`
 
-- [ ] **Step 1: Add MSG write callback**
+- [✅] **Step 1: Add MSG write callback**
 
 In `main.c`, add:
 
@@ -1148,18 +1132,9 @@ Register it in `main()` alongside the PIN callback:
     gatt_set_msg_write_cb(on_msg_write);
 ```
 
-- [ ] **Step 2: Build, flash, and verify**
+- [✅] **Step 2: Build, flash, and verify**
 
-```powershell
-.\build.ps1
-.\flash.ps1
-```
-
-Send a shift command via serial ('u'), then check if the hub sends a ShiftComplete back. If it does, the serial log should show:
-
-```
-<inf> main: ShiftComplete: gear=N
-```
+Verified: wrote ShiftComplete frame `03 40 E5 A0 52 AB BA D7 00 00 07` to MSG → serial log shows `ShiftComplete: gear=7`.
 
 - [ ] **Step 3: Commit**
 
@@ -1176,7 +1151,7 @@ git commit -am "feat(firmware-c): ShiftComplete parsing from hub MSG writes"
 **Files:**
 - Modify: `open-elin-firmware-c/src/main.c`
 
-- [ ] **Step 1: Add bootloader entry to serial handler**
+- [✅] **Step 1: Add bootloader entry to serial handler**
 
 Add to `main.c`:
 
@@ -1201,7 +1176,7 @@ In the serial input handler, add:
             }
 ```
 
-- [ ] **Step 2: Add NRF_POWER register access**
+- [✅] **Step 2: Add NRF_POWER register access**
 
 Ensure `nrf.h` is included at the top of `main.c`:
 
@@ -1216,11 +1191,11 @@ If this doesn't work, use the raw register address:
 *NRF_POWER_GPREGRET = 0x57;
 ```
 
-- [ ] **Step 3: Build, flash, and verify**
+- [✅] **Step 3: Build, flash, and verify**
 
 Send 'B' over serial. The board should reboot into bootloader mode (USB drive appears).
 
-- [ ] **Step 4: Update flash.ps1 to support serial bootloader entry**
+- [✅] **Step 4: Update flash.ps1 to support serial bootloader entry**
 
 Add to `flash.ps1`, before the drive detection:
 
@@ -1257,7 +1232,7 @@ git commit -am "feat(firmware-c): bootloader entry via serial command"
 - Modify: `open-elin-firmware-c/prj.conf`
 - Modify: `open-elin-firmware-c/src/main.c`
 
-- [ ] **Step 1: Add power config to prj.conf**
+- [✅] **Step 1: Add power config to prj.conf**
 
 ```ini
 # Power management
@@ -1271,7 +1246,7 @@ CONFIG_GPIO=y
 CONFIG_LOG_DEFAULT_LEVEL=2
 ```
 
-- [ ] **Step 2: Replace polling loop with event-driven sleep**
+- [✅] **Step 2: Replace polling loop with event-driven sleep**
 
 Replace the `while (1) { ... k_msleep(20); }` main loop with a more power-efficient approach using a k_timer for battery reporting and UART callback for serial input:
 
@@ -1306,9 +1281,9 @@ static void battery_timer_handler(struct k_timer *timer)
     }
 ```
 
-- [ ] **Step 3: Build, flash, and verify**
+- [✅] **Step 3: Build, flash, and verify**
 
-Verify firmware still works identically (BLE, serial triggers, battery reporting). The main difference is power — CPU sleeps more between events.
+Verified: BLE advertising, connection, battery timer (5s interval), and button triggers all working with CONFIG_PM=y and reduced log level.
 
 - [ ] **Step 4: Commit**
 

@@ -13,6 +13,11 @@ target/
 *.tsbuildinfo
 *.bin
 *.uf2
+*.hex
+
+# Firmware build artifacts
+open-elin-firmware-c/tests/test_protocol
+open-elin-firmware-c/dot-config.txt
 
 # OS / editor
 .DS_Store
