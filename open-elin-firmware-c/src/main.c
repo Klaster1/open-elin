@@ -79,6 +79,22 @@ static void adv_restart_work_handler(struct k_work *work)
     start_advertising();
 }
 
+/*── LED blink on activity ──*/
+static void led_off_work_handler(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(led_off_work, led_off_work_handler);
+
+static void led_off_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    gpio_pin_set_dt(&led, 0);
+}
+
+static void led_blink(void)
+{
+    gpio_pin_set_dt(&led, 1);
+    k_work_schedule(&led_off_work, K_MSEC(50));
+}
+
 /*── BLE connection callbacks ──*/
 static struct bt_conn *current_conn;
 
@@ -90,13 +106,11 @@ static void connected(struct bt_conn *conn, uint8_t err)
     }
     current_conn = bt_conn_ref(conn);
     LOG_INF("HUB CONNECTED");
-    gpio_pin_set_dt(&led, 1);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
     LOG_INF("HUB DISCONNECTED (reason %u)", reason);
-    gpio_pin_set_dt(&led, 0);
     if (current_conn) {
         bt_conn_unref(current_conn);
         current_conn = NULL;
@@ -117,6 +131,7 @@ static void on_msg_write(const uint8_t *data, uint16_t len)
     if (protocol_parse_shift_complete(data, len, &sc) == 0) {
         LOG_INF("ShiftComplete: gear=%u", sc.gear);
     }
+    led_blink();
 }
 
 static void on_pin_write(const uint8_t *data, uint16_t len)
@@ -124,6 +139,7 @@ static void on_pin_write(const uint8_t *data, uint16_t len)
     LOG_INF("PIN exchange (%u bytes) -> ACK", len);
     static const uint8_t ack = 0x01;
     gatt_notify_pin(&ack, 1);
+    led_blink();
 }
 
 /*── Button helpers ──*/
@@ -152,6 +168,7 @@ static void send_press_release(uint8_t btn_id)
     gatt_notify_msg(frame, sizeof(frame));
 
     LOG_INF("-> button 0x%02X press+release", btn_id);
+    led_blink();
 }
 
 static void send_battery(void)
