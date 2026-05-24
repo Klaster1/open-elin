@@ -76,7 +76,7 @@ When you reset the hub (hold button 10 s):
 - Clockwise shaft rotation → pulls cable shuttle in (retracts cable).
 - Counterclockwise shaft rotation → pushes cable shuttle out (extends cable).
 
-## Troubleshooting
+# Troubleshooting
 
 ## If stuck at 203mm retraction
 
@@ -86,3 +86,11 @@ When you reset the hub (hold button 10 s):
 4. Maybe run drive calibration
 
 Symptom: shuttle all the way in, cable anchor touching gears
+
+## WCH connections
+
+        WCH   Board
+black   clk   clk
+white   io    dio
+grey    gnd   gnd
+purple  3v3   vdd
