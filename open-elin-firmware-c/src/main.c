@@ -43,6 +43,17 @@ static uint8_t pending_shift = 0xFF;
 static void adv_timeout_handler(struct k_timer *timer);
 static K_TIMER_DEFINE(adv_timeout_timer, adv_timeout_handler, NULL);
 
+/*── Connection parameter renegotiation (parked bike power saving) ──*/
+#define LATENCY_ESCALATION_MIN  60    /* Minutes idle before requesting wider latency */
+#define LATENCY_NORMAL          10    /* Hub's default slave latency */
+#define LATENCY_RELAXED         50    /* Wider latency for idle saving */
+#define CONN_INTERVAL           48    /* 60ms — keep hub's interval unchanged */
+
+static bool latency_relaxed;
+
+static void latency_escalation_handler(struct k_timer *timer);
+static K_TIMER_DEFINE(latency_timer, latency_escalation_handler, NULL);
+
 static void usb_status_cb(enum usb_dc_status_code status, const uint8_t *param)
 {
     ARG_UNUSED(param);
@@ -143,6 +154,55 @@ static void adv_restart_work_handler(struct k_work *work)
 static struct bt_conn *current_conn;  /* forward — used by adv_timeout_handler */
 static void send_press_release(uint8_t btn_id);  /* forward — used by pending_shift_flush */
 
+/*── Latency escalation helpers ──*/
+
+/* Compute minimum supervision timeout for given latency (BLE spec constraint) */
+static uint16_t supervision_to_for(uint16_t latency)
+{
+    /* timeout > (1 + latency) * interval * 2, in 10ms units */
+    /* interval is in 1.25ms units, so interval_ms = CONN_INTERVAL * 1.25 */
+    /* We need: timeout_10ms > (1 + latency) * CONN_INTERVAL * 1.25 * 2 / 10 */
+    /* = (1 + latency) * CONN_INTERVAL / 4 */
+    uint16_t min_to = (uint16_t)(((1u + latency) * CONN_INTERVAL + 3u) / 4u) + 1u;
+    /* Clamp to BLE max (3200 = 32s) */
+    return min_to > 3200 ? 3200 : min_to;
+}
+
+static void latency_escalation_handler(struct k_timer *timer)
+{
+    ARG_UNUSED(timer);
+    if (!current_conn || latency_relaxed) {
+        return;
+    }
+    uint16_t sv_to = supervision_to_for(LATENCY_RELAXED);
+    struct bt_le_conn_param param = BT_LE_CONN_PARAM_INIT(
+        CONN_INTERVAL, CONN_INTERVAL, LATENCY_RELAXED, sv_to);
+    int err = bt_conn_le_param_update(current_conn, &param);
+    if (err) {
+        NUS_LOG("Latency escalation failed: %d", err);
+    } else {
+        latency_relaxed = true;
+        NUS_LOG("Latency relaxed (%u)", LATENCY_RELAXED);
+    }
+}
+
+static void latency_tighten(void)
+{
+    if (!current_conn || !latency_relaxed) {
+        return;
+    }
+    uint16_t sv_to = supervision_to_for(LATENCY_NORMAL);
+    struct bt_le_conn_param param = BT_LE_CONN_PARAM_INIT(
+        CONN_INTERVAL, CONN_INTERVAL, LATENCY_NORMAL, sv_to);
+    int err = bt_conn_le_param_update(current_conn, &param);
+    if (err) {
+        NUS_LOG("Latency tighten failed: %d", err);
+    } else {
+        NUS_LOG("Latency normal (%d)", LATENCY_NORMAL);
+    }
+    latency_relaxed = false;
+}
+
 static void adv_timeout_handler(struct k_timer *timer)
 {
     ARG_UNUSED(timer);
@@ -210,6 +270,9 @@ static void connected(struct bt_conn *conn, uint8_t err)
     set_pairing_mode(false);
     k_timer_stop(&adv_timeout_timer);
     radio_sleeping = false;
+    /* Start latency escalation timer */
+    latency_relaxed = false;
+    k_timer_start(&latency_timer, K_MINUTES(LATENCY_ESCALATION_MIN), K_NO_WAIT);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -219,6 +282,8 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
         bt_conn_unref(current_conn);
         current_conn = NULL;
     }
+    k_timer_stop(&latency_timer);
+    latency_relaxed = false;
     /* Schedule advertising restart after BLE stack cleanup completes */
     k_work_schedule(&adv_restart_work, K_MSEC(500));
 }
@@ -263,10 +328,20 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,
     }
 }
 
+static void le_param_updated(struct bt_conn *conn, uint16_t interval,
+                             uint16_t latency, uint16_t timeout)
+{
+    /* interval is in 1.25ms units; use integer math (Zephyr has no %f) */
+    unsigned int ms_x100 = interval * 125u;
+    NUS_LOG("Conn params: interval=%u (%u.%02ums) latency=%u timeout=%u",
+            interval, ms_x100 / 100, ms_x100 % 100, latency, timeout);
+}
+
 BT_CONN_CB_DEFINE(conn_callbacks) = {
     .connected = connected,
     .disconnected = disconnected,
     .security_changed = security_changed,
+    .le_param_updated = le_param_updated,
 };
 
 /*── SMP auth callbacks (diagnostic) ──*/
@@ -347,6 +422,8 @@ static void handle_command(uint8_t ch)
             radio_sleeping = true;
             NUS_LOG("Radio sleep (forced)");
         }
+    } else if (ch == 'L') {
+        latency_escalation_handler(NULL);
     }
 }
 
@@ -444,6 +521,10 @@ static void get_own_mac(uint8_t mac_le[MAC_LEN])
 
 static void send_press_release(uint8_t btn_id)
 {
+    /* Tighten latency and reset escalation timer on every shift */
+    latency_tighten();
+    k_timer_start(&latency_timer, K_MINUTES(LATENCY_ESCALATION_MIN), K_NO_WAIT);
+
     uint8_t mac[MAC_LEN];
     get_own_mac(mac);
 
@@ -542,7 +623,7 @@ int main(void)
     gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
 
     LOG_INF("NXS pod firmware v0.1.0 (Zephyr)");
-    LOG_INF("Commands: u=up d=down t=tune p=wake P=pair S=sleep B=bootloader");
+    LOG_INF("Commands: u=up d=down t=tune p=wake P=pair S=sleep L=relax B=bootloader");
 
     /* BLE init */
     int err = bt_enable(NULL);
