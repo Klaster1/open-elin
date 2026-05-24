@@ -26,6 +26,26 @@ static struct gpio_callback btn_up_cb_data;
 static struct gpio_callback btn_down_cb_data;
 static struct gpio_callback btn_pair_cb_data;
 
+/*── USB VBUS detection ──*/
+static volatile bool usb_active;
+
+static void usb_status_cb(enum usb_dc_status_code status, const uint8_t *param)
+{
+    ARG_UNUSED(param);
+    switch (status) {
+    case USB_DC_CONFIGURED:
+    case USB_DC_RESUME:
+        usb_active = true;
+        break;
+    case USB_DC_DISCONNECTED:
+    case USB_DC_SUSPEND:
+        usb_active = false;
+        break;
+    default:
+        break;
+    }
+}
+
 /*── Bootloader entry ──*/
 static void enter_bootloader(void)
 {
@@ -320,8 +340,12 @@ static K_TIMER_DEFINE(battery_timer, battery_timer_handler, NULL);
 /*── Main ──*/
 int main(void)
 {
-    usb_enable(NULL);
-    k_msleep(1000);
+    usb_enable(usb_status_cb);
+
+    /* Only wait for USB enumeration if cable is plugged in */
+    if (NRF_POWER->USBREGSTATUS & POWER_USBREGSTATUS_VBUSDETECT_Msk) {
+        k_msleep(1000);
+    }
 
     gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
 
@@ -370,7 +394,7 @@ int main(void)
     uint8_t ch;
 
     while (1) {
-        if (uart_poll_in(console, &ch) == 0) {
+        if (usb_active && uart_poll_in(console, &ch) == 0) {
             if (ch == 'u') {
                 send_press_release(BTN_SHIFT_UP);
             } else if (ch == 'd') {
@@ -384,7 +408,9 @@ int main(void)
             }
         }
 
-        k_msleep(50);
+        /* Sleep longer when no USB — serial polling is pointless without a host.
+         * Buttons and BLE are interrupt-driven, so nothing is missed. */
+        k_msleep(usb_active ? 50 : 5000);
     }
     return 0;
 }
