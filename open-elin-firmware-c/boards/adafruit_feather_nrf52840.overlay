@@ -20,11 +20,16 @@
             gpios = <&gpio0 31 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
             label = "Shift Down";
         };
+        btn_pair: button_2 {
+            gpios = <&gpio0 20 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "Pair";
+        };
     };
 
     aliases {
         sw0 = &btn_up;
         sw1 = &btn_down;
+        sw2 = &btn_pair;
     };
 
     chosen {

@@ -20,8 +20,10 @@ static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
 static const struct gpio_dt_spec btn_up = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);   /* P0.17 */
 static const struct gpio_dt_spec btn_down = GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios); /* P0.31 */
+static const struct gpio_dt_spec btn_pair = GPIO_DT_SPEC_GET(DT_ALIAS(sw2), gpios); /* P0.20 */
 static struct gpio_callback btn_up_cb_data;
 static struct gpio_callback btn_down_cb_data;
+static struct gpio_callback btn_pair_cb_data;
 
 /*── Bootloader entry ──*/
 static void enter_bootloader(void)
@@ -37,16 +39,19 @@ static const uint8_t svc_uuid_le[16] = {
     0x91, 0xBA, 0x20, 0xCC, 0x00, 0xC0, 0xC1, 0xA5,
 };
 
-static uint8_t mfr_data[12];
+static uint8_t mfr_data[11];  /* 2 company ID + 2 type + 6 MAC + 1 flag (matches real pod) */
+
+#define MFR_FLAG_NORMAL  0x00
+#define MFR_FLAG_PAIRING 0xAC
 
 static const struct bt_data ad[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR),
-    BT_DATA(BT_DATA_MANUFACTURER_DATA, mfr_data, sizeof(mfr_data)),
     BT_DATA(BT_DATA_NAME_COMPLETE, "NXS MTB Pod", 11),
 };
 
 static const struct bt_data sd[] = {
     BT_DATA(BT_DATA_UUID128_ALL, svc_uuid_le, sizeof(svc_uuid_le)),
+    BT_DATA(BT_DATA_MANUFACTURER_DATA, mfr_data, sizeof(mfr_data)),
 };
 
 static void fill_mfr_data(void)
@@ -60,13 +65,15 @@ static void fill_mfr_data(void)
     mfr_data[2] = 0x0A;  /* device type */
     mfr_data[3] = 0x10;
     memcpy(&mfr_data[4], addr.a.val, 6);
-    mfr_data[10] = 0x00;
-    mfr_data[11] = 0x00;
+    mfr_data[10] = MFR_FLAG_NORMAL;
 }
 
 static void start_advertising(void)
 {
-    int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+    /* ~128ms interval to match real pod (0xCC * 0.625ms ≈ 127.5ms) */
+    static const struct bt_le_adv_param adv_param = BT_LE_ADV_PARAM_INIT(
+        BT_LE_ADV_OPT_CONN, 0x00CC, 0x00CC, NULL);
+    int err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (err) {
         LOG_ERR("Advertising failed (err %d)", err);
     } else {
@@ -124,9 +131,45 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
     k_work_schedule(&adv_restart_work, K_MSEC(500));
 }
 
+static void security_changed(struct bt_conn *conn, bt_security_t level,
+                              enum bt_security_err err)
+{
+    if (err) {
+        LOG_ERR("Security change FAILED (level %u, err %d)", level, err);
+    } else {
+        LOG_INF("Security changed to level %u", level);
+    }
+}
+
 BT_CONN_CB_DEFINE(conn_callbacks) = {
     .connected = connected,
     .disconnected = disconnected,
+    .security_changed = security_changed,
+};
+
+/*── SMP auth callbacks (diagnostic) ──*/
+static void auth_cancel(struct bt_conn *conn)
+{
+    LOG_INF("SMP: auth cancelled");
+}
+
+static struct bt_conn_auth_cb auth_cb = {
+    .cancel = auth_cancel,
+};
+
+static void auth_pairing_complete(struct bt_conn *conn, bool bonded)
+{
+    LOG_INF("SMP: pairing complete (bonded=%d)", bonded);
+}
+
+static void auth_pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
+{
+    LOG_ERR("SMP: pairing FAILED (reason %d)", reason);
+}
+
+static struct bt_conn_auth_info_cb auth_info_cb = {
+    .pairing_complete = auth_pairing_complete,
+    .pairing_failed = auth_pairing_failed,
 };
 
 /*── GATT callbacks ──*/
@@ -138,11 +181,43 @@ static void on_pin_write(const uint8_t *data, uint16_t len)
     led_blink();
 }
 
+/*── Pairing mode ──*/
+static void pairing_timeout_handler(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(pairing_timeout_work, pairing_timeout_handler);
+
+static void set_pairing_mode(bool enable)
+{
+    /* Update flag byte in manufacturer data (already in ad[] by reference) */
+    mfr_data[10] = enable ? MFR_FLAG_PAIRING : MFR_FLAG_NORMAL;
+
+    /* Restart advertising with updated data (skip if connected — no slot available) */
+    if (!current_conn) {
+        bt_le_adv_stop();
+        start_advertising();
+    }
+
+    if (enable) {
+        LOG_INF("PAIRING MODE ON (10s)");
+        k_work_schedule(&pairing_timeout_work, K_SECONDS(10));
+    } else {
+        LOG_INF("PAIRING MODE OFF");
+        k_work_cancel_delayable(&pairing_timeout_work);
+    }
+}
+
+static void pairing_timeout_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    set_pairing_mode(false);
+}
+
 /*── GPIO button interrupts ──*/
 static void btn_up_work_handler(struct k_work *work);
 static void btn_down_work_handler(struct k_work *work);
+static void btn_pair_work_handler(struct k_work *work);
 static K_WORK_DEFINE(btn_up_work, btn_up_work_handler);
 static K_WORK_DEFINE(btn_down_work, btn_down_work_handler);
+static K_WORK_DEFINE(btn_pair_work, btn_pair_work_handler);
 
 static void btn_up_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
@@ -154,6 +229,12 @@ static void btn_down_isr(const struct device *dev, struct gpio_callback *cb, uin
 {
     ARG_UNUSED(dev); ARG_UNUSED(cb); ARG_UNUSED(pins);
     k_work_submit(&btn_down_work);
+}
+
+static void btn_pair_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+    ARG_UNUSED(dev); ARG_UNUSED(cb); ARG_UNUSED(pins);
+    k_work_submit(&btn_pair_work);
 }
 
 /*── Button helpers ──*/
@@ -197,6 +278,12 @@ static void btn_down_work_handler(struct k_work *work)
     send_press_release(BTN_SHIFT_DOWN);
 }
 
+static void btn_pair_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    set_pairing_mode(true);
+}
+
 static void send_battery(void)
 {
     uint8_t mac[MAC_LEN];
@@ -224,7 +311,7 @@ int main(void)
     gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
 
     LOG_INF("NXS pod firmware v0.1.0 (Zephyr)");
-    LOG_INF("Commands: u=up d=down B=bootloader");
+    LOG_INF("Commands: u=up d=down p=pair B=bootloader");
 
     /* BLE init */
     int err = bt_enable(NULL);
@@ -234,6 +321,8 @@ int main(void)
     }
 
     fill_mfr_data();
+    bt_conn_auth_cb_register(&auth_cb);
+    bt_conn_auth_info_cb_register(&auth_info_cb);
     gatt_set_pin_write_cb(on_pin_write);
 
     /* GPIO buttons */
@@ -245,7 +334,11 @@ int main(void)
     gpio_init_callback(&btn_down_cb_data, btn_down_isr, BIT(btn_down.pin));
     gpio_add_callback(btn_up.port, &btn_up_cb_data);
     gpio_add_callback(btn_down.port, &btn_down_cb_data);
-    LOG_INF("GPIO buttons: P0.17=up P0.31=down");
+    gpio_pin_configure_dt(&btn_pair, GPIO_INPUT);
+    gpio_pin_interrupt_configure_dt(&btn_pair, GPIO_INT_EDGE_TO_ACTIVE);
+    gpio_init_callback(&btn_pair_cb_data, btn_pair_isr, BIT(btn_pair.pin));
+    gpio_add_callback(btn_pair.port, &btn_pair_cb_data);
+    LOG_INF("GPIO buttons: P0.17=up P0.31=down P0.20=pair");
 
     start_advertising();
 
@@ -262,6 +355,8 @@ int main(void)
                 send_press_release(BTN_SHIFT_UP);
             } else if (ch == 'd') {
                 send_press_release(BTN_SHIFT_DOWN);
+            } else if (ch == 'p') {
+                set_pairing_mode(true);
             } else if (ch == 'B') {
                 LOG_INF("Entering bootloader...");
                 k_msleep(100);
