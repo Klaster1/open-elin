@@ -241,6 +241,11 @@ static void btn_pair_isr(const struct device *dev, struct gpio_callback *cb, uin
 #define BTN_SHIFT_UP   0x00
 #define BTN_SHIFT_DOWN 0x01
 #define BATTERY_MV     3000
+#define DEBOUNCE_MS    150
+
+static int64_t last_btn_up_ms;
+static int64_t last_btn_down_ms;
+static int64_t last_btn_pair_ms;
 
 static void get_own_mac(uint8_t mac_le[MAC_LEN])
 {
@@ -269,18 +274,27 @@ static void send_press_release(uint8_t btn_id)
 static void btn_up_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
+    int64_t now = k_uptime_get();
+    if (now - last_btn_up_ms < DEBOUNCE_MS) { return; }
+    last_btn_up_ms = now;
     send_press_release(BTN_SHIFT_UP);
 }
 
 static void btn_down_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
+    int64_t now = k_uptime_get();
+    if (now - last_btn_down_ms < DEBOUNCE_MS) { return; }
+    last_btn_down_ms = now;
     send_press_release(BTN_SHIFT_DOWN);
 }
 
 static void btn_pair_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
+    int64_t now = k_uptime_get();
+    if (now - last_btn_pair_ms < DEBOUNCE_MS) { return; }
+    last_btn_pair_ms = now;
     set_pairing_mode(true);
 }
 
