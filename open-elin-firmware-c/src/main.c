@@ -22,9 +22,11 @@ static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct gpio_dt_spec btn_up = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);   /* P0.17 */
 static const struct gpio_dt_spec btn_down = GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios); /* P0.31 */
 static const struct gpio_dt_spec btn_pair = GPIO_DT_SPEC_GET(DT_ALIAS(sw2), gpios); /* P0.20 */
+static const struct gpio_dt_spec btn_tune = GPIO_DT_SPEC_GET(DT_ALIAS(sw3), gpios); /* P0.22 */
 static struct gpio_callback btn_up_cb_data;
 static struct gpio_callback btn_down_cb_data;
 static struct gpio_callback btn_pair_cb_data;
+static struct gpio_callback btn_tune_cb_data;
 
 /*── USB VBUS detection ──*/
 static volatile bool usb_active;
@@ -141,6 +143,7 @@ static void led_blink(void)
 
 /*── BLE connection callbacks ──*/
 static struct bt_conn *current_conn;
+static void set_pairing_mode(bool enable);
 
 static void connected(struct bt_conn *conn, uint8_t err)
 {
@@ -150,6 +153,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
     }
     current_conn = bt_conn_ref(conn);
     NUS_LOG("HUB CONNECTED");
+    set_pairing_mode(false);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -196,7 +200,10 @@ static void auth_pairing_complete(struct bt_conn *conn, bool bonded)
 
 static void auth_pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
 {
-    LOG_ERR("SMP: pairing FAILED (reason %d)", reason);
+    struct bt_conn_info info;
+    bt_conn_get_info(conn, &info);
+    LOG_ERR("SMP: pairing FAILED (reason %d), deleting bond", reason);
+    bt_unpair(BT_ID_DEFAULT, info.le.dst);
 }
 
 static struct bt_conn_auth_info_cb auth_info_cb = {
@@ -215,10 +222,10 @@ static void on_pin_write(const uint8_t *data, uint16_t len)
 
 /* Forward declaration for NUS command processing */
 static void send_press_release(uint8_t btn_id);
-static void set_pairing_mode(bool enable);
 
 #define BTN_SHIFT_UP   0x00
 #define BTN_SHIFT_DOWN 0x01
+#define BTN_TUNE       0x02
 
 static void handle_command(uint8_t ch)
 {
@@ -226,6 +233,8 @@ static void handle_command(uint8_t ch)
         send_press_release(BTN_SHIFT_UP);
     } else if (ch == 'd') {
         send_press_release(BTN_SHIFT_DOWN);
+    } else if (ch == 't') {
+        send_press_release(BTN_TUNE);
     } else if (ch == 'p') {
         set_pairing_mode(true);
     } else if (ch == 'B') {
@@ -275,9 +284,11 @@ static void pairing_timeout_handler(struct k_work *work)
 static void btn_up_work_handler(struct k_work *work);
 static void btn_down_work_handler(struct k_work *work);
 static void btn_pair_work_handler(struct k_work *work);
+static void btn_tune_work_handler(struct k_work *work);
 static K_WORK_DEFINE(btn_up_work, btn_up_work_handler);
 static K_WORK_DEFINE(btn_down_work, btn_down_work_handler);
 static K_WORK_DEFINE(btn_pair_work, btn_pair_work_handler);
+static K_WORK_DEFINE(btn_tune_work, btn_tune_work_handler);
 
 static void btn_up_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
@@ -297,6 +308,12 @@ static void btn_pair_isr(const struct device *dev, struct gpio_callback *cb, uin
     k_work_submit(&btn_pair_work);
 }
 
+static void btn_tune_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+    ARG_UNUSED(dev); ARG_UNUSED(cb); ARG_UNUSED(pins);
+    k_work_submit(&btn_tune_work);
+}
+
 /*── Button helpers ──*/
 #define BATTERY_MV     3000
 #define DEBOUNCE_MS    150
@@ -304,6 +321,7 @@ static void btn_pair_isr(const struct device *dev, struct gpio_callback *cb, uin
 static int64_t last_btn_up_ms;
 static int64_t last_btn_down_ms;
 static int64_t last_btn_pair_ms;
+static int64_t last_btn_tune_ms;
 
 static void get_own_mac(uint8_t mac_le[MAC_LEN])
 {
@@ -356,6 +374,15 @@ static void btn_pair_work_handler(struct k_work *work)
     set_pairing_mode(true);
 }
 
+static void btn_tune_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    int64_t now = k_uptime_get();
+    if (now - last_btn_tune_ms < DEBOUNCE_MS) { return; }
+    last_btn_tune_ms = now;
+    send_press_release(BTN_TUNE);
+}
+
 static void send_battery(void)
 {
     uint8_t mac[MAC_LEN];
@@ -387,7 +414,7 @@ int main(void)
     gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
 
     LOG_INF("NXS pod firmware v0.1.0 (Zephyr)");
-    LOG_INF("Commands: u=up d=down p=pair B=bootloader");
+    LOG_INF("Commands: u=up d=down t=tune p=pair B=bootloader");
 
     /* BLE init */
     int err = bt_enable(NULL);
@@ -396,10 +423,13 @@ int main(void)
         return 1;
     }
 
-    /* Load bond info from NVS */
-    settings_subsys_init();
-    settings_load();
-    LOG_INF("Settings loaded (bonds from NVS)");
+    /* NVS is clean — init settings subsystem only */
+    int rc = settings_subsys_init();
+    LOG_INF("Settings init: %d", rc);
+    if (rc == 0) {
+        settings_load();
+        LOG_INF("Settings loaded");
+    }
 
     fill_mfr_data();
     bt_conn_auth_cb_register(&auth_cb);
@@ -420,7 +450,11 @@ int main(void)
     gpio_pin_interrupt_configure_dt(&btn_pair, GPIO_INT_EDGE_TO_ACTIVE);
     gpio_init_callback(&btn_pair_cb_data, btn_pair_isr, BIT(btn_pair.pin));
     gpio_add_callback(btn_pair.port, &btn_pair_cb_data);
-    LOG_INF("GPIO buttons: P0.17=up P0.31=down P0.20=pair");
+    gpio_pin_configure_dt(&btn_tune, GPIO_INPUT);
+    gpio_pin_interrupt_configure_dt(&btn_tune, GPIO_INT_EDGE_TO_ACTIVE);
+    gpio_init_callback(&btn_tune_cb_data, btn_tune_isr, BIT(btn_tune.pin));
+    gpio_add_callback(btn_tune.port, &btn_tune_cb_data);
+    LOG_INF("GPIO buttons: P0.17=up P0.31=down P0.20=pair P0.22=tune");
 
     start_advertising();
 

@@ -24,12 +24,17 @@
             gpios = <&gpio0 20 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
             label = "Pair";
         };
+        btn_tune: button_3 {
+            gpios = <&gpio0 22 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "Tune";
+        };
     };
 
     aliases {
         sw0 = &btn_up;
         sw1 = &btn_down;
         sw2 = &btn_pair;
+        sw3 = &btn_tune;
     };
 
     chosen {

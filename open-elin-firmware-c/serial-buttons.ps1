@@ -7,7 +7,7 @@ $serial = New-Object System.IO.Ports.SerialPort $Port, $Baud
 $serial.Open()
 
 Write-Host "Connected to $Port @ $Baud" -ForegroundColor Green
-Write-Host "  u = Shift Up    d = Shift Down    p = Pair    B = Bootloader    q = Quit" -ForegroundColor Cyan
+Write-Host "  u = Shift Up    d = Shift Down    t = Tune    p = Pair    B = Bootloader    q = Quit" -ForegroundColor Cyan
 Write-Host ""
 
 try {
@@ -17,6 +17,7 @@ try {
             switch ($key) {
                 'u' { $serial.Write("u"); Write-Host "-> Shift Up" -ForegroundColor Yellow }
                 'd' { $serial.Write("d"); Write-Host "-> Shift Down" -ForegroundColor Yellow }
+                't' { $serial.Write("t"); Write-Host "-> Tune Toggle" -ForegroundColor Yellow }
                 'p' { $serial.Write("p"); Write-Host "-> Pairing Mode (10s)" -ForegroundColor Magenta }
                 'B' { $serial.Write("B"); Write-Host "-> Bootloader (bye!)" -ForegroundColor Red; break }
                 'q' { break }
