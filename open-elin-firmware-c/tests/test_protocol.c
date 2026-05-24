@@ -36,48 +36,12 @@ static void test_battery_encoding(void)
     printf("  PASS: test_battery_encoding\n");
 }
 
-static void test_shift_complete_parse(void)
-{
-    uint8_t data[SHIFT_COMPLETE_LEN] = {0};
-    put_le16(&data[OFF_OPCODE], OPCODE_SHIFT_COMPLETE);
-    data[OFF_SC_GEAR] = 7;
-
-    struct shift_complete result;
-    assert(protocol_parse_shift_complete(data, sizeof(data), &result) == 0);
-    assert(result.gear == 7);
-    printf("  PASS: test_shift_complete_parse\n");
-}
-
-static void test_shift_complete_wrong_opcode(void)
-{
-    uint8_t data[SHIFT_COMPLETE_LEN] = {0};
-    put_le16(&data[OFF_OPCODE], OPCODE_BUTTON);  /* wrong opcode */
-    data[OFF_SC_GEAR] = 5;
-
-    struct shift_complete result;
-    assert(protocol_parse_shift_complete(data, sizeof(data), &result) != 0);
-    printf("  PASS: test_shift_complete_wrong_opcode\n");
-}
-
-static void test_shift_complete_too_short(void)
-{
-    uint8_t data[FRAME_LEN] = {0};  /* 10 bytes, need 11 */
-    put_le16(&data[OFF_OPCODE], OPCODE_SHIFT_COMPLETE);
-
-    struct shift_complete result;
-    assert(protocol_parse_shift_complete(data, sizeof(data), &result) != 0);
-    printf("  PASS: test_shift_complete_too_short\n");
-}
-
 int main(void)
 {
     printf("Running protocol tests...\n");
     test_button_press_encoding();
     test_button_release_encoding();
     test_battery_encoding();
-    test_shift_complete_parse();
-    test_shift_complete_wrong_opcode();
-    test_shift_complete_too_short();
-    printf("All 6 tests passed.\n");
+    printf("All 3 tests passed.\n");
     return 0;
 }

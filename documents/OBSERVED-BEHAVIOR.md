@@ -315,20 +315,20 @@ The hub acts as BLE central to the pod. All confirmed observations are of the **
 - The hub writes to the pod's **PIN** characteristic during pairing (observed: CirPy receives PIN data via `pin_buf`/`pin_char.value` and responds with ACK `0x01`).
 - The hub presumably writes **something** to the pod after connection setup (connection bonding, CCCD subscription). But no protocol-level data has been captured for this.
 
+**What we now know (verified 2026-05-24 with Zephyr C firmware):**
+- The hub does **NOT** write ShiftComplete (`0x4003`) — or anything else — to the pod's MSG characteristic after a shift. The Zephyr firmware logs all GATT writes via `LOG_HEXDUMP_INF` and no `MSG write` output appeared after button presses that successfully triggered shifts on the hub. The ShiftComplete parsing code in both CirPy and Zephyr firmware is **dead code**.
+- The hub does **not** write any other commands to the pod's MSG characteristic during normal operation (connect → button presses → disconnect cycle).
+
 **What we DON'T know:**
-- Whether the hub writes ShiftComplete (`0x4003`) to the pod's MSG characteristic after a shift. The CirPy code includes a parser for this ([code.py lines 238–250](../open-elin-firmware-python/code.py)), but it has **never been observed to fire**. No `← MSG (val)` or `← MSG (buf)` log line containing ShiftComplete data has been recorded.
-- Whether the hub writes any other commands to the pod.
 - Whether the hub relays app commands (e.g. position queries, config changes) to the pod.
 
-**CirPy's direction-flipping mechanism:** The CirPy fake pod uses a **1.2-second timeout** as the primary direction-flip mechanism. If no ShiftComplete arrives within 1.2s of a button press, it assumes a gear limit was hit and reverses direction. This timeout path is the **only confirmed working mechanism** — the ShiftComplete parsing path may be dead code.
-
-**How to verify:** Flash firmware with USB serial logging, perform shifts, and check the serial output for `← MSG` lines. If the hub writes ShiftComplete to the pod, you'd see frames starting with `03 40` on the pod's MSG characteristic.
+**CirPy's direction-flipping mechanism:** The CirPy fake pod uses a **1.2-second timeout** as the primary direction-flip mechanism. If no ShiftComplete arrives within 1.2s of a button press, it assumes a gear limit was hit and reverses direction. This timeout path is the **only working mechanism** — the ShiftComplete parsing path is dead code.
 
 ---
 
 ## Open Questions (things NOT yet observed)
 
-- Hub→pod wire format: **does the hub write ShiftComplete (0x4003) to the pod's MSG characteristic?** (see section above)
+- ~~Hub→pod wire format: **does the hub write ShiftComplete (0x4003) to the pod's MSG characteristic?**~~ **No.** Verified 2026-05-24 — hub never writes to pod MSG after shifts.
 - Whether the hub relays any app commands to the pod
 - Connection parameters (interval, MTU)
 - What triggers the pod to send `BLE_MSG_BAT_V` (on connect only? periodic? threshold?)

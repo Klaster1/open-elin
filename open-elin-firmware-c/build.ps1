@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 $appDir = $PSScriptRoot
 
 Write-Host "Building firmware..." -ForegroundColor Cyan
-docker run --rm -v "${appDir}:/app" nxs-zephyr
+docker run --rm -v "${appDir}:/app" -v nxs-zephyr-build:/workdir/zephyr/build nxs-zephyr
 
 if ($LASTEXITCODE -ne 0) { exit 1 }
 

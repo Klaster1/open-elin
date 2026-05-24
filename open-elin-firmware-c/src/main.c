@@ -125,15 +125,6 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 };
 
 /*── GATT callbacks ──*/
-static void on_msg_write(const uint8_t *data, uint16_t len)
-{
-    struct shift_complete sc;
-    if (protocol_parse_shift_complete(data, len, &sc) == 0) {
-        LOG_INF("ShiftComplete: gear=%u", sc.gear);
-    }
-    led_blink();
-}
-
 static void on_pin_write(const uint8_t *data, uint16_t len)
 {
     LOG_INF("PIN exchange (%u bytes) -> ACK", len);
@@ -208,7 +199,6 @@ int main(void)
     }
 
     fill_mfr_data();
-    gatt_set_msg_write_cb(on_msg_write);
     gatt_set_pin_write_cb(on_pin_write);
     start_advertising();
 

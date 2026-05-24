@@ -20,16 +20,3 @@ void protocol_encode_battery(uint8_t out[FRAME_LEN],
     memcpy(&out[OFF_MAC], mac_le, MAC_LEN);
     put_le16(&out[OFF_PAYLOAD], mv);
 }
-
-int protocol_parse_shift_complete(const uint8_t *data, size_t len,
-                                  struct shift_complete *out)
-{
-    if (len < SHIFT_COMPLETE_LEN) {
-        return -1;
-    }
-    if (get_le16(&data[OFF_OPCODE]) != OPCODE_SHIFT_COMPLETE) {
-        return -1;
-    }
-    out->gear = data[OFF_SC_GEAR];
-    return 0;
-}

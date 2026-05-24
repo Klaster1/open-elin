@@ -32,7 +32,8 @@ Open-source replacement firmware and tools for the NXS BikeNet wireless electron
 |--------|-----|------|
 | Hub | `D7:BA:AB:52:A0:E5` | NXS eLink hub |
 | Pod (real) | `D5:89:B2:13:FA:04` | NXS MTB Pod |
-| Pod (fake) | `C2:4F:23:0B:B5:43` | CircuitPython fake pod |
+| Pod (fake, CircuitPython) | `C2:4F:23:0B:B5:43` | CircuitPython fake pod |
+| Pod (fake, Zephyr) | `F7:3A:3D:75:99:A0` | Zephyr C firmware on SuperMini |
 
 ## Conventions
 
