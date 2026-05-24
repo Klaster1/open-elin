@@ -31,6 +31,18 @@ static struct gpio_callback btn_tune_cb_data;
 /*── USB VBUS detection ──*/
 static volatile bool usb_active;
 
+/*── Radio sleep (advertising timeout) ──*/
+#define ADV_TIMEOUT_MIN       15    /* Stop advertising after this many minutes idle */
+#define ADV_WAKE_TIMEOUT_SEC  60    /* After wake, stop again if hub doesn't connect */
+
+static volatile bool radio_sleeping;  /* true = advertising stopped to save power */
+
+/* Pending shift — btn_id to send once hub connects (0xFF = none) */
+static uint8_t pending_shift = 0xFF;
+
+static void adv_timeout_handler(struct k_timer *timer);
+static K_TIMER_DEFINE(adv_timeout_timer, adv_timeout_handler, NULL);
+
 static void usb_status_cb(enum usb_dc_status_code status, const uint8_t *param)
 {
     ARG_UNUSED(param);
@@ -112,6 +124,8 @@ static void start_advertising(void)
         LOG_ERR("Advertising failed (err %d)", err);
     } else {
         LOG_INF("Advertising as 'NXS MTB Pod'");
+        /* Reset inactivity timer — hub has ADV_TIMEOUT_MIN to connect */
+        k_timer_start(&adv_timeout_timer, K_MINUTES(ADV_TIMEOUT_MIN), K_NO_WAIT);
     }
 }
 
@@ -123,6 +137,47 @@ static void adv_restart_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
     start_advertising();
+}
+
+/*── Radio sleep helpers ──*/
+static struct bt_conn *current_conn;  /* forward — used by adv_timeout_handler */
+static void send_press_release(uint8_t btn_id);  /* forward — used by pending_shift_flush */
+
+static void adv_timeout_handler(struct k_timer *timer)
+{
+    ARG_UNUSED(timer);
+    if (current_conn) {
+        return;  /* Don't sleep while connected */
+    }
+    bt_le_adv_stop();
+    radio_sleeping = true;
+    NUS_LOG("Radio sleep (no hub for %d min)", ADV_TIMEOUT_MIN);
+}
+
+static void pending_shift_set(uint8_t btn_id)
+{
+    pending_shift = btn_id;  /* Last press wins */
+}
+
+static void pending_shift_flush(void)
+{
+    if (pending_shift != 0xFF) {
+        uint8_t btn_id = pending_shift;
+        pending_shift = 0xFF;
+        send_press_release(btn_id);
+    }
+}
+
+static void radio_wake(void)
+{
+    if (!radio_sleeping) {
+        return;
+    }
+    radio_sleeping = false;
+    start_advertising();
+    /* Give hub ADV_WAKE_TIMEOUT_SEC to connect, then sleep again */
+    k_timer_start(&adv_timeout_timer, K_SECONDS(ADV_WAKE_TIMEOUT_SEC), K_NO_WAIT);
+    NUS_LOG("Radio wake (button press)");
 }
 
 /*── LED blink on activity ──*/
@@ -142,7 +197,6 @@ static void led_blink(void)
 }
 
 /*── BLE connection callbacks ──*/
-static struct bt_conn *current_conn;
 static void set_pairing_mode(bool enable);
 
 static void connected(struct bt_conn *conn, uint8_t err)
@@ -154,6 +208,8 @@ static void connected(struct bt_conn *conn, uint8_t err)
     current_conn = bt_conn_ref(conn);
     NUS_LOG("HUB CONNECTED");
     set_pairing_mode(false);
+    k_timer_stop(&adv_timeout_timer);
+    radio_sleeping = false;
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -167,6 +223,30 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
     k_work_schedule(&adv_restart_work, K_MSEC(500));
 }
 
+static void pending_flush_work_handler(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(pending_flush_work, pending_flush_work_handler);
+
+static void pending_blink_work_handler(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(pending_blink_work, pending_blink_work_handler);
+
+static void pending_blink_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    if (pending_shift != 0xFF) {
+        led_blink();
+        k_work_schedule(&pending_blink_work, K_MSEC(300));
+    }
+}
+
+static void pending_flush_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    k_work_cancel_delayable(&pending_blink_work);
+    pending_shift_flush();
+}
+
+static void send_battery(void);  /* forward */
+
 static void security_changed(struct bt_conn *conn, bt_security_t level,
                               enum bt_security_err err)
 {
@@ -174,6 +254,12 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,
         LOG_ERR("Security change FAILED (level %u, err %d)", level, err);
     } else {
         LOG_INF("Security changed to level %u", level);
+        send_battery();
+        /* Hub needs ~3s after connection before it accepts button presses */
+        k_work_schedule(&pending_flush_work, K_MSEC(3000));
+        if (pending_shift != 0xFF) {
+            k_work_schedule(&pending_blink_work, K_MSEC(100));
+        }
     }
 }
 
@@ -220,27 +306,47 @@ static void on_pin_write(const uint8_t *data, uint16_t len)
     led_blink();
 }
 
-/* Forward declaration for NUS command processing */
-static void send_press_release(uint8_t btn_id);
-
 #define BTN_SHIFT_UP   0x00
 #define BTN_SHIFT_DOWN 0x01
 #define BTN_TUNE       0x02
 
+static void send_shift_or_queue(uint8_t btn_id)
+{
+    if (radio_sleeping || !current_conn) {
+        pending_shift_set(btn_id);
+        radio_wake();
+    } else {
+        send_press_release(btn_id);
+    }
+}
+
 static void handle_command(uint8_t ch)
 {
     if (ch == 'u') {
-        send_press_release(BTN_SHIFT_UP);
+        send_shift_or_queue(BTN_SHIFT_UP);
     } else if (ch == 'd') {
-        send_press_release(BTN_SHIFT_DOWN);
+        send_shift_or_queue(BTN_SHIFT_DOWN);
     } else if (ch == 't') {
-        send_press_release(BTN_TUNE);
+        send_shift_or_queue(BTN_TUNE);
     } else if (ch == 'p') {
+        if (radio_sleeping) {
+            radio_wake();
+        }
+    } else if (ch == 'P') {
         set_pairing_mode(true);
     } else if (ch == 'B') {
         NUS_LOG("Entering bootloader...");
         k_msleep(100);
         enter_bootloader();
+    } else if (ch == 'S') {
+        if (current_conn) {
+            NUS_LOG("Can't sleep while connected");
+        } else {
+            k_timer_stop(&adv_timeout_timer);
+            bt_le_adv_stop();
+            radio_sleeping = true;
+            NUS_LOG("Radio sleep (forced)");
+        }
     }
 }
 
@@ -348,7 +454,7 @@ static void send_press_release(uint8_t btn_id)
     protocol_encode_button(frame, mac, btn_id, ACTION_RELEASE);
     gatt_notify_msg(frame, sizeof(frame));
 
-    NUS_LOG("-> button 0x%02X press+release", btn_id);
+    NUS_LOG("-> button 0x%02X", btn_id);
     led_blink();
 }
 
@@ -358,7 +464,7 @@ static void btn_up_work_handler(struct k_work *work)
     int64_t now = k_uptime_get();
     if (now - last_btn_up_ms < DEBOUNCE_MS) { return; }
     last_btn_up_ms = now;
-    send_press_release(BTN_SHIFT_UP);
+    send_shift_or_queue(BTN_SHIFT_UP);
 }
 
 static void btn_down_work_handler(struct k_work *work)
@@ -367,7 +473,7 @@ static void btn_down_work_handler(struct k_work *work)
     int64_t now = k_uptime_get();
     if (now - last_btn_down_ms < DEBOUNCE_MS) { return; }
     last_btn_down_ms = now;
-    send_press_release(BTN_SHIFT_DOWN);
+    send_shift_or_queue(BTN_SHIFT_DOWN);
 }
 
 static void btn_pair_work_handler(struct k_work *work)
@@ -379,7 +485,10 @@ static void btn_pair_work_handler(struct k_work *work)
 
     /* Check if button is pressed (active) or released */
     if (gpio_pin_get_dt(&btn_pair)) {
-        /* Button pressed — start 6s hold timer */
+        /* Button pressed — wake radio if sleeping, start 6s hold timer for pairing */
+        if (radio_sleeping) {
+            radio_wake();
+        }
         k_work_schedule(&btn_pair_hold_work, K_SECONDS(6));
     } else {
         /* Button released — cancel if held less than 6s */
@@ -399,7 +508,7 @@ static void btn_tune_work_handler(struct k_work *work)
     int64_t now = k_uptime_get();
     if (now - last_btn_tune_ms < DEBOUNCE_MS) { return; }
     last_btn_tune_ms = now;
-    send_press_release(BTN_TUNE);
+    send_shift_or_queue(BTN_TUNE);
 }
 
 static void send_battery(void)
@@ -412,13 +521,13 @@ static void send_battery(void)
     gatt_notify_msg(frame, sizeof(frame));
 }
 
-/*── Battery timer ──*/
-static void battery_timer_handler(struct k_timer *timer)
+/*── Battery timer (every 5s) ──*/
+static void periodic_timer_handler(struct k_timer *timer)
 {
     ARG_UNUSED(timer);
     send_battery();
 }
-static K_TIMER_DEFINE(battery_timer, battery_timer_handler, NULL);
+static K_TIMER_DEFINE(periodic_timer, periodic_timer_handler, NULL);
 
 /*── Main ──*/
 int main(void)
@@ -433,7 +542,7 @@ int main(void)
     gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
 
     LOG_INF("NXS pod firmware v0.1.0 (Zephyr)");
-    LOG_INF("Commands: u=up d=down t=tune p=pair B=bootloader");
+    LOG_INF("Commands: u=up d=down t=tune p=wake P=pair S=sleep B=bootloader");
 
     /* BLE init */
     int err = bt_enable(NULL);
@@ -478,7 +587,7 @@ int main(void)
     start_advertising();
 
     /* Battery report every 5s via timer (runs in ISR context) */
-    k_timer_start(&battery_timer, K_SECONDS(5), K_SECONDS(5));
+    k_timer_start(&periodic_timer, K_SECONDS(5), K_SECONDS(5));
 
     /* Main loop: poll serial (USB CDC doesn't support interrupt-driven rx) */
     const struct device *console = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
