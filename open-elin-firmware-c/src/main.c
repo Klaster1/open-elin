@@ -18,6 +18,11 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 #define LED0_NODE DT_ALIAS(led0)
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
+static const struct gpio_dt_spec btn_up = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);   /* P0.17 */
+static const struct gpio_dt_spec btn_down = GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios); /* P0.31 */
+static struct gpio_callback btn_up_cb_data;
+static struct gpio_callback btn_down_cb_data;
+
 /*── Bootloader entry ──*/
 static void enter_bootloader(void)
 {
@@ -133,6 +138,24 @@ static void on_pin_write(const uint8_t *data, uint16_t len)
     led_blink();
 }
 
+/*── GPIO button interrupts ──*/
+static void btn_up_work_handler(struct k_work *work);
+static void btn_down_work_handler(struct k_work *work);
+static K_WORK_DEFINE(btn_up_work, btn_up_work_handler);
+static K_WORK_DEFINE(btn_down_work, btn_down_work_handler);
+
+static void btn_up_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+    ARG_UNUSED(dev); ARG_UNUSED(cb); ARG_UNUSED(pins);
+    k_work_submit(&btn_up_work);
+}
+
+static void btn_down_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+    ARG_UNUSED(dev); ARG_UNUSED(cb); ARG_UNUSED(pins);
+    k_work_submit(&btn_down_work);
+}
+
 /*── Button helpers ──*/
 #define BTN_SHIFT_UP   0x00
 #define BTN_SHIFT_DOWN 0x01
@@ -160,6 +183,18 @@ static void send_press_release(uint8_t btn_id)
 
     LOG_INF("-> button 0x%02X press+release", btn_id);
     led_blink();
+}
+
+static void btn_up_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    send_press_release(BTN_SHIFT_UP);
+}
+
+static void btn_down_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    send_press_release(BTN_SHIFT_DOWN);
 }
 
 static void send_battery(void)
@@ -200,6 +235,18 @@ int main(void)
 
     fill_mfr_data();
     gatt_set_pin_write_cb(on_pin_write);
+
+    /* GPIO buttons */
+    gpio_pin_configure_dt(&btn_up, GPIO_INPUT);
+    gpio_pin_configure_dt(&btn_down, GPIO_INPUT);
+    gpio_pin_interrupt_configure_dt(&btn_up, GPIO_INT_EDGE_TO_ACTIVE);
+    gpio_pin_interrupt_configure_dt(&btn_down, GPIO_INT_EDGE_TO_ACTIVE);
+    gpio_init_callback(&btn_up_cb_data, btn_up_isr, BIT(btn_up.pin));
+    gpio_init_callback(&btn_down_cb_data, btn_down_isr, BIT(btn_down.pin));
+    gpio_add_callback(btn_up.port, &btn_up_cb_data);
+    gpio_add_callback(btn_down.port, &btn_down_cb_data);
+    LOG_INF("GPIO buttons: P0.17=up P0.31=down");
+
     start_advertising();
 
     /* Battery report every 5s via timer (runs in ISR context) */
