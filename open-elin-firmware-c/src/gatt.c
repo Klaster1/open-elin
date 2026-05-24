@@ -4,6 +4,7 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/logging/log.h>
+#include <stdbool.h>
 #include <string.h>
 
 LOG_MODULE_REGISTER(gatt, LOG_LEVEL_INF);
@@ -105,4 +106,70 @@ int gatt_notify_msg(const uint8_t *data, size_t len)
 int gatt_notify_pin(const uint8_t *data, size_t len)
 {
     return bt_gatt_notify(NULL, &bikenet_svc.attrs[5], data, len);
+}
+
+/*── Nordic UART Service (NUS) ──────────────────────────────────────────────*/
+/* UUID: 6e400001-b5a3-f393-e0a9-e50e24dcca9e */
+static struct bt_uuid_128 nus_svc_uuid = BT_UUID_INIT_128(
+    0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0,
+    0x93, 0xF3, 0xA3, 0xB5, 0x01, 0x00, 0x40, 0x6E);
+
+/* NUS TX (pod→phone): 6e400003-b5a3-f393-e0a9-e50e24dcca9e */
+static struct bt_uuid_128 nus_tx_uuid = BT_UUID_INIT_128(
+    0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0,
+    0x93, 0xF3, 0xA3, 0xB5, 0x03, 0x00, 0x40, 0x6E);
+
+/* NUS RX (phone→pod): 6e400002-b5a3-f393-e0a9-e50e24dcca9e */
+static struct bt_uuid_128 nus_rx_uuid = BT_UUID_INIT_128(
+    0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0,
+    0x93, 0xF3, 0xA3, 0xB5, 0x02, 0x00, 0x40, 0x6E);
+
+static volatile bool nus_subscribed;
+static gatt_write_cb_t nus_rx_cb;
+
+void gatt_set_nus_rx_cb(gatt_write_cb_t cb) { nus_rx_cb = cb; }
+
+static void nus_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value)
+{
+    nus_subscribed = (value == BT_GATT_CCC_NOTIFY);
+    LOG_INF("NUS TX notifications %s", nus_subscribed ? "enabled" : "disabled");
+}
+
+static ssize_t nus_rx_write(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+                            const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
+{
+    if (len > 0 && nus_rx_cb) {
+        nus_rx_cb(buf, len);
+    }
+    return len;
+}
+
+BT_GATT_SERVICE_DEFINE(nus_svc,
+    BT_GATT_PRIMARY_SERVICE(&nus_svc_uuid),
+
+    /* TX: notify only (pod → phone) */
+    BT_GATT_CHARACTERISTIC(&nus_tx_uuid.uuid,
+        BT_GATT_CHRC_NOTIFY,
+        BT_GATT_PERM_NONE,
+        NULL, NULL, NULL),
+    BT_GATT_CCC(nus_ccc_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+
+    /* RX: write (phone → pod) */
+    BT_GATT_CHARACTERISTIC(&nus_rx_uuid.uuid,
+        BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+        BT_GATT_PERM_WRITE,
+        NULL, nus_rx_write, NULL),
+);
+
+bool gatt_nus_is_subscribed(void)
+{
+    return nus_subscribed;
+}
+
+int gatt_nus_send(const char *str, size_t len)
+{
+    if (!nus_subscribed || len == 0) {
+        return 0;
+    }
+    return bt_gatt_notify(NULL, &nus_svc.attrs[1], str, len);
 }

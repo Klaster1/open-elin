@@ -47,6 +47,17 @@ static void usb_status_cb(enum usb_dc_status_code status, const uint8_t *param)
 }
 
 /*── Bootloader entry ──*/
+
+/* Log to both console and BLE NUS (if subscribed). */
+#define NUS_LOG(fmt, ...) do { \
+    LOG_INF(fmt, ##__VA_ARGS__); \
+    if (gatt_nus_is_subscribed()) { \
+        char _nb[80]; \
+        int _nl = snprintf(_nb, sizeof(_nb), fmt "\n", ##__VA_ARGS__); \
+        if (_nl > 0) { gatt_nus_send(_nb, MIN((size_t)_nl, sizeof(_nb))); } \
+    } \
+} while (0)
+
 static void enter_bootloader(void)
 {
     NRF_POWER->GPREGRET = 0x57;
@@ -138,12 +149,12 @@ static void connected(struct bt_conn *conn, uint8_t err)
         return;
     }
     current_conn = bt_conn_ref(conn);
-    LOG_INF("HUB CONNECTED");
+    NUS_LOG("HUB CONNECTED");
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
-    LOG_INF("HUB DISCONNECTED (reason %u)", reason);
+    NUS_LOG("HUB DISCONNECTED (reason %u)", reason);
     if (current_conn) {
         bt_conn_unref(current_conn);
         current_conn = NULL;
@@ -180,7 +191,7 @@ static struct bt_conn_auth_cb auth_cb = {
 
 static void auth_pairing_complete(struct bt_conn *conn, bool bonded)
 {
-    LOG_INF("SMP: pairing complete (bonded=%d)", bonded);
+    NUS_LOG("SMP: pairing complete (bonded=%d)", bonded);
 }
 
 static void auth_pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
@@ -202,6 +213,34 @@ static void on_pin_write(const uint8_t *data, uint16_t len)
     led_blink();
 }
 
+/* Forward declaration for NUS command processing */
+static void send_press_release(uint8_t btn_id);
+static void set_pairing_mode(bool enable);
+
+#define BTN_SHIFT_UP   0x00
+#define BTN_SHIFT_DOWN 0x01
+
+static void handle_command(uint8_t ch)
+{
+    if (ch == 'u') {
+        send_press_release(BTN_SHIFT_UP);
+    } else if (ch == 'd') {
+        send_press_release(BTN_SHIFT_DOWN);
+    } else if (ch == 'p') {
+        set_pairing_mode(true);
+    } else if (ch == 'B') {
+        NUS_LOG("Entering bootloader...");
+        k_msleep(100);
+        enter_bootloader();
+    }
+}
+
+static void on_nus_rx(const uint8_t *data, uint16_t len)
+{
+    if (len == 0) return;
+    handle_command(data[0]);
+}
+
 /*── Pairing mode ──*/
 static void pairing_timeout_handler(struct k_work *work);
 static K_WORK_DELAYABLE_DEFINE(pairing_timeout_work, pairing_timeout_handler);
@@ -218,10 +257,10 @@ static void set_pairing_mode(bool enable)
     }
 
     if (enable) {
-        LOG_INF("PAIRING MODE ON (10s)");
+        NUS_LOG("PAIRING MODE ON (10s)");
         k_work_schedule(&pairing_timeout_work, K_SECONDS(10));
     } else {
-        LOG_INF("PAIRING MODE OFF");
+        NUS_LOG("PAIRING MODE OFF");
         k_work_cancel_delayable(&pairing_timeout_work);
     }
 }
@@ -259,8 +298,6 @@ static void btn_pair_isr(const struct device *dev, struct gpio_callback *cb, uin
 }
 
 /*── Button helpers ──*/
-#define BTN_SHIFT_UP   0x00
-#define BTN_SHIFT_DOWN 0x01
 #define BATTERY_MV     3000
 #define DEBOUNCE_MS    150
 
@@ -288,7 +325,7 @@ static void send_press_release(uint8_t btn_id)
     protocol_encode_button(frame, mac, btn_id, ACTION_RELEASE);
     gatt_notify_msg(frame, sizeof(frame));
 
-    LOG_INF("-> button 0x%02X press+release", btn_id);
+    NUS_LOG("-> button 0x%02X press+release", btn_id);
     led_blink();
 }
 
@@ -368,6 +405,7 @@ int main(void)
     bt_conn_auth_cb_register(&auth_cb);
     bt_conn_auth_info_cb_register(&auth_info_cb);
     gatt_set_pin_write_cb(on_pin_write);
+    gatt_set_nus_rx_cb(on_nus_rx);
 
     /* GPIO buttons */
     gpio_pin_configure_dt(&btn_up, GPIO_INPUT);
@@ -395,17 +433,7 @@ int main(void)
 
     while (1) {
         if (usb_active && uart_poll_in(console, &ch) == 0) {
-            if (ch == 'u') {
-                send_press_release(BTN_SHIFT_UP);
-            } else if (ch == 'd') {
-                send_press_release(BTN_SHIFT_DOWN);
-            } else if (ch == 'p') {
-                set_pairing_mode(true);
-            } else if (ch == 'B') {
-                LOG_INF("Entering bootloader...");
-                k_msleep(100);
-                enter_bootloader();
-            }
+            handle_command(ch);
         }
 
         /* Sleep longer when no USB — serial polling is pointless without a host.
