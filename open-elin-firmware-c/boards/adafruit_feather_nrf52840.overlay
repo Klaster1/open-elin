@@ -42,3 +42,29 @@
         compatible = "zephyr,cdc-acm-uart";
     };
 };
+
+/* Move storage_partition BEFORE UF2 bootloader (0xF4000+).
+ * Default Zephyr puts it at 0xF8000 which overlaps the Adafruit bootloader
+ * at 0xF4000-0x100000 and bricks it (see https://zmk.dev/blog/2020/10/03/bootloader-fix).
+ * ZMK's fix: 32KB (8 sectors) at 0xEC000-0xF4000, right below the bootloader. */
+
+/* Delete the default storage_partition at 0xF8000 */
+/delete-node/ &storage_partition;
+
+&flash0 {
+    partitions {
+        /* Shrink code_partition to end before storage */
+        code_partition: partition@1000 {
+            reg = <0x00001000 0x000eb000>;  /* 0x1000 to 0xEC000 */
+        };
+
+        /* 32KB NVS storage, safely below bootloader */
+        storage_partition: partition@ec000 {
+            compatible = "zephyr,mapped-partition";
+            label = "storage";
+            reg = <0x000ec000 0x00008000>;  /* 0xEC000 to 0xF4000 */
+        };
+
+        /* 0xF4000-0x100000 reserved for Adafruit UF2 bootloader */
+    };
+};

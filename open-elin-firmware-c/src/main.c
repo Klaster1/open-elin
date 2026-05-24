@@ -8,6 +8,7 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gap.h>
+#include <zephyr/settings/settings.h>
 #include <nrfx.h>
 
 #include "protocol.h"
@@ -333,6 +334,11 @@ int main(void)
         LOG_ERR("BT init failed (err %d)", err);
         return 1;
     }
+
+    /* Load bond info from NVS */
+    settings_subsys_init();
+    settings_load();
+    LOG_INF("Settings loaded (bonds from NVS)");
 
     fill_mfr_data();
     bt_conn_auth_cb_register(&auth_cb);
