@@ -265,6 +265,9 @@ static void set_pairing_mode(bool enable)
         start_advertising();
     }
 
+    /* LED solid on during pairing mode */
+    gpio_pin_set_dt(&led, enable ? 1 : 0);
+
     if (enable) {
         NUS_LOG("PAIRING MODE ON (10s)");
         k_work_schedule(&pairing_timeout_work, K_SECONDS(10));
@@ -284,10 +287,12 @@ static void pairing_timeout_handler(struct k_work *work)
 static void btn_up_work_handler(struct k_work *work);
 static void btn_down_work_handler(struct k_work *work);
 static void btn_pair_work_handler(struct k_work *work);
+static void btn_pair_hold_handler(struct k_work *work);
 static void btn_tune_work_handler(struct k_work *work);
 static K_WORK_DEFINE(btn_up_work, btn_up_work_handler);
 static K_WORK_DEFINE(btn_down_work, btn_down_work_handler);
 static K_WORK_DEFINE(btn_pair_work, btn_pair_work_handler);
+static K_WORK_DELAYABLE_DEFINE(btn_pair_hold_work, btn_pair_hold_handler);
 static K_WORK_DEFINE(btn_tune_work, btn_tune_work_handler);
 
 static void btn_up_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
@@ -371,6 +376,20 @@ static void btn_pair_work_handler(struct k_work *work)
     int64_t now = k_uptime_get();
     if (now - last_btn_pair_ms < DEBOUNCE_MS) { return; }
     last_btn_pair_ms = now;
+
+    /* Check if button is pressed (active) or released */
+    if (gpio_pin_get_dt(&btn_pair)) {
+        /* Button pressed — start 6s hold timer */
+        k_work_schedule(&btn_pair_hold_work, K_SECONDS(6));
+    } else {
+        /* Button released — cancel if held less than 6s */
+        k_work_cancel_delayable(&btn_pair_hold_work);
+    }
+}
+
+static void btn_pair_hold_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
     set_pairing_mode(true);
 }
 
@@ -447,7 +466,7 @@ int main(void)
     gpio_add_callback(btn_up.port, &btn_up_cb_data);
     gpio_add_callback(btn_down.port, &btn_down_cb_data);
     gpio_pin_configure_dt(&btn_pair, GPIO_INPUT);
-    gpio_pin_interrupt_configure_dt(&btn_pair, GPIO_INT_EDGE_TO_ACTIVE);
+    gpio_pin_interrupt_configure_dt(&btn_pair, GPIO_INT_EDGE_BOTH);  /* need both edges for long-press */
     gpio_init_callback(&btn_pair_cb_data, btn_pair_isr, BIT(btn_pair.pin));
     gpio_add_callback(btn_pair.port, &btn_pair_cb_data);
     gpio_pin_configure_dt(&btn_tune, GPIO_INPUT);
