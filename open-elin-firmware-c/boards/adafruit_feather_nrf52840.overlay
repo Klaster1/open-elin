@@ -73,3 +73,8 @@
         /* 0xF4000-0x100000 reserved for Adafruit UF2 bootloader */
     };
 };
+
+/* SuperMini has no QSPI flash — disable to suppress JEDEC ID error */
+&qspi {
+    status = "disabled";
+};
