@@ -9,6 +9,7 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gap.h>
 #include <zephyr/settings/settings.h>
+#include <zephyr/drivers/adc.h>
 #include <nrfx.h>
 
 #include "protocol.h"
@@ -53,6 +54,49 @@ static bool latency_relaxed;
 
 static void latency_escalation_handler(struct k_timer *timer);
 static K_TIMER_DEFINE(latency_timer, latency_escalation_handler, NULL);
+
+/*── Battery ADC ──*/
+static const struct adc_dt_spec adc_battery =
+    ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 0);
+
+/* Cached reading (updated every 5s from work queue) */
+static int32_t battery_mv;
+
+/* VDDHDIV5: internal 1/5 divider on VDDH pin */
+#define VDIV_FACTOR 5
+
+static int battery_init(void)
+{
+    if (!adc_is_ready_dt(&adc_battery)) {
+        LOG_ERR("ADC device not ready");
+        return -ENODEV;
+    }
+    int err = adc_channel_setup_dt(&adc_battery);
+    if (err) {
+        LOG_ERR("ADC channel setup failed: %d", err);
+        return err;
+    }
+    LOG_INF("Battery ADC ready (VDDHDIV5 internal)");
+    return 0;
+}
+
+static int32_t read_battery_mv(void)
+{
+    int16_t buf;
+    struct adc_sequence seq = {
+        .buffer = &buf,
+        .buffer_size = sizeof(buf),
+    };
+    adc_sequence_init_dt(&adc_battery, &seq);
+    int err = adc_read_dt(&adc_battery, &seq);
+    if (err) {
+        LOG_ERR("ADC read failed: %d", err);
+        return -1;
+    }
+    int32_t mv = buf;
+    adc_raw_to_millivolts_dt(&adc_battery, &mv);
+    return mv * VDIV_FACTOR;
+}
 
 static void usb_status_cb(enum usb_dc_status_code status, const uint8_t *param)
 {
@@ -395,6 +439,23 @@ static void send_shift_or_queue(uint8_t btn_id)
     }
 }
 
+static void print_help(void)
+{
+    /* Serial: ANSI colored (bold keys, yellow header) */
+    printk("\033[1;33mCommands:\033[0m "
+           "\033[1mu\033[0m=up \033[1md\033[0m=down \033[1mt\033[0m=tune\n"
+           "         \033[1mp\033[0m=wake \033[1mP\033[0m=pair \033[1mB\033[0m=boot "
+           "\033[1mS\033[0m=sleep\n"
+           "         \033[1mL\033[0m=latency \033[1mv\033[0m=battery "
+           "\033[1m?\033[0m=help\n");
+    /* NUS: plain text (no ANSI) */
+    if (gatt_nus_is_subscribed()) {
+        gatt_nus_send("Commands: u=up d=down t=tune\n", 30);
+        gatt_nus_send("p=wake P=pair B=boot S=sleep\n", 29);
+        gatt_nus_send("L=latency v=battery ?=help\n", 27);
+    }
+}
+
 static void handle_command(uint8_t ch)
 {
     if (ch == 'u') {
@@ -424,6 +485,11 @@ static void handle_command(uint8_t ch)
         }
     } else if (ch == 'L') {
         latency_escalation_handler(NULL);
+    } else if (ch == 'v') {
+        battery_mv = read_battery_mv();
+        NUS_LOG("Battery: %d mV%s", battery_mv, usb_active ? " (USB)" : "");
+    } else if (ch == '?') {
+        print_help();
     }
 }
 
@@ -431,6 +497,13 @@ static void on_nus_rx(const uint8_t *data, uint16_t len)
 {
     if (len == 0) return;
     handle_command(data[0]);
+}
+
+static void on_nus_subscribe(bool subscribed)
+{
+    if (subscribed) {
+        print_help();
+    }
 }
 
 /*── Pairing mode ──*/
@@ -503,7 +576,6 @@ static void btn_tune_isr(const struct device *dev, struct gpio_callback *cb, uin
 }
 
 /*── Button helpers ──*/
-#define BATTERY_MV     3000
 #define DEBOUNCE_MS    150
 
 static int64_t last_btn_up_ms;
@@ -598,15 +670,24 @@ static void send_battery(void)
     get_own_mac(mac);
 
     uint8_t frame[FRAME_LEN];
-    protocol_encode_battery(frame, mac, BATTERY_MV);
+    protocol_encode_battery(frame, mac, (uint16_t)(battery_mv > 0 ? battery_mv : 0));
     gatt_notify_msg(frame, sizeof(frame));
 }
 
 /*── Battery timer (every 5s) ──*/
+static void battery_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    battery_mv = read_battery_mv();
+    NUS_LOG("Battery: %d mV%s", battery_mv, usb_active ? " (USB)" : "");
+    send_battery();
+}
+static K_WORK_DEFINE(battery_work, battery_work_handler);
+
 static void periodic_timer_handler(struct k_timer *timer)
 {
     ARG_UNUSED(timer);
-    send_battery();
+    k_work_submit(&battery_work);
 }
 static K_TIMER_DEFINE(periodic_timer, periodic_timer_handler, NULL);
 
@@ -623,7 +704,8 @@ int main(void)
     gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
 
     LOG_INF("NXS pod firmware v0.1.0 (Zephyr)");
-    LOG_INF("Commands: u=up d=down t=tune p=wake P=pair S=sleep L=relax B=bootloader");
+
+    battery_init();
 
     /* BLE init */
     int err = bt_enable(NULL);
@@ -645,6 +727,7 @@ int main(void)
     bt_conn_auth_info_cb_register(&auth_info_cb);
     gatt_set_pin_write_cb(on_pin_write);
     gatt_set_nus_rx_cb(on_nus_rx);
+    gatt_set_nus_subscribe_cb(on_nus_subscribe);
 
     /* GPIO buttons */
     gpio_pin_configure_dt(&btn_up, GPIO_INPUT);
@@ -666,6 +749,9 @@ int main(void)
     LOG_INF("GPIO buttons: P0.17=up P0.31=down P0.20=pair P0.22=tune");
 
     start_advertising();
+
+    /* Print help banner to serial */
+    print_help();
 
     /* Battery report every 5s via timer (runs in ISR context) */
     k_timer_start(&periodic_timer, K_SECONDS(5), K_SECONDS(5));

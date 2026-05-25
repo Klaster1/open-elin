@@ -126,13 +126,18 @@ static struct bt_uuid_128 nus_rx_uuid = BT_UUID_INIT_128(
 
 static volatile bool nus_subscribed;
 static gatt_write_cb_t nus_rx_cb;
+static gatt_nus_subscribe_cb_t nus_subscribe_cb;
 
 void gatt_set_nus_rx_cb(gatt_write_cb_t cb) { nus_rx_cb = cb; }
+void gatt_set_nus_subscribe_cb(gatt_nus_subscribe_cb_t cb) { nus_subscribe_cb = cb; }
 
 static void nus_ccc_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
     nus_subscribed = (value == BT_GATT_CCC_NOTIFY);
     LOG_INF("NUS TX notifications %s", nus_subscribed ? "enabled" : "disabled");
+    if (nus_subscribe_cb) {
+        nus_subscribe_cb(nus_subscribed);
+    }
 }
 
 static ssize_t nus_rx_write(struct bt_conn *conn, const struct bt_gatt_attr *attr,

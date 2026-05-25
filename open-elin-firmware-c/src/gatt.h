@@ -25,4 +25,8 @@ void gatt_set_msg_write_cb(gatt_write_cb_t cb);
 void gatt_set_pin_write_cb(gatt_write_cb_t cb);
 void gatt_set_nus_rx_cb(gatt_write_cb_t cb);
 
+/* Called when NUS TX notifications are enabled/disabled. */
+typedef void (*gatt_nus_subscribe_cb_t)(bool subscribed);
+void gatt_set_nus_subscribe_cb(gatt_nus_subscribe_cb_t cb);
+
 #endif /* GATT_H */
