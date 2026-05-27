@@ -61,7 +61,7 @@ static K_TIMER_DEFINE(latency_timer, latency_escalation_handler, NULL);
 static const struct adc_dt_spec adc_battery =
     ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 0);
 
-/* Cached reading (updated every 5s from work queue) */
+/* Cached reading (updated every 15min, on connect, and on 'v' command) */
 static int32_t battery_mv;
 
 /* VDDHDIV5: internal 1/5 divider on VDDH pin */
@@ -701,13 +701,11 @@ static void send_battery(void)
     gatt_notify_msg(frame, sizeof(frame));
 }
 
-/*── Battery timer (every 5s) ──*/
+/*── Battery background check (every 15min, silent) ──*/
 static void battery_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
     battery_mv = read_battery_mv();
-    NUS_LOG("Battery: %d mV%s", battery_mv, usb_active ? " (USB)" : "");
-    send_battery();
 }
 static K_WORK_DEFINE(battery_work, battery_work_handler);
 
@@ -780,8 +778,8 @@ int main(void)
     /* Print help banner to serial */
     print_help();
 
-    /* Battery report every 5s via timer (runs in ISR context) */
-    k_timer_start(&periodic_timer, K_SECONDS(5), K_SECONDS(5));
+    /* Silent battery check every 15min (updates cached battery_mv) */
+    k_timer_start(&periodic_timer, K_MINUTES(15), K_MINUTES(15));
 
     /* Main loop: poll serial (USB CDC doesn't support interrupt-driven rx) */
     const struct device *console = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
