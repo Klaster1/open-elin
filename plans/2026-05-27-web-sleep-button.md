@@ -46,7 +46,7 @@ This plan adds a **synthetic hub card** at the top of the device list, consolida
 
 ### 1. Red: hub card visibility e2e test
 
-- [ ] In `DeviceListPageModel.ts`, add `hubCard()` → `getByTestId("device-list-hub-card")`
+- [✅] In `DeviceListPageModel.ts`, add `hubCard()` → `getByTestId("device-list-hub-card")`
 - [ ] Add `hubCardName()` → `hubCard().getByTestId("device-list-name")`
 - [ ] Add `hubCardMac()` → `hubCard().getByTestId("device-list-mac")`
 - [ ] Add `hubCardBattery()` → `hubCard().getByTestId("device-list-battery")`
@@ -62,7 +62,7 @@ This plan adds a **synthetic hub card** at the top of the device list, consolida
 
 ### 2. Green: implement hub card rendering
 
-- [ ] Add `PowerDown: "0x0027"` to `AppCommand` in `open-elin-web/src/commands.ts`
+- [✅] Add `PowerDown: "0x0027"` to `AppCommand` in `open-elin-web/src/commands.ts`
 - [ ] Add `async powerDown(): Promise<BasicResponse>` method to `ProtocolCommands`
 - [ ] Add `async calibrate(): Promise<BasicResponse>` method if missing
 - [ ] Add `async motorHome(): Promise<BasicResponse>` method
@@ -74,7 +74,7 @@ This plan adds a **synthetic hub card** at the top of the device list, consolida
 
 ### 3. Red: hub card action buttons e2e test
 
-- [ ] In `DeviceListPageModel.ts`, add locators:
+- [✅] In `DeviceListPageModel.ts`, add locators:
   - `hubBlinkButton()` → `getByTestId("hub-blink-button")`
   - `hubCalibrateButton()` → `getByTestId("hub-calibrate-button")`
   - `hubHomeButton()` → `getByTestId("hub-home-button")`
@@ -87,7 +87,7 @@ This plan adds a **synthetic hub card** at the top of the device list, consolida
 
 ### 4. Green: implement hub card action buttons
 
-- [ ] In `store.ts`, add `blinkLed()` action (get commands, call `blinkLed()`, log result/error)
+- [✅] In `store.ts`, add `blinkLed()` action (get commands, call `blinkLed()`, log result/error)
 - [ ] Add `powerDown()` action (catch timeout as success — hub dies before ACK)
 - [ ] Add `motorHome()` action (get commands, call `motorHome()`, log result/error)
 - [ ] Add all three to `appActions` export
@@ -102,32 +102,32 @@ This plan adds a **synthetic hub card** at the top of the device list, consolida
 
 ### 5. Red: sleep flow e2e test
 
-- [ ] Create `open-elin-web/e2e/fixtures/sleep.demo.spec.ts`
+- [✅] Create `open-elin-web/e2e/fixtures/sleep.demo.spec.ts`
 - [ ] Test: "returns to landing page after sleep" — open app, start demo, go to device list, click hub sleep button, assert landing page visible
 - [ ] **Run test → expect RED** (sleep event not handled yet)
 
 ### 6. Green: implement sleep flow
 
-- [ ] In `app.ts`, add `@sleep-requested=${this.handleSleep}` on `<shell-device>` (event bubbles from device list)
+- [✅] In `app.ts`, add `@sleep-requested=${this.handleSleep}` on `<shell-device>` (event bubbles from device list)
 - [ ] Add `private async handleSleep()` — calls `await appActions.powerDown()`, `appActions.clearStoredMac()`, navigates to `/`
 - [ ] **Run test → expect GREEN**
 
 ### 7. Red: rename via hub card e2e test
 
-- [ ] In `DeviceListPageModel.ts`, add rename dialog locators: `renameDialog()`, `renameInput()`, `renameInputControl()`, `renameConfirmButton()`
+- [✅] In `DeviceListPageModel.ts`, add rename dialog locators: `renameDialog()`, `renameInput()`, `renameInputControl()`, `renameConfirmButton()`
 - [ ] Add `async openRenameDialog()` → clicks hub rename button
 - [ ] In `rename.demo.spec.ts`, update all tests to navigate to device list tab and use `DeviceListPageModel` locators instead of `DevicePageModel` sidebar locators
 - [ ] **Run test → expect RED** (rename dialog not yet in device list)
 
 ### 8. Green: move rename dialog to device list
 
-- [ ] Move rename `<sl-dialog>` markup from `shell-device.ts` to `page-device-list.ts`
+- [✅] Move rename `<sl-dialog>` markup from `shell-device.ts` to `page-device-list.ts`
 - [ ] Move rename state (`renameOpen`, `renameValue`, `renameError`, `renameBusy`) and methods (`openRename`, `closeRename`, `onRenameInput`, `confirmRename`, `onRenameRequestClose`) to `page-device-list.ts`
 - [ ] **Run test → expect GREEN**
 
 ### 9. Clean up: remove rename from sidebar
 
-- [ ] In `shell-device.ts`, remove rename icon `<button>` from `.sidebar-actions`
+- [✅] In `shell-device.ts`, remove rename icon `<button>` from `.sidebar-actions`
 - [ ] Remove rename `<sl-dialog>` (already moved)
 - [ ] Remove rename properties and methods
 - [ ] In `DevicePageModel.ts`, remove `renameButton()`, `renameDialog()`, `renameInput()`, `renameInputControl()`, `renameConfirmButton()`, `openRenameDialog()`
@@ -135,7 +135,7 @@ This plan adds a **synthetic hub card** at the top of the device list, consolida
 
 ### 10. Visual check: demo mode in browser
 
-- [ ] Start dev server, open in VS Code browser, connect in demo mode
+- [✅] Start dev server, open in VS Code browser, connect in demo mode
 - [ ] Navigate to device list, visually verify hub card renders with correct info and action buttons
 - [ ] Click Blink, Calibrate, Home — verify log entries appear
 - [ ] Click Rename — verify dialog opens and rename works

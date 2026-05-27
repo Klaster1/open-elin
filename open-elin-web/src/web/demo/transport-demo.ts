@@ -1,7 +1,7 @@
 import type {
-    ProtocolTransport,
-    TransportConnection,
-    TransportDevice,
+  ProtocolTransport,
+  TransportConnection,
+  TransportDevice,
 } from "open-elin-lib/protocol";
 import { hexToBuffer, reverseMacAddress } from "open-elin-lib/protocol";
 import type { DemoBatterySample } from "./demo-state.ts";
@@ -48,7 +48,7 @@ export class DemoTransport implements ProtocolTransport {
   constructor(
     private readonly pod: PodMock,
     private readonly hub: HubMock,
-  ) {}
+  ) { }
 
   private attachPodListeners() {
     if (this.podListenersAttached) return;
@@ -189,6 +189,9 @@ export class DemoTransport implements ProtocolTransport {
         this.handleWriteButtonMap(payload, device.address);
         return;
       case 0x0004:
+        this.hub.blinkLed();
+        this.queueResponse(device.address);
+        return;
       default:
         this.queueResponse(device.address);
     }
@@ -473,7 +476,7 @@ export class DemoTransport implements ProtocolTransport {
         e.button1.code.toUpperCase() === buttonHex &&
         e.action.code.toUpperCase() === actionHex &&
         e.podAddressHex.toUpperCase() ===
-          podMac.split(":").reverse().join("").toUpperCase(),
+        podMac.split(":").reverse().join("").toUpperCase(),
     );
     if (!entry) return;
     const fnCode = entry.function.code.toUpperCase();

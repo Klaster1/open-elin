@@ -136,17 +136,29 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
     loading: { type: Boolean, attribute: false },
     addPodOpen: { type: Boolean, attribute: false },
     addPodMac: { type: String, attribute: false },
+    renameOpen: { type: Boolean, attribute: false },
+    renameValue: { type: String, attribute: false },
+    renameError: { type: String, attribute: false },
+    renameBusy: { type: Boolean, attribute: false },
   };
 
   declare loading: boolean;
   declare addPodOpen: boolean;
   declare addPodMac: string;
+  declare renameOpen: boolean;
+  declare renameValue: string;
+  declare renameError: string;
+  declare renameBusy: boolean;
 
   constructor() {
     super();
     this.loading = false;
     this.addPodOpen = false;
     this.addPodMac = "";
+    this.renameOpen = false;
+    this.renameValue = "";
+    this.renameError = "";
+    this.renameBusy = false;
   }
 
   connectedCallback() {
@@ -175,13 +187,6 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
               <sl-button
                 size="small"
                 variant="default"
-                data-test-id="device-list-calibrate"
-                ?disabled=${!canList}
-                @click=${this.onCalibrate}
-              >Calibrate</sl-button>
-              <sl-button
-                size="small"
-                variant="default"
                 data-test-id="device-list-add-pod"
                 ?disabled=${!canList}
                 @click=${this.onAddPodOpen}
@@ -196,6 +201,7 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
           </div>
           <p class="hint">Scan the hub for linked devices.</p>
         </div>
+        ${this.renderHubCard()}
         ${entries.length
           ? html`<div
               class="device-list"
@@ -235,6 +241,39 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
           @click=${this.onAddPodConfirm}
         >Add</sl-button>
       </sl-dialog>
+      <sl-dialog
+        data-test-id="device-rename-dialog"
+        label="Rename hub"
+        ?open=${this.renameOpen}
+        @sl-request-close=${this.onRenameRequestClose}
+      >
+        <sl-input
+          data-test-id="device-rename-input"
+          label="New name"
+          placeholder="Enter hub name"
+          .value=${this.renameValue}
+          ?invalid=${Boolean(this.renameError)}
+          help-text=${this.renameError}
+          @sl-input=${this.onRenameInput}
+          ?disabled=${this.renameBusy}
+        ></sl-input>
+        <div slot="footer" style="display:flex;gap:8px;justify-content:flex-end;">
+          <sl-button
+            data-test-id="device-rename-cancel"
+            ?disabled=${this.renameBusy}
+            @click=${this.closeRename}
+          >Cancel</sl-button>
+          <sl-button
+            data-test-id="device-rename-confirm"
+            variant="primary"
+            ?disabled=${this.renameBusy}
+            @click=${this.confirmRename}
+          >
+            ${this.renameBusy ? html`<inline-spinner slot="prefix"></inline-spinner>` : html``}
+            Rename
+          </sl-button>
+        </div>
+      </sl-dialog>
     `;
   }
 
@@ -257,6 +296,72 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
     await appActions.calibrate();
   }
 
+  private async onBlink() {
+    await appActions.blinkLed();
+  }
+
+  private async onHome() {
+    await appActions.motorHome();
+  }
+
+  private onSleep() {
+    this.dispatchEvent(
+      new CustomEvent("sleep-requested", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  private onRenameOpen() {
+    const currentName = appState.connectedDevice.get()?.name || "";
+    this.renameValue = currentName;
+    this.renameError = "";
+    this.renameOpen = true;
+  }
+
+  private closeRename() {
+    this.renameOpen = false;
+    this.renameError = "";
+  }
+
+  private onRenameRequestClose(event: Event) {
+    if (this.renameBusy) {
+      event.preventDefault();
+      return;
+    }
+    this.closeRename();
+  }
+
+  private onRenameInput(event: Event) {
+    const target = event.target as HTMLInputElement | null;
+    this.renameValue = target?.value ?? "";
+    if (this.renameError) {
+      this.renameError = "";
+    }
+  }
+
+  private async confirmRename() {
+    const trimmed = this.renameValue.trim();
+    if (!trimmed) {
+      this.renameError = "Name is required.";
+      return;
+    }
+    if (this.renameBusy) return;
+    this.renameBusy = true;
+    try {
+      const response = await appActions.renameHub(trimmed);
+      if (response?.status === "success") {
+        this.renameOpen = false;
+        this.renameError = "";
+        return;
+      }
+      this.renameError = "Rename failed. Try again.";
+    } finally {
+      this.renameBusy = false;
+    }
+  }
+
   private onAddPodOpen() {
     this.addPodMac = "";
     this.addPodOpen = true;
@@ -275,6 +380,46 @@ export class PageDeviceList extends SignalWatcher(LitElement) {
     const mac = this.addPodMac.trim();
     this.addPodOpen = false;
     await appActions.addDevice(mac);
+  }
+
+  private renderHubCard() {
+    const device = appState.connectedDevice.get();
+    const mac = appState.mac.get() || "--";
+    const battery = appState.hubBatteryVoltage.get();
+    const name = device?.name || "Hub";
+    const batteryText = this.formatBattery(battery);
+    return html`
+      <div class="device-card" data-test-id="device-list-hub-card" style="margin-bottom:14px;">
+        <div class="device-header">
+          <div>
+            <div class="device-name" data-test-id="device-list-name">${name}</div>
+            <div class="device-mac" data-test-id="device-list-mac">${mac}</div>
+          </div>
+          <div
+            class="device-pill"
+            data-test-id="device-list-status"
+            style="background:rgba(56,128,255,0.18);color:#6cb4ff;"
+          >Hub</div>
+        </div>
+        <dl class="device-meta">
+          <div>
+            <dt>Type</dt>
+            <dd>eLink Hub</dd>
+          </div>
+          <div>
+            <dt>Battery</dt>
+            <dd data-test-id="device-list-battery">${batteryText}</dd>
+          </div>
+        </dl>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+          <sl-button size="small" variant="default" data-test-id="hub-blink-button" @click=${this.onBlink}>Blink</sl-button>
+          <sl-button size="small" variant="default" data-test-id="hub-calibrate-button" @click=${this.onCalibrate}>Calibrate</sl-button>
+          <sl-button size="small" variant="default" data-test-id="hub-home-button" @click=${this.onHome}>Home</sl-button>
+          <sl-button size="small" variant="default" data-test-id="hub-rename-button" @click=${this.onRenameOpen}>Rename</sl-button>
+          <sl-button size="small" variant="default" data-test-id="hub-sleep-button" @click=${this.onSleep}>Sleep</sl-button>
+        </div>
+      </div>
+    `;
   }
 
   private renderEntry(entry: {

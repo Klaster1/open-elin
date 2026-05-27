@@ -20,7 +20,9 @@ export const HUB_MOCK_MAX_OFFSET = 250;
 export class HubMock {
   readonly state = signal<HubStateShape>(structuredClone(hubData));
   readonly pairingWindow = signal(false);
+  readonly ledBlinking = signal(false);
   private pairingWindowTimer: ReturnType<typeof setTimeout> | null = null;
+  private ledBlinkTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly minOffset = HUB_MOCK_MIN_OFFSET;
   private readonly maxOffset = HUB_MOCK_MAX_OFFSET;
   private readonly maxNameLength = 16;
@@ -42,6 +44,17 @@ export class HubMock {
       this.pairingWindow.set(false);
       this.pairingWindowTimer = null;
     }, 60_000);
+  }
+
+  blinkLed() {
+    if (this.ledBlinkTimer !== null) {
+      clearTimeout(this.ledBlinkTimer);
+    }
+    this.ledBlinking.set(true);
+    this.ledBlinkTimer = setTimeout(() => {
+      this.ledBlinking.set(false);
+      this.ledBlinkTimer = null;
+    }, 800);
   }
 
   pair(podMac: string) {

@@ -84,4 +84,64 @@ test.describe("Device list in demo mode", () => {
     await expect(deviceList.firstRowDeviceId()).toHaveText("10");
     await expect(deviceList.firstRowStatus()).toHaveText("Connected");
   });
+
+  test("shows hub card at top with name, MAC, battery, and Hub pill", async ({
+    page,
+    updateDemoDataState,
+  }) => {
+    const landing = new LandingPageModel(page);
+    const device = new DevicePageModel(page);
+    const deviceList = new DeviceListPageModel(page);
+
+    // Go to app
+    await landing.open();
+    await expect(landing.root()).toBeVisible();
+
+    // Seed fast battery update interval before starting demo
+    await updateDemoDataState((draft) => {
+      draft.transportDelays.batteryIntervalMs = 100;
+    });
+
+    // Start demo mode
+    await landing.startDemo();
+    await expect(page).toHaveURL(device.deviceRouteMatcher());
+
+    // Go to device list screen
+    await device.goToListTab();
+    await expect(page).toHaveURL(device.listRouteMatcher());
+
+    // Assert hub card is visible with correct info
+    await expect(deviceList.hubCard()).toBeVisible();
+    await expect(deviceList.hubCardName()).toHaveText("XSHIFTER ELIN");
+    await expect(deviceList.hubCardMac()).toHaveText("02:11:22:33:44:55");
+    await expect(deviceList.hubCardPill()).toHaveText("Hub");
+
+    // Assert battery updates from async notification
+    await expect(deviceList.hubCardBattery()).toContainText("V", { timeout: 10000 });
+  });
+
+  test("hub card shows action buttons", async ({ page }) => {
+    const landing = new LandingPageModel(page);
+    const device = new DevicePageModel(page);
+    const deviceList = new DeviceListPageModel(page);
+
+    // Go to app
+    await landing.open();
+    await expect(landing.root()).toBeVisible();
+
+    // Start demo mode
+    await landing.startDemo();
+    await expect(page).toHaveURL(device.deviceRouteMatcher());
+
+    // Go to device list screen
+    await device.goToListTab();
+    await expect(page).toHaveURL(device.listRouteMatcher());
+
+    // Assert all five hub action buttons are visible
+    await expect(deviceList.hubBlinkButton()).toBeVisible();
+    await expect(deviceList.hubCalibrateButton()).toBeVisible();
+    await expect(deviceList.hubHomeButton()).toBeVisible();
+    await expect(deviceList.hubRenameButton()).toBeVisible();
+    await expect(deviceList.hubSleepButton()).toBeVisible();
+  });
 });

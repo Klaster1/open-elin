@@ -78,4 +78,70 @@ export class DeviceListPageModel {
   addPodConfirmButton(): Locator {
     return this.page.getByTestId("add-pod-confirm");
   }
+
+  // -- Hub card locators --
+
+  hubCard(): Locator {
+    return this.page.getByTestId("device-list-hub-card");
+  }
+
+  hubCardName(): Locator {
+    return this.hubCard().getByTestId("device-list-name");
+  }
+
+  hubCardMac(): Locator {
+    return this.hubCard().getByTestId("device-list-mac");
+  }
+
+  hubCardBattery(): Locator {
+    return this.hubCard().getByTestId("device-list-battery");
+  }
+
+  hubCardPill(): Locator {
+    return this.hubCard().getByTestId("device-list-status");
+  }
+
+  // -- Hub card action button locators --
+
+  hubBlinkButton(): Locator {
+    return this.page.getByTestId("hub-blink-button");
+  }
+
+  hubCalibrateButton(): Locator {
+    return this.page.getByTestId("hub-calibrate-button");
+  }
+
+  hubHomeButton(): Locator {
+    return this.page.getByTestId("hub-home-button");
+  }
+
+  hubRenameButton(): Locator {
+    return this.page.getByTestId("hub-rename-button");
+  }
+
+  hubSleepButton(): Locator {
+    return this.page.getByTestId("hub-sleep-button");
+  }
+
+  // -- Rename dialog locators --
+
+  renameDialog(): Locator {
+    return this.page.getByTestId("device-rename-dialog");
+  }
+
+  renameInput(): Locator {
+    return this.page.getByTestId("device-rename-input");
+  }
+
+  renameInputControl(): Locator {
+    return this.renameInput().locator("input");
+  }
+
+  renameConfirmButton(): Locator {
+    return this.page.getByTestId("device-rename-confirm");
+  }
+
+  async openRenameDialog() {
+    await this.hubRenameButton().click();
+  }
 }

@@ -1,4 +1,5 @@
 import { expect, test } from "../fixture";
+import { DeviceListPageModel } from "../pages/DeviceListPageModel";
 import { DevicePageModel } from "../pages/DevicePageModel";
 import { LandingPageModel } from "../pages/LandingPageModel";
 
@@ -6,6 +7,7 @@ test.describe("Rename hub in demo mode", () => {
   test("renames hub successfully", async ({ page }) => {
     const landing = new LandingPageModel(page);
     const device = new DevicePageModel(page);
+    const deviceList = new DeviceListPageModel(page);
 
     // Go to app
     await landing.open();
@@ -15,25 +17,31 @@ test.describe("Rename hub in demo mode", () => {
     await landing.startDemo();
     await expect(page).toHaveURL(device.deviceRouteMatcher());
 
-    // Assert initial hub name is visible
-    await expect(device.sidebarName()).toHaveText("XSHIFTER ELIN");
+    // Go to device list screen
+    await device.goToListTab();
+    await expect(page).toHaveURL(device.listRouteMatcher());
 
-    // Open rename dialog
-    await device.openRenameDialog();
-    await expect(device.renameDialog()).toHaveAttribute("open");
+    // Assert initial hub name is visible on hub card
+    await expect(deviceList.hubCardName()).toHaveText("XSHIFTER ELIN");
+
+    // Open rename dialog from hub card
+    await deviceList.openRenameDialog();
+    await expect(deviceList.renameDialog()).toHaveAttribute("open");
 
     // Enter a new name and confirm rename
-    await device.renameInputControl().fill("Demo Hub Renamed");
-    await device.renameConfirmButton().click();
+    await deviceList.renameInputControl().fill("Demo Hub Renamed");
+    await deviceList.renameConfirmButton().click();
 
-    // Assert rename dialog is closed and sidebar shows updated name
-    await expect(device.renameDialog()).not.toHaveAttribute("open");
+    // Assert rename dialog is closed and hub card + sidebar show updated name
+    await expect(deviceList.renameDialog()).not.toHaveAttribute("open");
+    await expect(deviceList.hubCardName()).toHaveText("Demo Hub Renamed");
     await expect(device.sidebarName()).toHaveText("Demo Hub Renamed");
   });
 
   test("shows validation error when rename is empty", async ({ page }) => {
     const landing = new LandingPageModel(page);
     const device = new DevicePageModel(page);
+    const deviceList = new DeviceListPageModel(page);
 
     // Go to app
     await landing.open();
@@ -43,21 +51,25 @@ test.describe("Rename hub in demo mode", () => {
     await landing.startDemo();
     await expect(page).toHaveURL(device.deviceRouteMatcher());
 
-    // Open rename dialog
-    await device.openRenameDialog();
-    await expect(device.renameDialog()).toHaveAttribute("open");
+    // Go to device list screen
+    await device.goToListTab();
+    await expect(page).toHaveURL(device.listRouteMatcher());
+
+    // Open rename dialog from hub card
+    await deviceList.openRenameDialog();
+    await expect(deviceList.renameDialog()).toHaveAttribute("open");
 
     // Submit empty name
-    await device.renameInputControl().fill("");
-    await device.renameConfirmButton().click();
+    await deviceList.renameInputControl().fill("");
+    await deviceList.renameConfirmButton().click();
 
     // Assert validation error is shown and dialog remains open
-    await expect(device.renameInput()).toHaveAttribute(
+    await expect(deviceList.renameInput()).toHaveAttribute(
       "help-text",
       "Name is required.",
     );
-    await expect(device.renameInput()).toHaveAttribute("invalid");
-    await expect(device.renameDialog()).toHaveAttribute("open");
+    await expect(deviceList.renameInput()).toHaveAttribute("invalid");
+    await expect(deviceList.renameDialog()).toHaveAttribute("open");
   });
 
   test("shows error when rename command fails for long name", async ({
@@ -65,6 +77,7 @@ test.describe("Rename hub in demo mode", () => {
   }) => {
     const landing = new LandingPageModel(page);
     const device = new DevicePageModel(page);
+    const deviceList = new DeviceListPageModel(page);
 
     // Go to app
     await landing.open();
@@ -74,24 +87,28 @@ test.describe("Rename hub in demo mode", () => {
     await landing.startDemo();
     await expect(page).toHaveURL(device.deviceRouteMatcher());
 
-    // Assert initial hub name is visible
-    await expect(device.sidebarName()).toHaveText("XSHIFTER ELIN");
+    // Go to device list screen
+    await device.goToListTab();
+    await expect(page).toHaveURL(device.listRouteMatcher());
 
-    // Open rename dialog
-    await device.openRenameDialog();
-    await expect(device.renameDialog()).toHaveAttribute("open");
+    // Assert initial hub name is visible on hub card
+    await expect(deviceList.hubCardName()).toHaveText("XSHIFTER ELIN");
+
+    // Open rename dialog from hub card
+    await deviceList.openRenameDialog();
+    await expect(deviceList.renameDialog()).toHaveAttribute("open");
 
     // Submit a name longer than hub max length
-    await device.renameInputControl().fill("NameLongerThanSixteenChars");
-    await device.renameConfirmButton().click();
+    await deviceList.renameInputControl().fill("NameLongerThanSixteenChars");
+    await deviceList.renameConfirmButton().click();
 
     // Assert command-level rename error is shown and name remains unchanged
-    await expect(device.renameInput()).toHaveAttribute(
+    await expect(deviceList.renameInput()).toHaveAttribute(
       "help-text",
       "Rename failed. Try again.",
     );
-    await expect(device.renameInput()).toHaveAttribute("invalid");
-    await expect(device.renameDialog()).toHaveAttribute("open");
-    await expect(device.sidebarName()).toHaveText("XSHIFTER ELIN");
+    await expect(deviceList.renameInput()).toHaveAttribute("invalid");
+    await expect(deviceList.renameDialog()).toHaveAttribute("open");
+    await expect(deviceList.hubCardName()).toHaveText("XSHIFTER ELIN");
   });
 });

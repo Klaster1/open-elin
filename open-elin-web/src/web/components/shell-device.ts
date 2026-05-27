@@ -224,18 +224,10 @@ export class ShellDevice extends SignalWatcher(LitElement) {
   static properties = {
     macValue: { type: String, attribute: "mac-value" },
     activePage: { type: String, attribute: "active-page" },
-    renameOpen: { type: Boolean, attribute: false },
-    renameValue: { type: String, attribute: false },
-    renameError: { type: String, attribute: false },
-    renameBusy: { type: Boolean, attribute: false },
   };
 
   declare macValue: string;
   declare activePage: string;
-  declare renameOpen: boolean;
-  declare renameValue: string;
-  declare renameError: string;
-  declare renameBusy: boolean;
 
   protected updated(changed: PropertyValues) {
     if (changed.has("activePage")) {
@@ -247,10 +239,6 @@ export class ShellDevice extends SignalWatcher(LitElement) {
     super();
     this.macValue = "";
     this.activePage = "log";
-    this.renameOpen = false;
-    this.renameValue = "";
-    this.renameError = "";
-    this.renameBusy = false;
   }
 
   render() {
@@ -281,20 +269,6 @@ export class ShellDevice extends SignalWatcher(LitElement) {
                   ${deviceName}
                 </div>
                 <div class="sidebar-actions">
-                  <button
-                    class="icon-button"
-                    type="button"
-                    data-test-id="device-rename-button"
-                    @click=${this.openRename}
-                    aria-label="Rename hub"
-                    title="Rename hub"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path
-                        d="M4 20h4l10.5-10.5-4-4L4 16v4zM14.5 5.5l4 4"
-                      ></path>
-                    </svg>
-                  </button>
                   <button
                     class="icon-button"
                     type="button"
@@ -332,44 +306,6 @@ export class ShellDevice extends SignalWatcher(LitElement) {
         </aside>
         <div class="content">${this.renderDevicePage(activePage)}</div>
       </section>
-      <sl-dialog
-        data-test-id="device-rename-dialog"
-        label="Rename hub"
-        ?open=${this.renameOpen}
-        @sl-request-close=${this.onRenameRequestClose}
-      >
-        <sl-input
-          data-test-id="device-rename-input"
-          label="New name"
-          placeholder="Enter hub name"
-          .value=${this.renameValue}
-          ?invalid=${Boolean(this.renameError)}
-          help-text=${this.renameError}
-          @sl-input=${this.onRenameInput}
-          ?disabled=${this.renameBusy}
-        ></sl-input>
-        <div slot="footer" class="dialog-actions">
-          <sl-button
-            data-test-id="device-rename-cancel"
-            class="dialog-cancel"
-            ?disabled=${this.renameBusy}
-            @click=${this.closeRename}
-          >
-            Cancel
-          </sl-button>
-          <sl-button
-            data-test-id="device-rename-confirm"
-            variant="primary"
-            ?disabled=${this.renameBusy}
-            @click=${this.confirmRename}
-          >
-            ${this.renameBusy
-              ? html`<inline-spinner slot="prefix"></inline-spinner>`
-              : html``}
-            Rename
-          </sl-button>
-        </div>
-      </sl-dialog>
     `;
   }
 
@@ -433,55 +369,6 @@ export class ShellDevice extends SignalWatcher(LitElement) {
     );
   }
 
-  private openRename() {
-    const currentName = appState.connectedDevice.get()?.name || "";
-    this.renameValue = currentName;
-    this.renameError = "";
-    this.renameOpen = true;
-  }
-
-  private closeRename() {
-    this.renameOpen = false;
-    this.renameError = "";
-  }
-
-  private onRenameRequestClose(event: Event) {
-    if (this.renameBusy) {
-      event.preventDefault();
-      return;
-    }
-    this.closeRename();
-  }
-
-  private onRenameInput(event: Event) {
-    const target = event.target as HTMLInputElement | null;
-    this.renameValue = target?.value ?? "";
-    if (this.renameError) {
-      this.renameError = "";
-    }
-  }
-
-  private async confirmRename() {
-    const trimmed = this.renameValue.trim();
-    if (!trimmed) {
-      this.renameError = "Name is required.";
-      return;
-    }
-    if (this.renameBusy) return;
-    this.renameBusy = true;
-    try {
-      const response = await appActions.renameHub(trimmed);
-      if (response?.status === "success") {
-        this.renameOpen = false;
-        this.renameError = "";
-        return;
-      }
-      this.renameError = "Rename failed. Try again.";
-    } finally {
-      this.renameBusy = false;
-    }
-  }
-
   private formatBatteryStatus(value: number | null) {
     if (value === null || value === undefined) {
       return { label: "Battery --", kind: "wait" };
@@ -508,4 +395,4 @@ if (!customElements.get("shell-device")) {
   customElements.define("shell-device", ShellDevice);
 }
 
-export {};
+export { };

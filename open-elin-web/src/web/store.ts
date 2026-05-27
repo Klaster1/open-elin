@@ -310,6 +310,9 @@ export const appActions = {
   writeSetupRearCogs,
   setBikenet,
   calibrate,
+  blinkLed,
+  powerDown,
+  motorHome,
   addDevice,
   writeDefaultButtonMap,
   writeButtonMap,
@@ -1046,6 +1049,52 @@ export async function calibrate() {
     appendLog("Calibrate result", response ?? {});
   } catch (err) {
     appendLog("Calibrate error", err instanceof Error ? err.message : err);
+  }
+}
+
+export async function blinkLed() {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) {
+    appendLog("Connect to a hub first.");
+    return;
+  }
+  appendLog("Blink LED...");
+  try {
+    const response = await deviceCommands.blinkLed();
+    appendLog("Blink LED result", response ?? {});
+  } catch (err) {
+    appendLog("Blink LED error", err instanceof Error ? err.message : err);
+  }
+}
+
+export async function powerDown() {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) {
+    appendLog("Connect to a hub first.");
+    return;
+  }
+  appendLog("Power down...");
+  try {
+    const response = await deviceCommands.powerDown();
+    appendLog("Power down result", response ?? {});
+  } catch {
+    // Timeout/disconnect expected — hub powers off before ACK
+    appendLog("Hub powered down (disconnected).");
+  }
+}
+
+export async function motorHome() {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) {
+    appendLog("Connect to a hub first.");
+    return;
+  }
+  appendLog("Motor home...");
+  try {
+    const response = await deviceCommands.motorHome();
+    appendLog("Motor home result", response ?? {});
+  } catch (err) {
+    appendLog("Motor home error", err instanceof Error ? err.message : err);
   }
 }
 

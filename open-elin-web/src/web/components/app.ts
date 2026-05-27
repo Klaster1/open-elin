@@ -138,6 +138,7 @@ export class App extends SignalWatcher(LitElement) {
         .activePage=${activePage}
         @reconnect-requested=${this.handleReconnect}
         @disconnect-requested=${this.handleDisconnect}
+        @sleep-requested=${this.handleSleep}
         @demo-requested=${this.handleDemo}
       ></shell-device>
     `;
@@ -183,6 +184,12 @@ export class App extends SignalWatcher(LitElement) {
   }
 
   private async handleDisconnect() {
+    appActions.clearStoredMac();
+    await this.navigate("/");
+  }
+
+  private async handleSleep() {
+    await appActions.powerDown();
     appActions.clearStoredMac();
     await this.navigate("/");
   }

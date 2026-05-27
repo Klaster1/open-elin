@@ -124,11 +124,35 @@ export class HubMockGui extends SignalWatcher(LitElement) {
         0%, 100% { box-shadow: 0 0 4px rgba(76, 200, 255, 0.3); }
         50% { box-shadow: 0 0 14px rgba(76, 200, 255, 0.7); }
       }
+
+      .hub-led {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: transparent;
+        position: absolute;
+        top: 36px;
+        left: 133px;
+      }
+
+      .hub-led[data-active] {
+        background: #4ca8ff;
+        box-shadow: 0 0 10px rgba(76, 168, 255, 0.9), 0 0 20px rgba(76, 168, 255, 0.5);
+        animation: led-blink 0.3s ease-in-out forwards;
+      }
+
+      @keyframes led-blink {
+        0% { opacity: 0; }
+        15% { opacity: 1; }
+        85% { opacity: 1; }
+        100% { opacity: 0; }
+      }
     `,
   ];
 
   render() {
     const isPairing = demoHub.pairingWindow.get();
+    const isBlinking = demoHub.ledBlinking.get();
     const hubMac = demoHub.state.get().device.mac;
     const { x: ax, y: ay } = this.resetAnchor;
     return html`
@@ -136,6 +160,7 @@ export class HubMockGui extends SignalWatcher(LitElement) {
         <div class="hub-mock-frame">
           <div class="hub-image-wrap">
             <img src=${hubImageUrl} alt="Hub" @load=${this.measureAnchors} />
+            <div class="hub-led" ?data-active=${isBlinking}></div>
             <svg
               class="hub-leader-svg"
               viewBox="0 0 100 100"
@@ -162,7 +187,7 @@ export class HubMockGui extends SignalWatcher(LitElement) {
             </button>
           </div>
           ${hubMac
-            ? html`<div class="hub-mac-row" data-test-id="hub-mac">
+        ? html`<div class="hub-mac-row" data-test-id="hub-mac">
                 <span class="hub-mac-label">MAC</span>
                 <span data-test-id="hub-mac-value">${hubMac}</span>
                 <sl-copy-button
@@ -171,11 +196,11 @@ export class HubMockGui extends SignalWatcher(LitElement) {
                   data-test-id="hub-mac-copy"
                 ></sl-copy-button>
               </div>`
-            : html``}
+        : html``}
         </div>
         ${isPairing
-          ? html`<div class="pairing-badge" role="status" aria-live="polite">Pairing window open</div>`
-          : html``}
+        ? html`<div class="pairing-badge" role="status" aria-live="polite">Pairing window open</div>`
+        : html``}
       </div>
     `;
   }

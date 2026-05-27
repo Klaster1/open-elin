@@ -49,13 +49,16 @@ test.describe("Hub reset in demo mode", () => {
 
     // ---- 3. Mutate state via GUI ----
 
-    // 3a. Rename the hub -> sidebar reflects the new name
-    await device.openRenameDialog();
-    await device.renameInputControl().fill("TESTED HUB");
-    await device.renameConfirmButton().click();
+    // 3a. Rename the hub via device list hub card
+    await device.goToListTab();
+    await deviceList.openRenameDialog();
+    await deviceList.renameInputControl().fill("TESTED HUB");
+    await deviceList.renameConfirmButton().click();
+    await expect(deviceList.hubCardName()).toHaveText("TESTED HUB");
     await expect(device.sidebarName()).toHaveText("TESTED HUB");
 
     // 3b. Tune-shift the current cog by +1 -> precise offset shifts to 22.10
+    await device.goToCogsTab();
     await cogs.tuneIncrease1Button().click();
     await expect(cogs.gearOffsetByNumber(11)).toHaveText("22.10");
 

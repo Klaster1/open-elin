@@ -71,26 +71,6 @@ export class DevicePageModel {
     return this.page.getByTestId("device-sidebar-battery-status");
   }
 
-  renameButton(): Locator {
-    return this.page.getByTestId("device-rename-button");
-  }
-
-  renameDialog(): Locator {
-    return this.page.getByTestId("device-rename-dialog");
-  }
-
-  renameInput(): Locator {
-    return this.page.getByTestId("device-rename-input");
-  }
-
-  renameInputControl(): Locator {
-    return this.renameInput().locator("input");
-  }
-
-  renameConfirmButton(): Locator {
-    return this.page.getByTestId("device-rename-confirm");
-  }
-
   disconnectButton(): Locator {
     return this.page.getByTestId("device-disconnect-button");
   }
@@ -135,10 +115,6 @@ export class DevicePageModel {
 
   async goToLogTab() {
     await this.logTabLink().click();
-  }
-
-  async openRenameDialog() {
-    await this.renameButton().click();
   }
 
   async disconnect() {
