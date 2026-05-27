@@ -1,12 +1,12 @@
 {
   "private": true,
   "scripts": {
-    "cli": "node open-elin-cli/src/cli.ts",
-    "web": "npm run dev --workspace=open-elin-web"
+    "cli": "node cli/src/cli.ts",
+    "web": "npm run dev --workspace=web"
   },
   "workspaces": [
-    "open-elin-lib",
-    "open-elin-cli",
-    "open-elin-web"
+    "lib",
+    "cli",
+    "web"
   ]
 }

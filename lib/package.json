@@ -1,0 +1,12 @@
+{
+  "name": "lib",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Cross-platform protocol library for NXS BikeNet (Node.js + browser)",
+  "exports": {
+    "./commands": "./src/commands.ts",
+    "./default-button-map": "./src/default-button-map.ts",
+    "./pod-models": "./src/pod-models.ts",
+    "./protocol": "./src/protocol.ts"
+  }
+}

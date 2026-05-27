@@ -26,7 +26,7 @@ npm run cli -- <command> [flags]
 Or directly:
 
 ```
-node open-elin-cli/src/cli.ts <command> [flags]
+node cli/src/cli.ts <command> [flags]
 ```
 
 ## Key commands

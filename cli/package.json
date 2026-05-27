@@ -1,0 +1,26 @@
+{
+  "name": "cli",
+  "version": "0.1.0",
+  "description": "Agent-native CLI for NXS BikeNet hub",
+  "type": "module",
+  "bin": {
+    "open-elin": "./src/cli.ts"
+  },
+  "scripts": {
+    "dev": "node src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=26.2.0"
+  },
+  "dependencies": {
+    "@abandonware/noble": "^1.9.2-26",
+    "@optique/core": "npm:@jsr/optique__core@*",
+    "@optique/run": "npm:@jsr/optique__run@*",
+    "lib": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^6.0.0"
+  }
+}
