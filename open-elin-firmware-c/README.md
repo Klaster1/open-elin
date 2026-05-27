@@ -3,6 +3,71 @@
 Replacement pod firmware for **SuperMini nRF52840** using Zephyr RTOS.
 Emulates an NXS BikeNet pod so the hub can connect, pair, and shift gears.
 
+---
+
+## User Guide
+
+### Buttons
+
+The SuperMini connects to two physical controls:
+
+| Button | Wired to | What it does |
+|--------|----------|-------------|
+| **Shift Up** | Right shift lever — upper button | Shifts to a smaller cog (harder gear) |
+| **Shift Down** | Right shift lever — lower button | Shifts to a larger cog (easier gear) |
+| **Tune** | Bar end plug — left button | Toggles fine-tune / trim mode on the hub |
+| **Pairing** | Bar end plug — right button | Wake radio / show battery / enter pairing mode |
+
+### Pairing Button Details
+
+The pairing button does different things depending on how long you hold it:
+
+- **Quick press** — wakes the radio if sleeping; LED pulses to show battery level (1–9 pulses, more = fuller)
+- **Hold 6 seconds** — enters pairing mode (LED stays solid for 10 s, hub can discover the pod)
+
+### Red LED
+
+| Pattern | Meaning |
+|---------|---------|
+| Quick blink (50 ms) | Button press registered / shift sent / PIN exchanged |
+| Slow pulses (1–9×) | Battery level indicator (1 pulse ≈ empty, 9 ≈ full) |
+| Solid on (10 s) | Pairing mode active |
+| Blinking every 300 ms | A shift is queued — radio is waking up to send it |
+| Off | Normal idle |
+
+### Blue LED (SuperMini power)
+
+| Pattern | Meaning |
+|---------|---------|
+| Solid on (USB connected) | Charging |
+| Off (USB connected) | Fully charged |
+
+### Power & Sleep
+
+| Event | What happens |
+|-------|-------------|
+| Power on | Pod advertises BLE immediately; hub connects within seconds |
+| 15 min idle (no connection) | Radio goes to sleep to save battery |
+| Press any button while sleeping | Radio wakes, sends the shift ~100 ms later |
+| Hub doesn't connect within 60 s of wake | Radio sleeps again |
+| 60 min connected but idle | Pod requests wider connection intervals (saves power, transparent to you) |
+| Press any button after 60 min idle | Connection tightens back instantly — no noticeable delay |
+
+### Battery
+
+- **Cell:** 14250 Li-Ion (or CR2032 for testing)
+- **Check level:** press the pairing button — count LED pulses (1 = ~3.0 V dead, 9 = ~4.2 V full)
+- Battery voltage is also reported to the hub on every connection
+
+### Day-to-Day Usage
+
+1. **First time:** hold pairing button 6 s → LED solid → run `hub add-device` + `hub write-default-button-map` from CLI
+2. **Normal ride:** just press shift buttons — pod connects to hub automatically
+3. **After a long break (>15 min):** first button press wakes the radio; shift goes through ~100 ms later (imperceptible)
+4. **Firmware update:** double-tap RST to GND (or send `B` over serial) → UF2 drive appears → copy `firmware.uf2`
+
+---
+
 ## Hardware
 
 - **Board:** SuperMini nRF52840 (nice_nano clone)
