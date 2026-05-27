@@ -16,7 +16,8 @@
 |------|--------|----------------|
 | `open-elin-firmware-c/prj.conf` | Modify | Add `CONFIG_PWM=y` |
 | `open-elin-firmware-c/boards/adafruit_feather_nrf52840.overlay` | Modify | Add PWM0 node for LED pin P0.15 |
-| `open-elin-firmware-c/src/main.c` | Modify | Replace periodic handler, add PWM LED functions, modify wake handler |
+| `open-elin-firmware-c/src/main.c` | Modify | Replace periodic handler, add PWM LED functions, modify wake handler, add sim battery commands |
+| `open-elin-firmware-c/serial-buttons.ps1` | Modify | Add digit keys 0-9 for simulated battery levels |
 
 ---
 
@@ -26,7 +27,7 @@
 - Modify: `open-elin-firmware-c/prj.conf`
 - Modify: `open-elin-firmware-c/boards/adafruit_feather_nrf52840.overlay`
 
-- [ ] **Step 1: Add PWM Kconfig**
+- [✅] **Step 1: Add PWM Kconfig**
 
 In `prj.conf`, add after the `CONFIG_ADC=y` line:
 
@@ -35,7 +36,7 @@ In `prj.conf`, add after the `CONFIG_ADC=y` line:
 CONFIG_PWM=y
 ```
 
-- [ ] **Step 2: Add PWM0 node and pwm-led to overlay**
+- [✅] **Step 2: Add PWM0 node and pwm-led to overlay**
 
 In `adafruit_feather_nrf52840.overlay`, add a `&pwm0` node and a `pwm-leds` node. The existing `gpio-leds` node stays (used for simple on/off blinks). Add before the `&qspi` section:
 
@@ -80,12 +81,12 @@ And add the include at the top of the overlay (after the ADC include):
 #include <zephyr/dt-bindings/pwm/pwm.h>
 ```
 
-- [ ] **Step 3: Build to verify PWM compiles**
+- [✅] **Step 3: Build to verify PWM compiles**
 
 Run: `.\open-elin-firmware-c\build.ps1`
 Expected: Build succeeds (258/258 or similar), firmware.uf2 written.
 
-- [ ] **Step 4: Commit**
+- [✅] **Step 4: Commit**
 
 ```powershell
 git add open-elin-firmware-c/prj.conf open-elin-firmware-c/boards/adafruit_feather_nrf52840.overlay
@@ -99,7 +100,7 @@ git commit -m "feat(firmware): add PWM device tree for battery LED brightness"
 **Files:**
 - Modify: `open-elin-firmware-c/src/main.c`
 
-- [ ] **Step 1: Add PWM include and device spec**
+- [✅] **Step 1: Add PWM include and device spec**
 
 At the top of `main.c`, add after the `#include <zephyr/drivers/adc.h>` line:
 
@@ -113,7 +114,7 @@ After the `LED0_NODE` / `led` GPIO spec block (around line 20-21), add:
 static const struct pwm_dt_spec pwm_led = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_led0));
 ```
 
-- [ ] **Step 2: Add battery-brightness flash function**
+- [✅] **Step 2: Add battery-brightness flash function**
 
 After the existing `led_blink()` function (around line 300), add:
 
@@ -144,12 +145,12 @@ static void led_battery_flash(int32_t mv)
 }
 ```
 
-- [ ] **Step 3: Build to verify it compiles**
+- [✅] **Step 3: Build to verify it compiles**
 
 Run: `.\open-elin-firmware-c\build.ps1`
 Expected: Build succeeds.
 
-- [ ] **Step 4: Commit**
+- [✅] **Step 4: Commit**
 
 ```powershell
 git add open-elin-firmware-c/src/main.c
@@ -163,7 +164,7 @@ git commit -m "feat(firmware): add PWM battery-brightness LED flash function"
 **Files:**
 - Modify: `open-elin-firmware-c/src/main.c`
 
-- [ ] **Step 1: Make battery_work_handler silent**
+- [✅] **Step 1: Make battery_work_handler silent**
 
 Replace the current `battery_work_handler` (around line 678):
 
@@ -189,7 +190,7 @@ static void battery_work_handler(struct k_work *work)
 }
 ```
 
-- [ ] **Step 2: Change timer interval from 5s to 15min**
+- [✅] **Step 2: Change timer interval from 5s to 15min**
 
 In `main()`, replace:
 
@@ -205,7 +206,7 @@ With:
     k_timer_start(&periodic_timer, K_MINUTES(15), K_MINUTES(15));
 ```
 
-- [ ] **Step 3: Update the cached comment**
+- [✅] **Step 3: Update the cached comment**
 
 Replace the comment above `battery_mv` (around line 63):
 
@@ -219,12 +220,12 @@ With:
 /* Cached reading (updated every 15min, on connect, and on 'v' command) */
 ```
 
-- [ ] **Step 4: Build to verify**
+- [✅] **Step 4: Build to verify**
 
 Run: `.\open-elin-firmware-c\build.ps1`
 Expected: Build succeeds.
 
-- [ ] **Step 5: Commit**
+- [✅] **Step 5: Commit**
 
 ```powershell
 git add open-elin-firmware-c/src/main.c
@@ -238,7 +239,7 @@ git commit -m "feat(firmware): change battery poll from 5s chatty to 15min silen
 **Files:**
 - Modify: `open-elin-firmware-c/src/main.c`
 
-- [ ] **Step 1: Add PWM device ready check in main()**
+- [✅] **Step 1: Add PWM device ready check in main()**
 
 In `main()`, after `battery_init()` (around line 706), add:
 
@@ -248,7 +249,7 @@ In `main()`, after `battery_init()` (around line 706), add:
     }
 ```
 
-- [ ] **Step 2: Modify btn_pair_work_handler to flash battery on wake**
+- [✅] **Step 2: Modify btn_pair_work_handler to flash battery on wake**
 
 Replace the current wake logic in `btn_pair_work_handler` (the button-pressed branch):
 
@@ -278,54 +279,113 @@ With:
         k_work_schedule(&btn_pair_hold_work, K_SECONDS(6));
 ```
 
-- [ ] **Step 3: Build to verify**
+- [✅] **Step 3: Add simulated battery serial command (digits 0–9)**
+
+In `handle_command()`, add before the `} else if (ch == '?')` branch:
+
+```c
+    } else if (ch >= '0' && ch <= '9') {
+        /* Simulate battery level: 0=3000mV(dead) .. 9=4200mV(full) */
+        int32_t sim_mv = 3000 + (ch - '0') * 1200 / 9;
+        battery_mv = sim_mv;
+        led_battery_flash(sim_mv);
+        NUS_LOG("Sim battery: %d mV (key %c)", sim_mv, ch);
+```
+
+- [✅] **Step 4: Update help banner with sim battery keys**
+
+In `print_help()`, replace the serial printk:
+
+```c
+    printk("\033[1;33mCommands:\033[0m "
+           "\033[1mu\033[0m=up \033[1md\033[0m=down \033[1mt\033[0m=tune\n"
+           "         \033[1mp\033[0m=wake \033[1mP\033[0m=pair \033[1mB\033[0m=boot "
+           "\033[1mS\033[0m=sleep\n"
+           "         \033[1mL\033[0m=latency \033[1mv\033[0m=battery "
+           "\033[1m?\033[0m=help\n");
+```
+
+With:
+
+```c
+    printk("\033[1;33mCommands:\033[0m "
+           "\033[1mu\033[0m=up \033[1md\033[0m=down \033[1mt\033[0m=tune\n"
+           "         \033[1mp\033[0m=wake \033[1mP\033[0m=pair \033[1mB\033[0m=boot "
+           "\033[1mS\033[0m=sleep\n"
+           "         \033[1mL\033[0m=latency \033[1mv\033[0m=battery "
+           "\033[1m0-9\033[0m=sim bat "
+           "\033[1m?\033[0m=help\n");
+```
+
+Also update the NUS help text to mention `0-9=sim`.
+
+- [✅] **Step 5: Update serial-buttons.ps1**
+
+In `serial-buttons.ps1`, add digit handling to the `Show-Banner` function — add a line:
+
+```powershell
+    Write-Host "  0-9 = Sim Battery (0=dead 5=mid 9=full)    v = Read Battery" -ForegroundColor Cyan
+```
+
+And add to the switch block, after the `'B'` case:
+
+```powershell
+                { $_ -match '[0-9]' } { $serial.Write([string]$key); Write-Host "-> Sim Battery level $key" -ForegroundColor Cyan }
+```
+
+- [✅] **Step 6: Build to verify**
 
 Run: `.\open-elin-firmware-c\build.ps1`
 Expected: Build succeeds.
 
-- [ ] **Step 4: Commit**
+- [✅] **Step 7: Commit**
 
 ```powershell
-git add open-elin-firmware-c/src/main.c
-git commit -m "feat(firmware): flash battery level on wake button press"
+git add open-elin-firmware-c/src/main.c open-elin-firmware-c/serial-buttons.ps1
+git commit -m "feat(firmware): add 0-9 simulated battery commands for testing"
 ```
 
 ---
 
 ### Task 5: Flash, test, and verify
 
-- [ ] **Step 1: Flash firmware**
+- [✅] **Step 1: Flash firmware**
 
 Run: `.\open-elin-firmware-c\flash.ps1`
 Expected: firmware.uf2 copied to UF2 drive, device reboots.
 
-- [ ] **Step 2: Verify serial output**
+- [✅] **Step 2: Verify serial output**
 
-Connect serial console. Expected on boot:
-- Help banner prints (ANSI colored)
+Connect serial console (`serial-buttons.ps1`). Expected on boot:
+- Help banner prints (ANSI colored), includes `0-9=sim bat`
 - **No** periodic battery log every 5s (old behavior gone)
-- After 15 minutes, no visible output (silent check)
 
-- [ ] **Step 3: Test wake button**
+- [✅] **Step 3: Test simulated battery levels**
+
+Use `serial-buttons.ps1` to send digit keys:
+- Press `0`: LED barely visible (dim flash), log shows `Sim battery: 3000 mV (key 0)`
+- Press `5`: LED medium brightness, log shows `Sim battery: 3666 mV (key 5)`
+- Press `9`: LED full brightness, log shows `Sim battery: 4200 mV (key 9)`
+- Each press produces a ~400ms LED flash then off
+
+- [ ] **Step 4: Test wake button** *(manual — press pair button)*
 
 Press pair button (short press). Expected:
 - LED flashes at brightness proportional to battery voltage
-  - On USB: bright flash (~4600mV maps to ~100%)
-  - On battery: brightness varies with charge level
 - NUS log: `Battery: XXXX mV` (if NUS subscribed)
 
-- [ ] **Step 4: Test `v` command**
+- [✅] **Step 5: Test `v` command**
 
 Send `v` over serial or NUS. Expected:
 - `Battery: XXXX mV` or `Battery: XXXX mV (USB)` logged
-- No LED flash (only wake button does PWM flash)
+- No LED flash (only wake button and sim digits do PWM flash)
 
-- [ ] **Step 5: Test on-connect battery report**
+- [ ] **Step 6: Test on-connect battery report** *(manual — connect hub)*
 
 Connect hub to pod over BLE. Expected:
 - Battery frame sent on security_changed (existing behavior, unchanged)
 
-- [ ] **Step 6: Commit final state**
+- [ ] **Step 7: Commit final state**
 
 ```powershell
 git add -A
