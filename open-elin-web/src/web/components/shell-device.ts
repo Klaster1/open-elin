@@ -4,14 +4,14 @@ import { LitElement, PropertyValues, css, html, nothing } from "lit";
 import "../demo/hub-mock-gui.ts";
 import "../demo/pod-mock-gui.ts";
 import { devicePages } from "../device-pages.ts";
-import { appActions, appState } from "../store.ts";
+import { appActions, appState, consoleOpen, toggleConsole } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 import "./connection-empty-state.ts";
 import "./inline-spinner.ts";
 import "./page-device-buttons.ts";
 import "./page-device-cogs.ts";
 import "./page-device-list.ts";
-import "./page-device-log.ts";
+import "./console-panel.ts";
 import "./page-device-motor.ts";
 import "./page-device-setup.ts";
 
@@ -34,12 +34,54 @@ export class ShellDevice extends SignalWatcher(LitElement) {
         align-items: start;
       }
 
+      .shell.with-mocks {
+        grid-template-columns: 240px minmax(0, 1fr) 260px;
+      }
+
       .sidebar {
         display: flex;
         flex-direction: column;
         gap: 16px;
         position: sticky;
         top: 20px;
+      }
+
+      .mock-devices {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        position: sticky;
+        top: 20px;
+      }
+
+      .console-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: #0f1620;
+        border: 1px solid transparent;
+        color: inherit;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        text-align: left;
+        transition:
+          border-color 0.2s ease,
+          background 0.2s ease;
+      }
+
+      .console-toggle:hover {
+        border-color: #2b3a4b;
+        background: #18222f;
+      }
+
+      .console-toggle.active {
+        border-color: #3a4a5c;
+        background: #1c2836;
+        color: #e7edf5;
       }
 
       .sidebar-head {
@@ -210,11 +252,13 @@ export class ShellDevice extends SignalWatcher(LitElement) {
       }
 
       @media (max-width: 900px) {
-        .shell {
+        .shell,
+        .shell.with-mocks {
           grid-template-columns: 1fr;
         }
 
-        .sidebar {
+        .sidebar,
+        .mock-devices {
           position: static;
         }
       }
@@ -238,7 +282,7 @@ export class ShellDevice extends SignalWatcher(LitElement) {
   constructor() {
     super();
     this.macValue = "";
-    this.activePage = "log";
+    this.activePage = "list";
   }
 
   render() {
@@ -254,13 +298,14 @@ export class ShellDevice extends SignalWatcher(LitElement) {
 
     const deviceName = appState.connectedDevice.get()?.name || "Unknown";
     const displayMac = this.macValue || "Unknown";
-    const activePage = this.activePage || "log";
+    const activePage = this.activePage || "list";
     const battery = appState.hubBatteryVoltage.get();
     const batteryStatus = this.formatBatteryStatus(battery);
     const isDemo = appState.demoMode.get();
+    const isConsoleOpen = consoleOpen.get();
 
     return html`
-      <section class="shell" role="main" aria-label="Device details">
+      <section class="shell ${isDemo ? "with-mocks" : ""}" role="main" aria-label="Device details">
         <aside class="sidebar">
           <div class="card">
             <div class="sidebar-head">
@@ -300,11 +345,21 @@ export class ShellDevice extends SignalWatcher(LitElement) {
               ${devicePages.map((page) =>
                 this.renderNavLink(page.id, page.label, activePage, displayMac),
               )}
+              <button
+                class="console-toggle ${isConsoleOpen ? "active" : ""}"
+                type="button"
+                data-test-id="console-toggle"
+                @click=${this.onToggleConsole}
+                aria-label="${isConsoleOpen ? "Hide console" : "Show console"}"
+                aria-pressed=${isConsoleOpen ? "true" : "false"}
+              >
+                Console
+              </button>
             </nav>
           </div>
-          ${isDemo ? html`<hub-mock-gui></hub-mock-gui><pod-mock-gui></pod-mock-gui>` : html``}
         </aside>
         <div class="content">${this.renderDevicePage(activePage)}</div>
+        ${isDemo ? html`<aside class="mock-devices"><hub-mock-gui></hub-mock-gui><pod-mock-gui></pod-mock-gui></aside>` : html``}
       </section>
     `;
   }
@@ -342,9 +397,8 @@ export class ShellDevice extends SignalWatcher(LitElement) {
         return html`<page-device-cogs></page-device-cogs>`;
       case "setup":
         return html`<page-device-setup></page-device-setup>`;
-      case "log":
       default:
-        return html`<page-device-log></page-device-log>`;
+        return html`<page-device-list></page-device-list>`;
     }
   }
 
@@ -367,6 +421,10 @@ export class ShellDevice extends SignalWatcher(LitElement) {
         composed: true,
       }),
     );
+  }
+
+  private onToggleConsole() {
+    toggleConsole();
   }
 
   private formatBatteryStatus(value: number | null) {

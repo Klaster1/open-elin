@@ -1,14 +1,14 @@
 import type { Locator, Page } from "@playwright/test";
 
-export class DeviceLogPageModel {
+export class ConsolePanelModel {
   constructor(private readonly page: Page) {}
 
   root(): Locator {
-    return this.page.getByTestId("log");
+    return this.page.getByTestId("console-panel");
   }
 
   output(): Locator {
-    return this.page.getByTestId("log-output");
+    return this.page.getByTestId("console-panel-output");
   }
 
   async text() {

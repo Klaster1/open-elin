@@ -4,7 +4,7 @@ export class DevicePageModel {
   constructor(private readonly page: Page) {}
 
   deviceRouteMatcher() {
-    return /\/device\/[A-F0-9-]+\/(setup|log|cogs|list|motor|buttons)$/;
+    return /\/device\/[A-F0-9-]+\/(setup|cogs|list|motor|buttons)$/;
   }
 
   setupRouteMatcher() {
@@ -25,10 +25,6 @@ export class DevicePageModel {
 
   motorRouteMatcher() {
     return /\/device\/[A-F0-9-]+\/motor$/;
-  }
-
-  logRouteMatcher() {
-    return /\/device\/[A-F0-9-]+\/log$/;
   }
 
   cogsTabLink(): Locator {
@@ -55,8 +51,8 @@ export class DevicePageModel {
     await this.buttonsTabLink().click();
   }
 
-  logTabLink(): Locator {
-    return this.page.getByTestId("device-nav-log");
+  consoleToggle(): Locator {
+    return this.page.getByTestId("console-toggle");
   }
 
   sidebarName(): Locator {
@@ -113,8 +109,8 @@ export class DevicePageModel {
     await this.motorTabLink().click();
   }
 
-  async goToLogTab() {
-    await this.logTabLink().click();
+  async toggleConsole() {
+    await this.consoleToggle().click();
   }
 
   async disconnect() {

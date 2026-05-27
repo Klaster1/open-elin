@@ -3,11 +3,16 @@ import { SignalWatcher } from "@lit-labs/signals";
 import { LitElement, css, html } from "lit";
 
 import hubData from "../demo/hub-mock-data.json";
+import "./console-panel.ts";
 import {
     appActions,
     appState,
+    consoleHeight,
+    consoleOpen,
     isValidMac,
+    setConsoleHeight,
     setShiftMacListener,
+    toggleConsole,
 } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
@@ -28,13 +33,27 @@ export class App extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
+      :host {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .app-scroll {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+      }
+
       .app {
-        max-width: 1440px;
+        max-width: 1600px;
         margin: 0 auto;
-        padding: 40px 28px 60px;
+        padding: 40px 28px 20px;
         display: flex;
         flex-direction: column;
         gap: 22px;
+        min-height: 0;
       }
 
       .hero {
@@ -42,6 +61,31 @@ export class App extends SignalWatcher(LitElement) {
         align-items: flex-end;
         justify-content: space-between;
         gap: 20px;
+      }
+
+      .console-pane {
+        flex-shrink: 0;
+        border-top: 1px solid var(--panel-border, #223142);
+        background: var(--panel, #141c24);
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      .console-drag-handle {
+        position: absolute;
+        top: -4px;
+        left: 0;
+        right: 0;
+        height: 8px;
+        cursor: ns-resize;
+        z-index: 10;
+      }
+
+      .console-drag-handle:hover,
+      .console-drag-handle.dragging {
+        background: var(--accent, #35c28b);
+        opacity: 0.5;
       }
     `,
   ];
@@ -53,7 +97,7 @@ export class App extends SignalWatcher(LitElement) {
       path: "/device/:mac",
       enter: async ({ mac }) => {
         const normalizedMac = serializeMacForRoute(parseMacFromRoute(mac));
-        await this.navigate(`/device/${normalizedMac}/log`, {
+        await this.navigate(`/device/${normalizedMac}/list`, {
           replace: true,
         });
         return false;
@@ -71,10 +115,10 @@ export class App extends SignalWatcher(LitElement) {
     super.connectedCallback();
     const storedMac = appActions.initStoredMac();
     if (storedMac && window.location.pathname.startsWith("/mac")) {
-      this.navigate(`/device/${serializeMacForRoute(storedMac)}/log`);
+      this.navigate(`/device/${serializeMacForRoute(storedMac)}/list`);
     }
     setShiftMacListener((value) => {
-      this.navigate(`/device/${serializeMacForRoute(value)}/log`);
+      this.navigate(`/device/${serializeMacForRoute(value)}/list`);
     });
   }
 
@@ -84,17 +128,65 @@ export class App extends SignalWatcher(LitElement) {
   }
 
   render() {
+    const connected = appState.connected.get();
+    const isConsoleOpen = consoleOpen.get();
+    const paneHeight = consoleHeight.get();
     return html`
-      <div class="app">
-        <header class="hero">
-          <div>
-            <h1>OpenElin</h1>
-          </div>
-        </header>
-        ${this.router.outlet()}
+      <div class="app-scroll">
+        <div class="app">
+          <header class="hero">
+            <div>
+              <h1>OpenElin</h1>
+            </div>
+          </header>
+          ${this.router.outlet()}
+        </div>
       </div>
+      ${connected && isConsoleOpen
+        ? html`<div class="console-pane" style="height:${paneHeight}px">
+            <div
+              class="console-drag-handle"
+              @pointerdown=${this.onDragStart}
+            ></div>
+            <console-panel></console-panel>
+          </div>`
+        : html``}
     `;
   }
+
+  private dragging = false;
+  private dragStartY = 0;
+  private dragStartHeight = 0;
+
+  private onDragStart = (e: PointerEvent) => {
+    e.preventDefault();
+    const handle = e.currentTarget as HTMLElement;
+    handle.setPointerCapture(e.pointerId);
+    handle.classList.add("dragging");
+    this.dragging = true;
+    this.dragStartY = e.clientY;
+    this.dragStartHeight = consoleHeight.get();
+    handle.addEventListener("pointermove", this.onDragMove);
+    handle.addEventListener("pointerup", this.onDragEnd);
+    handle.addEventListener("pointercancel", this.onDragEnd);
+  };
+
+  private onDragMove = (e: PointerEvent) => {
+    if (!this.dragging) return;
+    const delta = this.dragStartY - e.clientY;
+    setConsoleHeight(this.dragStartHeight + delta);
+  };
+
+  private onDragEnd = (e: PointerEvent) => {
+    if (!this.dragging) return;
+    this.dragging = false;
+    const handle = e.currentTarget as HTMLElement;
+    handle.releasePointerCapture(e.pointerId);
+    handle.classList.remove("dragging");
+    handle.removeEventListener("pointermove", this.onDragMove);
+    handle.removeEventListener("pointerup", this.onDragEnd);
+    handle.removeEventListener("pointercancel", this.onDragEnd);
+  };
 
   private renderLandingRoute() {
     return html`<page-landing
@@ -130,7 +222,7 @@ export class App extends SignalWatcher(LitElement) {
 
     const targetMac =
       currentMac || (routeMac ? parseMacFromRoute(routeMac) : "");
-    const activePage = pageParam || "log";
+    const activePage = pageParam || "list";
 
     return html`
       <shell-device
@@ -148,7 +240,7 @@ export class App extends SignalWatcher(LitElement) {
     await appActions.connect();
     const mac = appState.mac.get();
     if (mac) {
-      void this.navigate(`/device/${serializeMacForRoute(mac)}/log`);
+      void this.navigate(`/device/${serializeMacForRoute(mac)}/list`);
     } else {
       void this.navigate("/mac");
     }
@@ -160,7 +252,7 @@ export class App extends SignalWatcher(LitElement) {
     if (mac) {
       const pending = appState.pendingRouteMac.get();
       const target = pending || mac;
-      void this.navigate(`/device/${serializeMacForRoute(target)}/log`);
+      void this.navigate(`/device/${serializeMacForRoute(target)}/list`);
     }
   }
 
@@ -170,7 +262,7 @@ export class App extends SignalWatcher(LitElement) {
     await appActions.connectDemo({ full });
     const mac = appState.mac.get();
     if (mac) {
-      void this.navigate(`/device/${serializeMacForRoute(mac)}/log`);
+      void this.navigate(`/device/${serializeMacForRoute(mac)}/list`);
     } else if (full) {
       void this.navigate("/mac");
     }
@@ -179,7 +271,7 @@ export class App extends SignalWatcher(LitElement) {
   private handleMacAcquired() {
     const mac = appState.mac.get();
     if (mac) {
-      void this.navigate(`/device/${serializeMacForRoute(mac)}/log`);
+      void this.navigate(`/device/${serializeMacForRoute(mac)}/list`);
     }
   }
 

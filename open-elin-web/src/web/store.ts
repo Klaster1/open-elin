@@ -221,7 +221,40 @@ let macLockedByUser = false;
 let pendingAdvertMac: string | null = null;
 let adTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let onShiftMac: ((mac: string) => void) | null = null;
-let currentActivePage = "log";
+let currentActivePage = "list";
+
+const CONSOLE_OPEN_KEY = "openElinConsoleOpen";
+const CONSOLE_HEIGHT_KEY = "openElinConsoleHeight";
+const DEFAULT_CONSOLE_HEIGHT = 280;
+const MIN_CONSOLE_HEIGHT = 100;
+const MAX_CONSOLE_HEIGHT = 600;
+
+function loadConsoleOpen(): boolean {
+  try { return localStorage.getItem(CONSOLE_OPEN_KEY) === "1"; } catch { return false; }
+}
+
+function loadConsoleHeight(): number {
+  try {
+    const v = Number(localStorage.getItem(CONSOLE_HEIGHT_KEY));
+    if (Number.isFinite(v) && v >= MIN_CONSOLE_HEIGHT && v <= MAX_CONSOLE_HEIGHT) return v;
+  } catch { /* ignore */ }
+  return DEFAULT_CONSOLE_HEIGHT;
+}
+
+export const consoleOpen = new Signal.State(loadConsoleOpen());
+export const consoleHeight = new Signal.State(loadConsoleHeight());
+
+export function toggleConsole() {
+  const next = !consoleOpen.get();
+  consoleOpen.set(next);
+  try { localStorage.setItem(CONSOLE_OPEN_KEY, next ? "1" : "0"); } catch { /* ignore */ }
+}
+
+export function setConsoleHeight(h: number) {
+  const clamped = Math.max(MIN_CONSOLE_HEIGHT, Math.min(MAX_CONSOLE_HEIGHT, h));
+  consoleHeight.set(clamped);
+  try { localStorage.setItem(CONSOLE_HEIGHT_KEY, String(clamped)); } catch { /* ignore */ }
+}
 
 export type OffsetBounds = {
   min: number;

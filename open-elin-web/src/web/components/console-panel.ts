@@ -5,39 +5,29 @@ import { createRef, ref, type Ref } from "lit/directives/ref.js";
 import { appState, type LogEntry } from "../store.ts";
 import { sharedStyles } from "../styles.ts";
 
-export class PageDeviceLog extends SignalWatcher(LitElement) {
+export class ConsolePanel extends SignalWatcher(LitElement) {
   static styles = [
     sharedStyles,
     css`
-      .card {
-        background: var(--panel, #141c24);
-        border-radius: 16px;
-        padding: 18px 20px;
-        border: 1px solid var(--panel-border, #223142);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-        max-height: calc(100vh - 220px);
+      :host {
         display: flex;
         flex-direction: column;
+        height: 100%;
         overflow: hidden;
       }
 
-      .card-head {
+      .pane-head {
         display: flex;
         flex-direction: row;
-        align-items: flex-start;
+        align-items: center;
         justify-content: space-between;
-        margin-bottom: 16px;
+        padding: 8px 16px;
+        flex-shrink: 0;
+        border-bottom: 1px solid var(--panel-border, #223142);
       }
 
-      .card-head-text {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .hint {
-        color: var(--muted, #98a6b5);
-        font-size: 13px;
+      .pane-head h2 {
+        font-size: 14px;
         margin: 0;
       }
 
@@ -47,12 +37,10 @@ export class PageDeviceLog extends SignalWatcher(LitElement) {
         margin: 0;
         font-size: 12px;
         line-height: 1.5;
-        padding: 14px;
-        border-radius: 12px;
-        border: 1px solid #233143;
+        padding: 10px 16px;
         background: #0f1620;
         font-family: Consolas, monospace;
-        overflow: auto;
+        overflow-y: auto;
         flex: 1;
         min-height: 0;
       }
@@ -86,23 +74,18 @@ export class PageDeviceLog extends SignalWatcher(LitElement) {
   render() {
     const entries = appState.logEntries.get();
     return html`
-      <div class="card" data-test-id="log">
-        <div class="card-head">
-          <div class="card-head-text">
-            <h2>Log</h2>
-            <p class="hint">Notifications and command results appear here.</p>
-          </div>
-          <sl-button size="small" @click=${this.clearLog}>Clear</sl-button>
-        </div>
-        <pre
-          class="log"
-          data-test-id="log-output"
-          ${ref(this.logRef)}
-          role="log"
-          aria-live="polite"
-          aria-relevant="additions text"
-        >${entries.map((entry, index) => renderEntry(entry, index === 0))}</pre>
+      <div class="pane-head" data-test-id="console-panel">
+        <h2>Console</h2>
+        <sl-button size="small" @click=${this.clearLog}>Clear</sl-button>
       </div>
+      <pre
+        class="log"
+        data-test-id="console-panel-output"
+        ${ref(this.logRef)}
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+      >${entries.map((entry, index) => renderEntry(entry, index === 0))}</pre>
     `;
   }
 
@@ -132,8 +115,8 @@ export class PageDeviceLog extends SignalWatcher(LitElement) {
   }
 }
 
-if (!customElements.get("page-device-log")) {
-  customElements.define("page-device-log", PageDeviceLog);
+if (!customElements.get("console-panel")) {
+  customElements.define("console-panel", ConsolePanel);
 }
 
 function renderEntry(entry: LogEntry, isFirst: boolean): TemplateResult {
