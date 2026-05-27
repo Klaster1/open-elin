@@ -188,6 +188,7 @@ if (!globalScope.__demoPodLogAttached) {
       actionLabel: detail.actionLabel,
       rawHex: detail.rawHex,
     });
+    demoHub.blinkLed();
 
     const direction = getDemoButtonDirection(detail.buttonId);
     if (!direction || detail.actionFlag === undefined) return;
@@ -209,7 +210,10 @@ if (!globalScope.__demoPodLogAttached) {
 
 const demoPodBatteryLevel = computed(() => demoPod.state.get().batteryLevel);
 const demoPodBatteryWatcher = new Signal.subtle.Watcher(() => {
-  demoState.updatePodBatteryLevel(demoPodBatteryLevel.get());
+  queueMicrotask(() => {
+    demoPodBatteryWatcher.watch();
+    demoState.updatePodBatteryLevel(demoPodBatteryLevel.get());
+  });
 });
 demoPodBatteryWatcher.watch(demoPodBatteryLevel);
 demoState.updatePodBatteryLevel(demoPodBatteryLevel.get());
