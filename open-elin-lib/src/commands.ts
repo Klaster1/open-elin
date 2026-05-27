@@ -174,6 +174,7 @@ const AppCommand = {
   SetTuningButtonLevel: "0x0022",
   ReadTuningButton: "0x0023",
   GetLastV: "0x0024",
+  PowerDown: "0x0027",
   AppAction: "0xFFFF",
 } as const;
 type AppCommand = (typeof AppCommand)[keyof typeof AppCommand];
@@ -747,6 +748,15 @@ export class ProtocolCommands {
   async blinkLed(): Promise<BasicResponse> {
     const payload = encodeCommandWithMac(
       AppCommand.BlinkLed,
+      this.device.address,
+    );
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
+  }
+
+  async powerDown(): Promise<BasicResponse> {
+    const payload = encodeCommandWithMac(
+      AppCommand.PowerDown,
       this.device.address,
     );
     const response = await this.protocol.sendCommand(this.device, payload);

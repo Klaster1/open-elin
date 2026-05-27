@@ -25,6 +25,7 @@ import * as setNameCmd from "./commands/hub/set-name.ts";
 import * as setRearCogCmd from "./commands/hub/set-rear-cog.ts";
 import * as shiftDownCmd from "./commands/hub/shift-down.ts";
 import * as shiftUpCmd from "./commands/hub/shift-up.ts";
+import * as sleepCmd from "./commands/hub/sleep.ts";
 import * as writeButtonMapCmd from "./commands/hub/write-button-map.ts";
 import * as writeDefaultButtonMapCmd from "./commands/hub/write-default-button-map.ts";
 import * as scanCmd from "./commands/scan.ts";
@@ -46,6 +47,7 @@ const setBikeNetParser = merge(object({ type: constant("set-bikenet") }), hubFla
 const listParser      = merge(object({ type: constant("list") }), hubFlags);
 const getParser     = merge(object({ type: constant("get"), mac: argument(string({ metavar: "MAC" })) }), hubFlags);
 const blinkParser   = merge(object({ type: constant("blink") }), hubFlags);
+const sleepParser   = merge(object({ type: constant("sleep") }), hubFlags);
 const shiftUpParser = merge(object({ type: constant("shift-up") }), hubFlags);
 const shiftDnParser = merge(object({ type: constant("shift-down") }), hubFlags);
 const moveParser    = merge(object({ type: constant("move"), position: argument(float({ min: 0, max: 6553.5, metavar: "POS" })) }), hubFlags);
@@ -89,6 +91,7 @@ const hubGroup1 = or(
   command("list",        listParser),
   command("get",         getParser),
   command("blink",       blinkParser),
+  command("sleep",       sleepParser),
   command("shift-up",    shiftUpParser),
   command("shift-down",  shiftDnParser),
   command("move",        moveParser),
@@ -153,6 +156,9 @@ switch (result.type) {
     break;
   case "blink":
     await blinkCmd.run(result);
+    break;
+  case "sleep":
+    await sleepCmd.run(result);
     break;
   case "shift-up":
     await shiftUpCmd.run(result);
