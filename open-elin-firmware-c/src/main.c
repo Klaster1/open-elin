@@ -303,14 +303,31 @@ static void led_blink(void)
 }
 
 /* PWM flash: brightness proportional to battery voltage.
- * 4200mV = 100% duty, 3000mV = 0% duty, clamped. */
-static void led_off_pwm_work_handler(struct k_work *work);
-static K_WORK_DELAYABLE_DEFINE(led_off_pwm_work, led_off_pwm_work_handler);
+ * 4200mV = 100% duty, 3000mV = 0% duty, clamped.
+ * Two pulses: on(200ms) off(150ms) on(200ms) off. */
+static void led_pwm_seq_handler(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(led_pwm_seq_work, led_pwm_seq_handler);
 
-static void led_off_pwm_work_handler(struct k_work *work)
+static uint32_t pwm_saved_pulse;
+static uint8_t  pwm_seq_step;
+
+static void led_pwm_seq_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
-    pwm_set_pulse_dt(&pwm_led, 0);
+    switch (pwm_seq_step++) {
+    case 0: /* end of first pulse */
+        pwm_set_pulse_dt(&pwm_led, 0);
+        k_work_schedule(&led_pwm_seq_work, K_MSEC(150));
+        break;
+    case 1: /* start second pulse */
+        pwm_set_pulse_dt(&pwm_led, pwm_saved_pulse);
+        k_work_schedule(&led_pwm_seq_work, K_MSEC(200));
+        break;
+    default: /* end of second pulse — hand pin back to GPIO */
+        pwm_set_pulse_dt(&pwm_led, 0);
+        gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
+        break;
+    }
 }
 
 static void led_battery_flash(int32_t mv)
@@ -323,8 +340,13 @@ static void led_battery_flash(int32_t mv)
     uint32_t pct = 5 + (uint32_t)(mv - 3000) * 95 / 1200;
     uint32_t pulse = pwm_led.period * pct / 100;
 
+    pwm_saved_pulse = pulse;
+    pwm_seq_step = 0;
+    k_work_cancel_delayable(&led_pwm_seq_work);
+    /* Release GPIO so PWM peripheral can drive the pin */
+    gpio_pin_configure_dt(&led, GPIO_DISCONNECTED);
     pwm_set_pulse_dt(&pwm_led, pulse);
-    k_work_schedule(&led_off_pwm_work, K_MSEC(400));
+    k_work_schedule(&led_pwm_seq_work, K_MSEC(200));
 }
 
 /*── BLE connection callbacks ──*/
