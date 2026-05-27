@@ -10,6 +10,7 @@
 #include <zephyr/bluetooth/gap.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/drivers/adc.h>
+#include <zephyr/drivers/pwm.h>
 #include <nrfx.h>
 
 #include "protocol.h"
@@ -19,6 +20,7 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 #define LED0_NODE DT_ALIAS(led0)
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+static const struct pwm_dt_spec pwm_led = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_led0));
 
 static const struct gpio_dt_spec btn_up = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);   /* P0.17 */
 static const struct gpio_dt_spec btn_down = GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios); /* P0.31 */
@@ -298,6 +300,31 @@ static void led_blink(void)
 {
     gpio_pin_set_dt(&led, 1);
     k_work_schedule(&led_off_work, K_MSEC(50));
+}
+
+/* PWM flash: brightness proportional to battery voltage.
+ * 4200mV = 100% duty, 3000mV = 0% duty, clamped. */
+static void led_off_pwm_work_handler(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(led_off_pwm_work, led_off_pwm_work_handler);
+
+static void led_off_pwm_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    pwm_set_pulse_dt(&pwm_led, 0);
+}
+
+static void led_battery_flash(int32_t mv)
+{
+    /* Clamp to 3000–4200mV range */
+    if (mv < 3000) { mv = 3000; }
+    if (mv > 4200) { mv = 4200; }
+
+    /* Map to duty cycle: 3000=5%, 4200=100% (never fully off — confirms button worked) */
+    uint32_t pct = 5 + (uint32_t)(mv - 3000) * 95 / 1200;
+    uint32_t pulse = pwm_led.period * pct / 100;
+
+    pwm_set_pulse_dt(&pwm_led, pulse);
+    k_work_schedule(&led_off_pwm_work, K_MSEC(400));
 }
 
 /*── BLE connection callbacks ──*/
