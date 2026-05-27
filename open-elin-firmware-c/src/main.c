@@ -11,7 +11,6 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/pwm.h>
-#include <nrfx.h>
 
 #include "protocol.h"
 #include "gatt.h"
@@ -20,7 +19,7 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 #define LED0_NODE DT_ALIAS(led0)
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
-static const struct pwm_dt_spec pwm_led = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_led0));
+
 
 static const struct gpio_dt_spec btn_up = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);   /* P0.17 */
 static const struct gpio_dt_spec btn_down = GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios); /* P0.31 */
@@ -302,30 +301,69 @@ static void led_blink(void)
     k_work_schedule(&led_off_work, K_MSEC(50));
 }
 
-/* PWM flash: brightness proportional to battery voltage.
- * 4200mV = 100% duty, 3000mV = 0% duty, clamped.
- * Two pulses: on(200ms) off(150ms) on(200ms) off. */
-static void led_pwm_seq_handler(struct k_work *work);
-static K_WORK_DELAYABLE_DEFINE(led_pwm_seq_work, led_pwm_seq_handler);
+/* PWM LED for battery indicator pulses.
+ * Pulse count = charge bucket (1–9): 10%→1 pulse, 90%→9 pulses.
+ * Each pulse: smooth fade-in → hold → fade-out at low brightness. */
+static const struct pwm_dt_spec pwm_led = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_led0));
 
-static uint32_t pwm_saved_pulse;
-static uint8_t  pwm_seq_step;
+static void led_pulse_handler(struct k_work *work);
+static K_WORK_DELAYABLE_DEFINE(led_pulse_work, led_pulse_handler);
 
-static void led_pwm_seq_handler(struct k_work *work)
+#define FADE_STEPS     12
+#define FADE_STEP_MS   6
+#define HOLD_MS        50
+#define GAP_MS         80
+#define PULSE_PCT       5  /* low brightness — just visible */
+
+enum pulse_phase { PHASE_FADE_IN, PHASE_HOLD, PHASE_FADE_OUT, PHASE_GAP };
+static uint8_t pulse_total;    /* how many pulses to emit */
+static uint8_t pulse_current;  /* which pulse we're on (0-based) */
+static enum pulse_phase pulse_phase;
+static uint8_t fade_step;
+
+static inline void pwm_set_pct(uint8_t pct)
+{
+    pwm_set_pulse_dt(&pwm_led, pwm_led.period * pct / 100);
+}
+
+static void led_pulse_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
-    switch (pwm_seq_step++) {
-    case 0: /* end of first pulse */
-        pwm_set_pulse_dt(&pwm_led, 0);
-        k_work_schedule(&led_pwm_seq_work, K_MSEC(150));
+    switch (pulse_phase) {
+    case PHASE_FADE_IN:
+        fade_step++;
+        pwm_set_pct(fade_step * PULSE_PCT / FADE_STEPS);
+        if (fade_step >= FADE_STEPS) {
+            pulse_phase = PHASE_HOLD;
+            k_work_schedule(&led_pulse_work, K_MSEC(HOLD_MS));
+        } else {
+            k_work_schedule(&led_pulse_work, K_MSEC(FADE_STEP_MS));
+        }
         break;
-    case 1: /* start second pulse */
-        pwm_set_pulse_dt(&pwm_led, pwm_saved_pulse);
-        k_work_schedule(&led_pwm_seq_work, K_MSEC(200));
+    case PHASE_HOLD:
+        pulse_phase = PHASE_FADE_OUT;
+        fade_step = FADE_STEPS;
+        k_work_schedule(&led_pulse_work, K_MSEC(FADE_STEP_MS));
         break;
-    default: /* end of second pulse — hand pin back to GPIO */
-        pwm_set_pulse_dt(&pwm_led, 0);
-        gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
+    case PHASE_FADE_OUT:
+        fade_step--;
+        pwm_set_pct(fade_step * PULSE_PCT / FADE_STEPS);
+        if (fade_step == 0) {
+            pulse_current++;
+            if (pulse_current < pulse_total) {
+                pulse_phase = PHASE_GAP;
+                k_work_schedule(&led_pulse_work, K_MSEC(GAP_MS));
+            }
+            /* else done — LED already off */
+        } else {
+            k_work_schedule(&led_pulse_work, K_MSEC(FADE_STEP_MS));
+        }
+        break;
+    case PHASE_GAP:
+        /* Start next pulse */
+        pulse_phase = PHASE_FADE_IN;
+        fade_step = 0;
+        k_work_schedule(&led_pulse_work, K_MSEC(FADE_STEP_MS));
         break;
     }
 }
@@ -336,17 +374,19 @@ static void led_battery_flash(int32_t mv)
     if (mv < 3000) { mv = 3000; }
     if (mv > 4200) { mv = 4200; }
 
-    /* Map to duty cycle: 3000=5%, 4200=100% (never fully off — confirms button worked) */
-    uint32_t pct = 5 + (uint32_t)(mv - 3000) * 95 / 1200;
-    uint32_t pulse = pwm_led.period * pct / 100;
+    /* Map to 1–9 pulses: 3000mV→1, 4200mV→9 */
+    uint8_t pulses = 1 + (uint8_t)((uint32_t)(mv - 3000) * 8 / 1200);
 
-    pwm_saved_pulse = pulse;
-    pwm_seq_step = 0;
-    k_work_cancel_delayable(&led_pwm_seq_work);
-    /* Release GPIO so PWM peripheral can drive the pin */
-    gpio_pin_configure_dt(&led, GPIO_DISCONNECTED);
-    pwm_set_pulse_dt(&pwm_led, pulse);
-    k_work_schedule(&led_pwm_seq_work, K_MSEC(200));
+    k_work_cancel_delayable(&led_pulse_work);
+    pulse_total = pulses;
+    pulse_current = 0;
+    pulse_phase = PHASE_FADE_IN;
+    fade_step = 0;
+
+    pwm_set_pct(0);
+    LOG_INF("Battery pulse: %u pulses (%d mV)", pulses, mv);
+
+    k_work_schedule(&led_pulse_work, K_MSEC(FADE_STEP_MS));
 }
 
 /*── BLE connection callbacks ──*/
@@ -769,6 +809,7 @@ int main(void)
 
     battery_init();
 
+    /* PWM LED for battery pulse indicator */
     if (!pwm_is_ready_dt(&pwm_led)) {
         LOG_ERR("PWM LED not ready");
     }

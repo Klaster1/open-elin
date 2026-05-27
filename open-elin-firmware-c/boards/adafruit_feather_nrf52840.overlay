@@ -84,7 +84,7 @@
     };
 };
 
-/* PWM for battery-level LED brightness indication */
+/* PWM for battery-level LED pulse indicator */
 &pwm0 {
     status = "okay";
     pinctrl-0 = <&pwm0_default>;
