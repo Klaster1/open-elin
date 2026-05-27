@@ -13,6 +13,7 @@ function Connect-Serial {
 function Show-Banner {
     Write-Host "  u = Shift Up    d = Shift Down    t = Tune    p = Wake" -ForegroundColor Cyan
     Write-Host "  P = Pair        S = Sleep         L = Relax Latency" -ForegroundColor Cyan
+    Write-Host "  0-9 = Sim Battery (0=dead 5=mid 9=full)    v = Read Battery" -ForegroundColor Cyan
     Write-Host "  F = Flash       B = Bootloader    q = Quit" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -36,6 +37,8 @@ try {
                 'P' { $serial.Write("P"); Write-Host "-> Pairing Mode (10s)" -ForegroundColor Magenta }
                 'S' { $serial.Write("S"); Write-Host "-> Radio Sleep" -ForegroundColor DarkYellow }
                 'L' { $serial.Write("L"); Write-Host "-> Relax Latency" -ForegroundColor DarkCyan }
+                'v' { $serial.Write("v"); Write-Host "-> Read Battery" -ForegroundColor Cyan }
+                { $_ -match '[0-9]' } { $serial.Write([string]$key); Write-Host "-> Sim Battery level $key" -ForegroundColor Cyan }
                 'F' {
                     Write-Host "-> Flash" -ForegroundColor Cyan
                     $uf2 = Join-Path $PSScriptRoot "firmware.uf2"

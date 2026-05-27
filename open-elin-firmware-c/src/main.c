@@ -474,12 +474,13 @@ static void print_help(void)
            "         \033[1mp\033[0m=wake \033[1mP\033[0m=pair \033[1mB\033[0m=boot "
            "\033[1mS\033[0m=sleep\n"
            "         \033[1mL\033[0m=latency \033[1mv\033[0m=battery "
+           "\033[1m0-9\033[0m=sim bat "
            "\033[1m?\033[0m=help\n");
     /* NUS: plain text (no ANSI) */
     if (gatt_nus_is_subscribed()) {
         gatt_nus_send("Commands: u=up d=down t=tune\n", 30);
         gatt_nus_send("p=wake P=pair B=boot S=sleep\n", 29);
-        gatt_nus_send("L=latency v=battery ?=help\n", 27);
+        gatt_nus_send("L=latency v=bat 0-9=sim ?=help\n", 31);
     }
 }
 
@@ -515,6 +516,12 @@ static void handle_command(uint8_t ch)
     } else if (ch == 'v') {
         battery_mv = read_battery_mv();
         NUS_LOG("Battery: %d mV%s", battery_mv, usb_active ? " (USB)" : "");
+    } else if (ch >= '0' && ch <= '9') {
+        /* Simulate battery level: 0=3000mV(dead) .. 9=4200mV(full) */
+        int32_t sim_mv = 3000 + (ch - '0') * 1200 / 9;
+        battery_mv = sim_mv;
+        led_battery_flash(sim_mv);
+        NUS_LOG("Sim battery: %d mV (key %c)", sim_mv, ch);
     } else if (ch == '?') {
         print_help();
     }
@@ -665,9 +672,17 @@ static void btn_pair_work_handler(struct k_work *work)
 
     /* Check if button is pressed (active) or released */
     if (gpio_pin_get_dt(&btn_pair)) {
-        /* Button pressed — wake radio if sleeping, start 6s hold timer for pairing */
+        /* Button pressed — wake radio, flash battery level, start 6s hold timer */
         if (radio_sleeping) {
             radio_wake();
+        }
+        /* Fresh battery read + PWM brightness flash */
+        battery_mv = read_battery_mv();
+        led_battery_flash(battery_mv);
+        NUS_LOG("Battery: %d mV%s", battery_mv, usb_active ? " (USB)" : "");
+        /* Send battery to hub if connected */
+        if (current_conn) {
+            send_battery();
         }
         k_work_schedule(&btn_pair_hold_work, K_SECONDS(6));
     } else {
@@ -731,6 +746,10 @@ int main(void)
     LOG_INF("NXS pod firmware v0.1.0 (Zephyr)");
 
     battery_init();
+
+    if (!pwm_is_ready_dt(&pwm_led)) {
+        LOG_ERR("PWM LED not ready");
+    }
 
     /* BLE init */
     int err = bt_enable(NULL);
