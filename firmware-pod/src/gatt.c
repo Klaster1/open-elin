@@ -1,4 +1,4 @@
-/* firmware-c/src/gatt.c */
+/* firmware-pod/src/gatt.c */
 #include "gatt.h"
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/uuid.h>

@@ -1,4 +1,4 @@
-# firmware-c/tests/Makefile
+# firmware-pod/tests/Makefile
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11
 

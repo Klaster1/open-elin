@@ -146,7 +146,7 @@ src/
 
 - **BLE stack:** Zephyr's built-in BLE (no SoftDevice)
 - **Pairing:** `CONFIG_BT_SMP=y` — hub bonds during `add-device`
-- **No NVS/flash persistence** — bonds are not saved. Hub re-pairs on each power cycle via `add-device`. This is fine because the CircuitPython pod worked the same way.
+- **NVS persistence** — hub bond is saved across power cycles via NVS (storage partition at `0xEC000`–`0xF4000`, safely below the bootloader at `0xF4000`).
 - **LED:** Blinks briefly (50ms) on GATT activity (button send, ShiftComplete, PIN exchange)
 - **Power:** `CONFIG_PM=y`, CPU sleeps between BLE events. Battery reported every 5s as fixed 3000 mV.
 
@@ -168,6 +168,6 @@ If the bootloader is corrupted (e.g. by accidental flash writes to `0xF4000`+), 
 
 ## Critical Lessons
 
-- **Never enable NVS/flash/settings on this board.** The `adafruit_feather_nrf52840` DTS has no `storage_partition` for internal flash. NVS will write to undefined flash regions and corrupt the bootloader.
-- **`CONFIG_BT_SMP=y` is sufficient** for hub pairing — no bond persistence needed.
-- **Memory layout:** MBR (0x0000–0x1000) → App (0x1000–0xF4000) → Bootloader (0xF4000–0x100000). Don't touch anything at 0xF4000+.
+- **NVS storage partition is at `0xEC000`–`0xF4000`** (32 KB). The overlay defines this explicitly to keep it safely below the bootloader. The base `adafruit_feather_nrf52840` DTS has no `storage_partition`, so the overlay adds one — without it, NVS would write to undefined flash and corrupt the bootloader.
+- **`CONFIG_BT_SMP=y`** with `CONFIG_BT_SETTINGS=y` enables bond persistence — hub doesn't need to re-pair on every power cycle.
+- **Memory layout:** MBR (0x0000–0x1000) → App (0x1000–0xEC000) → NVS (0xEC000–0xF4000) → Bootloader (0xF4000–0x100000). Don't touch anything at 0xF4000+.

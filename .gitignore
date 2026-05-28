@@ -16,8 +16,8 @@ target/
 *.hex
 
 # Firmware build artifacts
-firmware-c/tests/test_protocol
-firmware-c/dot-config.txt
+firmware-pod/tests/test_protocol
+firmware-pod/dot-config.txt
 
 # OS / editor
 .DS_Store

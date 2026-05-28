@@ -11,8 +11,7 @@ Open-source replacement firmware and tools for the NXS BikeNet wireless electron
 | `lib/` | Shared protocol library (commands, protocol) — cross-platform (Node.js + browser) |
 | `cli/` | Node.js CLI for controlling NXS hubs over BLE (TypeScript, ESM) |
 | `web/` | Lit-based web app for hub configuration via Web Bluetooth |
-| `firmware-c/` | Zephyr C pod firmware for SuperMini nRF52840 |
-| `firmware-python/` | CircuitPython firmware prototype (copy to `E:\` to deploy to device) |
+| `firmware-pod/` | Zephyr C pod firmware for SuperMini nRF52840 |
 | `documents/` | Protocol specs, hardware maps, observed behavior notes |
 | `plans/` | Implementation plans |
 | `decompilation/` | APK decompilation sources (reference only, do not modify) |

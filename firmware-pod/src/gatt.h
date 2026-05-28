@@ -1,4 +1,4 @@
-/* firmware-c/src/gatt.h */
+/* firmware-pod/src/gatt.h */
 #ifndef GATT_H
 #define GATT_H
 

@@ -674,8 +674,7 @@ static void btn_tune_isr(const struct device *dev, struct gpio_callback *cb, uin
 /*── Button helpers ──*/
 #define DEBOUNCE_MS    150
 
-static int64_t last_btn_up_ms;
-static int64_t last_btn_down_ms;
+static int64_t last_shift_ms;     /* shared across up/down to suppress crosstalk */
 static int64_t last_btn_pair_ms;
 static int64_t last_btn_tune_ms;
 
@@ -711,8 +710,8 @@ static void btn_up_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
     int64_t now = k_uptime_get();
-    if (now - last_btn_up_ms < DEBOUNCE_MS) { return; }
-    last_btn_up_ms = now;
+    if (now - last_shift_ms < DEBOUNCE_MS) { return; }
+    last_shift_ms = now;
     send_shift_or_queue(BTN_SHIFT_UP);
 }
 
@@ -720,8 +719,8 @@ static void btn_down_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
     int64_t now = k_uptime_get();
-    if (now - last_btn_down_ms < DEBOUNCE_MS) { return; }
-    last_btn_down_ms = now;
+    if (now - last_shift_ms < DEBOUNCE_MS) { return; }
+    last_shift_ms = now;
     send_shift_or_queue(BTN_SHIFT_DOWN);
 }
 

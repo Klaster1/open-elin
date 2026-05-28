@@ -1,4 +1,4 @@
-/* firmware-c/tests/test_protocol.c */
+/* firmware-pod/tests/test_protocol.c */
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>

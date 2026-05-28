@@ -1,4 +1,4 @@
-# firmware-c/flash.ps1
+# firmware-pod/flash.ps1
 # Flash firmware.uf2 to the SuperMini via UF2 bootloader.
 # Usage: .\flash.ps1
 #   Enter bootloader first: short RST to GND twice.

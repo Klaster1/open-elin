@@ -1,4 +1,4 @@
-# firmware-c/build.ps1
+# firmware-pod/build.ps1
 # Build firmware via Docker. Produces firmware.uf2 in this directory.
 # Prerequisites: docker build -t nxs-zephyr .
 

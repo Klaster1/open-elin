@@ -1,4 +1,4 @@
-/* firmware-c/boards/adafruit_feather_nrf52840.overlay */
+/* firmware-pod/boards/adafruit_feather_nrf52840.overlay */
 /* SuperMini nRF52840 pin overrides for UF2 bootloader */
 
 #include <zephyr/dt-bindings/adc/nrf-adc.h>

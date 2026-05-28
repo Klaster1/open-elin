@@ -1,4 +1,4 @@
-# firmware-c/unbrick.ps1
+# firmware-pod/unbrick.ps1
 # Recover a bricked SuperMini nRF52840 via SWD (CMSIS-DAP probe).
 #
 # Wiring (probe → SuperMini):
@@ -19,7 +19,7 @@ $ErrorActionPreference = "Stop"
 
 $openocd = "c:\dev\nxs\tools\pod-firmware\openocd\bin\openocd.exe"
 $scripts = "c:\dev\nxs\tools\pod-firmware\openocd\share\openocd\scripts"
-$bootloader = "c:/dev/nxs/firmware-c/nice_nano_bootloader.hex"
+$bootloader = "c:/dev/nxs/firmware-pod/nice_nano_bootloader.hex"
 
 if (-not (Test-Path $openocd)) {
     Write-Host "ERROR: OpenOCD not found at $openocd" -ForegroundColor Red
