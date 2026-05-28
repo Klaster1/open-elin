@@ -33,7 +33,7 @@ static const struct adc_dt_spec adc_lever_up =
 static const struct adc_dt_spec adc_lever_down =
     ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 2);
 
-#define LEVER_THRESHOLD_MV  300   /* >300mV = button pressed */
+#define LEVER_THRESHOLD_MV  300   /* <300mV = button pressed (switch shorts to GND) */
 #define LEVER_POLL_MS       10    /* poll every 10ms */
 static bool lever_adc_debug;      /* toggle with 'a' serial command */
 
