@@ -332,8 +332,23 @@ The hub acts as BLE central to the pod. All confirmed observations are of the **
 - Whether the hub relays any app commands to the pod
 - Connection parameters (interval, MTU)
 - What triggers the pod to send `BLE_MSG_BAT_V` (on connect only? periodic? threshold?)
-- Button sensing mechanism (ADC resistor ladder? digital GPIO?)
+- ~~Button sensing mechanism (ADC resistor ladder? digital GPIO?)~~ **Likely ADC resistor ladder.** See below.
 - Whether the pod tracks any state (e.g. tune mode) or all state lives on the hub
 - How the hub discovers pods in its own auto-pairing mode (hub button held)
 - Whether manufacturer-specific advertisement data is required
 - PIN auth behavior (default `0000`, never enforced — but not tested what happens with wrong PIN)
+
+---
+
+## OEM Pod Works with Di2 Lever Button Block
+
+**Verified 2026-05-28.** Shimano Di2 shift lever buttons (3-wire flat button block, cut from the Di2 "under the hood" controller) work correctly when soldered to the OEM NXS pod's button signal pads and GND. Test ride confirmed both up and down shifting works reliably.
+
+The Di2 button block is a resistor ladder, not simple open/close switches:
+- All 3 wires measure ~0Ω between each other (disconnected from any board)
+- Pressing a button increases resistance on that wire by a few ohms (2–3.5Ω at 200Ω meter range)
+- With a 13kΩ pull-up, buttons produce voltage spikes of ~0.7V (up) and ~1.7V (down)
+
+The OEM pod's row of ~7 SMD passives between the button pads and the nRF52832 chip conditions the signal — likely providing pull-ups and/or voltage divider for ADC reading via P0.02/AIN0.
+
+The SuperMini nRF52840 cannot read these buttons via GPIO edge interrupts (pins sit at ~0V permanently, both ISRs fire on any press due to shared internal resistance). Requires ADC polling approach. See `DI2-LEVER-BUTTONS.md` for full details.
