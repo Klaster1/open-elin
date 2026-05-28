@@ -11,6 +11,7 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/pwm.h>
+#include <hal/nrf_gpio.h>
 
 #include "protocol.h"
 #include "gatt.h"
@@ -21,14 +22,20 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
 
-static const struct gpio_dt_spec btn_up = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);   /* P0.17 */
-static const struct gpio_dt_spec btn_down = GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios); /* P0.31 */
 static const struct gpio_dt_spec btn_pair = GPIO_DT_SPEC_GET(DT_ALIAS(sw2), gpios); /* P0.20 */
 static const struct gpio_dt_spec btn_tune = GPIO_DT_SPEC_GET(DT_ALIAS(sw3), gpios); /* P0.22 */
-static struct gpio_callback btn_up_cb_data;
-static struct gpio_callback btn_down_cb_data;
 static struct gpio_callback btn_pair_cb_data;
 static struct gpio_callback btn_tune_cb_data;
+
+/*── Lever button ADC channels ──*/
+static const struct adc_dt_spec adc_lever_up =
+    ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 1);
+static const struct adc_dt_spec adc_lever_down =
+    ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 2);
+
+#define LEVER_THRESHOLD_MV  300   /* >300mV = button pressed */
+#define LEVER_POLL_MS       10    /* poll every 10ms */
+static bool lever_adc_debug;      /* toggle with 'a' serial command */
 
 /*── USB VBUS detection ──*/
 static volatile bool usb_active;
@@ -78,6 +85,19 @@ static int battery_init(void)
         return err;
     }
     LOG_INF("Battery ADC ready (VDDHDIV5 internal)");
+
+    /* Lever button ADC channels */
+    err = adc_channel_setup_dt(&adc_lever_up);
+    if (err) {
+        LOG_ERR("ADC lever-up setup failed: %d", err);
+        return err;
+    }
+    err = adc_channel_setup_dt(&adc_lever_down);
+    if (err) {
+        LOG_ERR("ADC lever-down setup failed: %d", err);
+        return err;
+    }
+    LOG_INF("Lever ADC ready (AIN5=up, AIN7=down)");
     return 0;
 }
 
@@ -97,6 +117,23 @@ static int32_t read_battery_mv(void)
     int32_t mv = buf;
     adc_raw_to_millivolts_dt(&adc_battery, &mv);
     return mv * VDIV_FACTOR;
+}
+
+static int32_t read_lever_mv(const struct adc_dt_spec *spec)
+{
+    int16_t buf;
+    struct adc_sequence seq = {
+        .buffer = &buf,
+        .buffer_size = sizeof(buf),
+    };
+    adc_sequence_init_dt(spec, &seq);
+    int err = adc_read_dt(spec, &seq);
+    if (err) {
+        return -1;
+    }
+    int32_t mv = buf;
+    adc_raw_to_millivolts_dt(spec, &mv);
+    return mv;
 }
 
 static void usb_status_cb(enum usb_dc_status_code status, const uint8_t *param)
@@ -536,13 +573,15 @@ static void print_help(void)
            "         \033[1mp\033[0m=wake \033[1mP\033[0m=pair \033[1mB\033[0m=boot "
            "\033[1mS\033[0m=sleep\n"
            "         \033[1mL\033[0m=latency \033[1mv\033[0m=battery "
-           "\033[1m0-9\033[0m=sim bat "
+           "\033[1m0-9\033[0m=sim bat\n"
+           "         \033[1ma\033[0m=adc "
            "\033[1m?\033[0m=help\n");
     /* NUS: plain text (no ANSI) */
     if (gatt_nus_is_subscribed()) {
         gatt_nus_send("Commands: u=up d=down t=tune\n", 30);
         gatt_nus_send("p=wake P=pair B=boot S=sleep\n", 29);
-        gatt_nus_send("L=latency v=bat 0-9=sim ?=help\n", 31);
+        gatt_nus_send("L=latency v=bat 0-9=sim a=adc\n", 31);
+        gatt_nus_send("?=help\n", 7);
     }
 }
 
@@ -584,6 +623,9 @@ static void handle_command(uint8_t ch)
         battery_mv = sim_mv;
         led_battery_flash(sim_mv);
         NUS_LOG("Sim battery: %d mV (key %c)", sim_mv, ch);
+    } else if (ch == 'a') {
+        lever_adc_debug = !lever_adc_debug;
+        NUS_LOG("Lever ADC debug: %s", lever_adc_debug ? "ON (10ms)" : "OFF");
     } else if (ch == '?') {
         print_help();
     }
@@ -635,29 +677,73 @@ static void pairing_timeout_handler(struct k_work *work)
     set_pairing_mode(false);
 }
 
+/*── Lever button ADC polling ──*/
+#define DEBOUNCE_MS    150
+
+static int64_t last_shift_ms;     /* shared across up/down to suppress crosstalk */
+static bool lever_up_pressed;
+static bool lever_down_pressed;
+
+static void lever_poll_work_handler(struct k_work *work);
+static K_WORK_DEFINE(lever_poll_work, lever_poll_work_handler);
+
+static void lever_poll_timer_handler(struct k_timer *timer)
+{
+    ARG_UNUSED(timer);
+    k_work_submit(&lever_poll_work);
+}
+
+static K_TIMER_DEFINE(lever_poll_timer, lever_poll_timer_handler, NULL);
+
+static void lever_poll_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+    int32_t mv_up = read_lever_mv(&adc_lever_up);
+    int32_t mv_down = read_lever_mv(&adc_lever_down);
+
+    if (lever_adc_debug) {
+        static int32_t prev_up = -1, prev_down = -1;
+        if (mv_up != prev_up || mv_down != prev_down) {
+            printk("ADC up=%d dn=%d\n", (int)mv_up, (int)mv_down);
+            prev_up = mv_up;
+            prev_down = mv_down;
+        }
+    }
+
+    /* Lever switches are normally-open to GND: idle=VDD(2399mV), pressed=~0mV */
+    bool up_now = (mv_up < LEVER_THRESHOLD_MV);
+    bool down_now = (mv_down < LEVER_THRESHOLD_MV);
+
+    if (up_now && !lever_up_pressed) {
+        lever_up_pressed = true;
+        int64_t now = k_uptime_get();
+        if (now - last_shift_ms >= DEBOUNCE_MS) {
+            last_shift_ms = now;
+            send_shift_or_queue(BTN_SHIFT_UP);
+        }
+    } else if (!up_now) {
+        lever_up_pressed = false;
+    }
+
+    if (down_now && !lever_down_pressed) {
+        lever_down_pressed = true;
+        int64_t now = k_uptime_get();
+        if (now - last_shift_ms >= DEBOUNCE_MS) {
+            last_shift_ms = now;
+            send_shift_or_queue(BTN_SHIFT_DOWN);
+        }
+    } else if (!down_now) {
+        lever_down_pressed = false;
+    }
+}
+
 /*── GPIO button interrupts ──*/
-static void btn_up_work_handler(struct k_work *work);
-static void btn_down_work_handler(struct k_work *work);
 static void btn_pair_work_handler(struct k_work *work);
 static void btn_pair_hold_handler(struct k_work *work);
 static void btn_tune_work_handler(struct k_work *work);
-static K_WORK_DEFINE(btn_up_work, btn_up_work_handler);
-static K_WORK_DEFINE(btn_down_work, btn_down_work_handler);
 static K_WORK_DEFINE(btn_pair_work, btn_pair_work_handler);
 static K_WORK_DELAYABLE_DEFINE(btn_pair_hold_work, btn_pair_hold_handler);
 static K_WORK_DEFINE(btn_tune_work, btn_tune_work_handler);
-
-static void btn_up_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
-{
-    ARG_UNUSED(dev); ARG_UNUSED(cb); ARG_UNUSED(pins);
-    k_work_submit(&btn_up_work);
-}
-
-static void btn_down_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
-{
-    ARG_UNUSED(dev); ARG_UNUSED(cb); ARG_UNUSED(pins);
-    k_work_submit(&btn_down_work);
-}
 
 static void btn_pair_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
@@ -672,9 +758,6 @@ static void btn_tune_isr(const struct device *dev, struct gpio_callback *cb, uin
 }
 
 /*── Button helpers ──*/
-#define DEBOUNCE_MS    150
-
-static int64_t last_shift_ms;     /* shared across up/down to suppress crosstalk */
 static int64_t last_btn_pair_ms;
 static int64_t last_btn_tune_ms;
 
@@ -704,24 +787,6 @@ static void send_press_release(uint8_t btn_id)
 
     NUS_LOG("-> button 0x%02X", btn_id);
     led_blink();
-}
-
-static void btn_up_work_handler(struct k_work *work)
-{
-    ARG_UNUSED(work);
-    int64_t now = k_uptime_get();
-    if (now - last_shift_ms < DEBOUNCE_MS) { return; }
-    last_shift_ms = now;
-    send_shift_or_queue(BTN_SHIFT_UP);
-}
-
-static void btn_down_work_handler(struct k_work *work)
-{
-    ARG_UNUSED(work);
-    int64_t now = k_uptime_get();
-    if (now - last_shift_ms < DEBOUNCE_MS) { return; }
-    last_shift_ms = now;
-    send_shift_or_queue(BTN_SHIFT_DOWN);
 }
 
 static void btn_pair_work_handler(struct k_work *work)
@@ -836,14 +901,6 @@ int main(void)
     gatt_set_nus_subscribe_cb(on_nus_subscribe);
 
     /* GPIO buttons */
-    gpio_pin_configure_dt(&btn_up, GPIO_INPUT);
-    gpio_pin_configure_dt(&btn_down, GPIO_INPUT);
-    gpio_pin_interrupt_configure_dt(&btn_up, GPIO_INT_EDGE_TO_ACTIVE);
-    gpio_pin_interrupt_configure_dt(&btn_down, GPIO_INT_EDGE_TO_ACTIVE);
-    gpio_init_callback(&btn_up_cb_data, btn_up_isr, BIT(btn_up.pin));
-    gpio_init_callback(&btn_down_cb_data, btn_down_isr, BIT(btn_down.pin));
-    gpio_add_callback(btn_up.port, &btn_up_cb_data);
-    gpio_add_callback(btn_down.port, &btn_down_cb_data);
     gpio_pin_configure_dt(&btn_pair, GPIO_INPUT);
     gpio_pin_interrupt_configure_dt(&btn_pair, GPIO_INT_EDGE_BOTH);  /* need both edges for long-press */
     gpio_init_callback(&btn_pair_cb_data, btn_pair_isr, BIT(btn_pair.pin));
@@ -852,7 +909,29 @@ int main(void)
     gpio_pin_interrupt_configure_dt(&btn_tune, GPIO_INT_EDGE_TO_ACTIVE);
     gpio_init_callback(&btn_tune_cb_data, btn_tune_isr, BIT(btn_tune.pin));
     gpio_add_callback(btn_tune.port, &btn_tune_cb_data);
-    LOG_INF("GPIO buttons: P0.17=up P0.31=down P0.20=pair P0.22=tune");
+    LOG_INF("GPIO buttons: P0.20=pair P0.22=tune");
+
+    /* Internal pull-ups on lever ADC pins (P0.29=AIN5, P0.31=AIN7).
+     * Di2 lever buttons are normally-open switches to GND.
+     * Idle: pin pulled to VDD (~2400mV) by pull-up.  Pressed: ~0mV.
+     * INPUT=Disconnect avoids digital buffer loading the analog signal. */
+    nrf_gpio_cfg(29, NRF_GPIO_PIN_DIR_INPUT, NRF_GPIO_PIN_INPUT_DISCONNECT,
+                 NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_S0S1, NRF_GPIO_PIN_NOSENSE);
+    nrf_gpio_cfg(31, NRF_GPIO_PIN_DIR_INPUT, NRF_GPIO_PIN_INPUT_DISCONNECT,
+                 NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_S0S1, NRF_GPIO_PIN_NOSENSE);
+    LOG_INF("Internal pull-ups enabled on P0.29 and P0.31");
+
+    /* Start lever ADC polling (10ms interval for Di2 lever buttons) */
+    k_timer_start(&lever_poll_timer, K_MSEC(LEVER_POLL_MS), K_MSEC(LEVER_POLL_MS));
+    LOG_INF("Lever ADC polling: P0.29=up P0.31=down (%dms, <%dmV)",
+            LEVER_POLL_MS, LEVER_THRESHOLD_MV);
+
+    /* Print idle ADC values at boot to help verify pull-ups */
+    {
+        int32_t up0 = read_lever_mv(&adc_lever_up);
+        int32_t dn0 = read_lever_mv(&adc_lever_down);
+        LOG_INF("Lever ADC idle: up=%dmV down=%dmV", up0, dn0);
+    }
 
     start_advertising();
 

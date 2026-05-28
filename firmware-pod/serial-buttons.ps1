@@ -38,6 +38,8 @@ try {
                 'S' { $serial.Write("S"); Write-Host "-> Radio Sleep" -ForegroundColor DarkYellow }
                 'L' { $serial.Write("L"); Write-Host "-> Relax Latency" -ForegroundColor DarkCyan }
                 'v' { $serial.Write("v"); Write-Host "-> Read Battery" -ForegroundColor Cyan }
+                'a' { $serial.Write("a"); Write-Host "-> ADC Debug Toggle" -ForegroundColor Cyan }
+                '?' { $serial.Write("?"); Write-Host "-> Help" -ForegroundColor Cyan }
                 { $_ -match '[0-9]' } { $serial.Write([string]$key); Write-Host "-> Sim Battery level $key" -ForegroundColor Cyan }
                 'F' {
                     Write-Host "-> Flash" -ForegroundColor Cyan
