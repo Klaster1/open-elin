@@ -35,19 +35,27 @@ static const struct adc_dt_spec adc_lever_down =
 
 #define LEVER_THRESHOLD_MV  300   /* <300mV = button pressed (switch shorts to GND) */
 #define LEVER_POLL_MS       10    /* poll every 10ms */
-static bool lever_adc_debug;      /* toggle with 'a' serial command */
+/*── Shared mutable state ──*/
+struct app_state {
+    struct bt_conn *current_conn;
+    volatile bool   radio_sleeping;
+    volatile bool   usb_active;
+    int32_t         battery_mv;     /* updated every 15min, on connect, and on 'v' */
+    uint8_t         pending_shift;  /* btn_id to send once hub connects (0xFF = none) */
+    bool            latency_relaxed;
+    bool            lever_adc_debug;
+    uint8_t         mfr_data[11];   /* 2 company ID + 2 type + 6 MAC + 1 flag */
+};
+
+static struct app_state app = {
+    .pending_shift = 0xFF,
+};
 
 /*── USB VBUS detection ──*/
-static volatile bool usb_active;
 
 /*── Radio sleep (advertising timeout) ──*/
 #define ADV_TIMEOUT_MIN       15    /* Stop advertising after this many minutes idle */
 #define ADV_WAKE_TIMEOUT_SEC  60    /* After wake, stop again if hub doesn't connect */
-
-static volatile bool radio_sleeping;  /* true = advertising stopped to save power */
-
-/* Pending shift — btn_id to send once hub connects (0xFF = none) */
-static uint8_t pending_shift = 0xFF;
 
 static void adv_timeout_work_handler(struct k_work *work);
 static K_WORK_DEFINE(adv_timeout_work, adv_timeout_work_handler);
@@ -61,8 +69,6 @@ static K_TIMER_DEFINE(adv_timeout_timer, adv_timeout_handler, NULL);
 #define LATENCY_RELAXED         50    /* Wider latency for idle saving */
 #define CONN_INTERVAL           48    /* 60ms — keep hub's interval unchanged */
 
-static bool latency_relaxed;
-
 static void latency_escalation_work_handler(struct k_work *work);
 static K_WORK_DEFINE(latency_escalation_work, latency_escalation_work_handler);
 
@@ -72,9 +78,6 @@ static K_TIMER_DEFINE(latency_timer, latency_escalation_timer_handler, NULL);
 /*── Battery ADC ──*/
 static const struct adc_dt_spec adc_battery =
     ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 0);
-
-/* Cached reading (updated every 15min, on connect, and on 'v' command) */
-static int32_t battery_mv;
 
 /* VDDHDIV5: internal 1/5 divider on VDDH pin */
 #define VDIV_FACTOR 5
@@ -148,11 +151,11 @@ static void usb_status_cb(enum usb_dc_status_code status, const uint8_t *param)
     switch (status) {
     case USB_DC_CONFIGURED:
     case USB_DC_RESUME:
-        usb_active = true;
+        app.usb_active = true;
         break;
     case USB_DC_DISCONNECTED:
     case USB_DC_SUSPEND:
-        usb_active = false;
+        app.usb_active = false;
         break;
     default:
         break;
@@ -184,8 +187,6 @@ static const uint8_t svc_uuid_le[16] = {
     0x91, 0xBA, 0x20, 0xCC, 0x00, 0xC0, 0xC1, 0xA5,
 };
 
-static uint8_t mfr_data[11];  /* 2 company ID + 2 type + 6 MAC + 1 flag (matches real pod) */
-
 #define MFR_FLAG_NORMAL  0x00
 #define MFR_FLAG_PAIRING 0xAC
 
@@ -196,7 +197,7 @@ static const struct bt_data ad[] = {
 
 static const struct bt_data sd[] = {
     BT_DATA(BT_DATA_UUID128_ALL, svc_uuid_le, sizeof(svc_uuid_le)),
-    BT_DATA(BT_DATA_MANUFACTURER_DATA, mfr_data, sizeof(mfr_data)),
+    BT_DATA(BT_DATA_MANUFACTURER_DATA, app.mfr_data, sizeof(app.mfr_data)),
 };
 
 static void fill_mfr_data(void)
@@ -205,12 +206,12 @@ static void fill_mfr_data(void)
     size_t count = 1;
     bt_id_get(&addr, &count);
 
-    mfr_data[0] = 0x98;  /* company ID 0xDE98 LE */
-    mfr_data[1] = 0xDE;
-    mfr_data[2] = 0x0A;  /* device type */
-    mfr_data[3] = 0x10;
-    memcpy(&mfr_data[4], addr.a.val, 6);
-    mfr_data[10] = MFR_FLAG_NORMAL;
+    app.mfr_data[0] = 0x98;  /* company ID 0xDE98 LE */
+    app.mfr_data[1] = 0xDE;
+    app.mfr_data[2] = 0x0A;  /* device type */
+    app.mfr_data[3] = 0x10;
+    memcpy(&app.mfr_data[4], addr.a.val, 6);
+    app.mfr_data[10] = MFR_FLAG_NORMAL;
 }
 
 static void start_advertising(void)
@@ -239,7 +240,6 @@ static void adv_restart_work_handler(struct k_work *work)
 }
 
 /*── Radio sleep helpers ──*/
-static struct bt_conn *current_conn;  /* forward — used by adv_timeout_handler */
 static void send_press_release(uint8_t btn_id);  /* forward — used by pending_shift_flush */
 
 /* Forward — lever_poll_timer defined in lever ADC section, used by connected/disconnected */
@@ -269,36 +269,36 @@ static void latency_escalation_timer_handler(struct k_timer *timer)
 static void latency_escalation_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
-    if (!current_conn || latency_relaxed) {
+    if (!app.current_conn || app.latency_relaxed) {
         return;
     }
     uint16_t sv_to = supervision_to_for(LATENCY_RELAXED);
     struct bt_le_conn_param param = BT_LE_CONN_PARAM_INIT(
         CONN_INTERVAL, CONN_INTERVAL, LATENCY_RELAXED, sv_to);
-    int err = bt_conn_le_param_update(current_conn, &param);
+    int err = bt_conn_le_param_update(app.current_conn, &param);
     if (err) {
         NUS_LOG("Latency escalation failed: %d", err);
     } else {
-        latency_relaxed = true;
+        app.latency_relaxed = true;
         NUS_LOG("Latency relaxed (%u)", LATENCY_RELAXED);
     }
 }
 
 static void latency_tighten(void)
 {
-    if (!current_conn || !latency_relaxed) {
+    if (!app.current_conn || !app.latency_relaxed) {
         return;
     }
     uint16_t sv_to = supervision_to_for(LATENCY_NORMAL);
     struct bt_le_conn_param param = BT_LE_CONN_PARAM_INIT(
         CONN_INTERVAL, CONN_INTERVAL, LATENCY_NORMAL, sv_to);
-    int err = bt_conn_le_param_update(current_conn, &param);
+    int err = bt_conn_le_param_update(app.current_conn, &param);
     if (err) {
         NUS_LOG("Latency tighten failed: %d", err);
     } else {
         NUS_LOG("Latency normal (%d)", LATENCY_NORMAL);
     }
-    latency_relaxed = false;
+    app.latency_relaxed = false;
 }
 
 static void adv_timeout_handler(struct k_timer *timer)
@@ -310,34 +310,34 @@ static void adv_timeout_handler(struct k_timer *timer)
 static void adv_timeout_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
-    if (current_conn) {
+    if (app.current_conn) {
         return;  /* Don't sleep while connected */
     }
     bt_le_adv_stop();
-    radio_sleeping = true;
+    app.radio_sleeping = true;
     NUS_LOG("Radio sleep (no hub for %d min)", ADV_TIMEOUT_MIN);
 }
 
 static void pending_shift_set(uint8_t btn_id)
 {
-    pending_shift = btn_id;  /* Last press wins */
+    app.pending_shift = btn_id;  /* Last press wins */
 }
 
 static void pending_shift_flush(void)
 {
-    if (pending_shift != 0xFF) {
-        uint8_t btn_id = pending_shift;
-        pending_shift = 0xFF;
+    if (app.pending_shift != 0xFF) {
+        uint8_t btn_id = app.pending_shift;
+        app.pending_shift = 0xFF;
         send_press_release(btn_id);
     }
 }
 
 static void radio_wake(void)
 {
-    if (!radio_sleeping) {
+    if (!app.radio_sleeping) {
         return;
     }
-    radio_sleeping = false;
+    app.radio_sleeping = false;
     start_advertising();
     /* Give hub ADV_WAKE_TIMEOUT_SEC to connect, then sleep again */
     k_timer_start(&adv_timeout_timer, K_SECONDS(ADV_WAKE_TIMEOUT_SEC), K_NO_WAIT);
@@ -457,29 +457,29 @@ static void connected(struct bt_conn *conn, uint8_t err)
         LOG_ERR("Connection failed (err %u)", err);
         return;
     }
-    current_conn = bt_conn_ref(conn);
+    app.current_conn = bt_conn_ref(conn);
     NUS_LOG("HUB CONNECTED");
     set_pairing_mode(false);
     k_timer_stop(&adv_timeout_timer);
-    radio_sleeping = false;
+    app.radio_sleeping = false;
     /* Start lever ADC polling — only needed while connected */
     k_timer_start(&lever_poll_timer, K_MSEC(LEVER_POLL_MS), K_MSEC(LEVER_POLL_MS));
     /* Start latency escalation timer */
-    latency_relaxed = false;
+    app.latency_relaxed = false;
     k_timer_start(&latency_timer, K_MINUTES(LATENCY_ESCALATION_MIN), K_NO_WAIT);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
     NUS_LOG("HUB DISCONNECTED (reason %u)", reason);
-    if (current_conn) {
-        bt_conn_unref(current_conn);
-        current_conn = NULL;
+    if (app.current_conn) {
+        bt_conn_unref(app.current_conn);
+        app.current_conn = NULL;
     }
     /* Stop lever ADC polling — no hub to send shifts to */
     k_timer_stop(&lever_poll_timer);
     k_timer_stop(&latency_timer);
-    latency_relaxed = false;
+    app.latency_relaxed = false;
     /* Schedule advertising restart after BLE stack cleanup completes */
     k_work_schedule(&adv_restart_work, K_MSEC(500));
 }
@@ -493,7 +493,7 @@ static K_WORK_DELAYABLE_DEFINE(pending_blink_work, pending_blink_work_handler);
 static void pending_blink_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
-    if (pending_shift != 0xFF) {
+    if (app.pending_shift != 0xFF) {
         led_blink();
         k_work_schedule(&pending_blink_work, K_MSEC(300));
     }
@@ -518,7 +518,7 @@ static void security_changed(struct bt_conn *conn, bt_security_t level,
         send_battery();
         /* Hub needs ~3s after connection before it accepts button presses */
         k_work_schedule(&pending_flush_work, K_MSEC(3000));
-        if (pending_shift != 0xFF) {
+        if (app.pending_shift != 0xFF) {
             k_work_schedule(&pending_blink_work, K_MSEC(100));
         }
     }
@@ -583,7 +583,7 @@ static void on_pin_write(const uint8_t *data, uint16_t len)
 
 static void send_shift_or_queue(uint8_t btn_id)
 {
-    if (radio_sleeping || !current_conn) {
+    if (app.radio_sleeping || !app.current_conn) {
         pending_shift_set(btn_id);
         radio_wake();
     } else {
@@ -620,7 +620,7 @@ static void handle_command(uint8_t ch)
     } else if (ch == 't') {
         send_shift_or_queue(BTN_TUNE);
     } else if (ch == 'p') {
-        if (radio_sleeping) {
+        if (app.radio_sleeping) {
             radio_wake();
         }
     } else if (ch == 'P') {
@@ -630,28 +630,28 @@ static void handle_command(uint8_t ch)
         k_msleep(100);
         enter_bootloader();
     } else if (ch == 'S') {
-        if (current_conn) {
+        if (app.current_conn) {
             NUS_LOG("Can't sleep while connected");
         } else {
             k_timer_stop(&adv_timeout_timer);
             bt_le_adv_stop();
-            radio_sleeping = true;
+            app.radio_sleeping = true;
             NUS_LOG("Radio sleep (forced)");
         }
     } else if (ch == 'L') {
         latency_escalation_work_handler(NULL);
     } else if (ch == 'v') {
-        battery_mv = read_battery_mv();
-        NUS_LOG("Battery: %d mV%s", battery_mv, usb_active ? " (USB)" : "");
+        app.battery_mv = read_battery_mv();
+        NUS_LOG("Battery: %d mV%s", app.battery_mv, app.usb_active ? " (USB)" : "");
     } else if (ch >= '0' && ch <= '9') {
         /* Simulate battery level: 0=3000mV(dead) .. 9=4200mV(full) */
         int32_t sim_mv = 3000 + (ch - '0') * 1200 / 9;
-        battery_mv = sim_mv;
+        app.battery_mv = sim_mv;
         led_battery_flash(sim_mv);
         NUS_LOG("Sim battery: %d mV (key %c)", sim_mv, ch);
     } else if (ch == 'a') {
-        lever_adc_debug = !lever_adc_debug;
-        NUS_LOG("Lever ADC debug: %s", lever_adc_debug ? "ON (10ms)" : "OFF");
+        app.lever_adc_debug = !app.lever_adc_debug;
+        NUS_LOG("Lever ADC debug: %s", app.lever_adc_debug ? "ON (10ms)" : "OFF");
     } else if (ch == '?') {
         print_help();
     }
@@ -677,10 +677,10 @@ static K_WORK_DELAYABLE_DEFINE(pairing_timeout_work, pairing_timeout_handler);
 static void set_pairing_mode(bool enable)
 {
     /* Update flag byte in manufacturer data (already in ad[] by reference) */
-    mfr_data[10] = enable ? MFR_FLAG_PAIRING : MFR_FLAG_NORMAL;
+    app.mfr_data[10] = enable ? MFR_FLAG_PAIRING : MFR_FLAG_NORMAL;
 
     /* Restart advertising with updated data (skip if connected — no slot available) */
-    if (!current_conn) {
+    if (!app.current_conn) {
         bt_le_adv_stop();
         start_advertising();
     }
@@ -725,7 +725,7 @@ static void lever_poll_work_handler(struct k_work *work)
     int32_t mv_up = read_lever_mv(&adc_lever_up);
     int32_t mv_down = read_lever_mv(&adc_lever_down);
 
-    if (lever_adc_debug) {
+    if (app.lever_adc_debug) {
         static int32_t prev_up = -1, prev_down = -1;
         if (mv_up != prev_up || mv_down != prev_down) {
             printk("ADC up=%d dn=%d\n", (int)mv_up, (int)mv_down);
@@ -823,15 +823,15 @@ static void btn_pair_work_handler(struct k_work *work)
     /* Check if button is pressed (active) or released */
     if (gpio_pin_get_dt(&btn_pair)) {
         /* Button pressed — wake radio, flash battery level, start 6s hold timer */
-        if (radio_sleeping) {
+        if (app.radio_sleeping) {
             radio_wake();
         }
         /* Fresh battery read + PWM brightness flash */
-        battery_mv = read_battery_mv();
-        led_battery_flash(battery_mv);
-        NUS_LOG("Battery: %d mV%s", battery_mv, usb_active ? " (USB)" : "");
+        app.battery_mv = read_battery_mv();
+        led_battery_flash(app.battery_mv);
+        NUS_LOG("Battery: %d mV%s", app.battery_mv, app.usb_active ? " (USB)" : "");
         /* Send battery to hub if connected */
-        if (current_conn) {
+        if (app.current_conn) {
             send_battery();
         }
         k_work_schedule(&btn_pair_hold_work, K_SECONDS(6));
@@ -862,7 +862,7 @@ static void send_battery(void)
     get_own_mac(mac);
 
     uint8_t frame[FRAME_LEN];
-    protocol_encode_battery(frame, mac, (uint16_t)(battery_mv > 0 ? battery_mv : 0));
+    protocol_encode_battery(frame, mac, (uint16_t)(app.battery_mv > 0 ? app.battery_mv : 0));
     gatt_notify_msg(frame, sizeof(frame));
 }
 
@@ -870,7 +870,7 @@ static void send_battery(void)
 static void battery_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
-    battery_mv = read_battery_mv();
+    app.battery_mv = read_battery_mv();
 }
 static K_WORK_DEFINE(battery_work, battery_work_handler);
 
@@ -969,13 +969,13 @@ int main(void)
     uint8_t ch;
 
     while (1) {
-        if (usb_active && uart_poll_in(console, &ch) == 0) {
+        if (app.usb_active && uart_poll_in(console, &ch) == 0) {
             handle_command(ch);
         }
 
         /* Sleep longer when no USB — serial polling is pointless without a host.
          * Buttons and BLE are interrupt-driven, so nothing is missed. */
-        k_msleep(usb_active ? 50 : 5000);
+        k_msleep(app.usb_active ? 50 : 5000);
     }
     return 0;
 }
