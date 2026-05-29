@@ -63,8 +63,11 @@ static K_TIMER_DEFINE(adv_timeout_timer, adv_timeout_handler, NULL);
 
 static bool latency_relaxed;
 
-static void latency_escalation_handler(struct k_timer *timer);
-static K_TIMER_DEFINE(latency_timer, latency_escalation_handler, NULL);
+static void latency_escalation_work_handler(struct k_work *work);
+static K_WORK_DEFINE(latency_escalation_work, latency_escalation_work_handler);
+
+static void latency_escalation_timer_handler(struct k_timer *timer);
+static K_TIMER_DEFINE(latency_timer, latency_escalation_timer_handler, NULL);
 
 /*── Battery ADC ──*/
 static const struct adc_dt_spec adc_battery =
@@ -239,6 +242,10 @@ static void adv_restart_work_handler(struct k_work *work)
 static struct bt_conn *current_conn;  /* forward — used by adv_timeout_handler */
 static void send_press_release(uint8_t btn_id);  /* forward — used by pending_shift_flush */
 
+/* Forward — lever_poll_timer defined in lever ADC section, used by connected/disconnected */
+static void lever_poll_timer_handler(struct k_timer *timer);
+static K_TIMER_DEFINE(lever_poll_timer, lever_poll_timer_handler, NULL);
+
 /*── Latency escalation helpers ──*/
 
 /* Compute minimum supervision timeout for given latency (BLE spec constraint) */
@@ -253,9 +260,15 @@ static uint16_t supervision_to_for(uint16_t latency)
     return min_to > 3200 ? 3200 : min_to;
 }
 
-static void latency_escalation_handler(struct k_timer *timer)
+static void latency_escalation_timer_handler(struct k_timer *timer)
 {
     ARG_UNUSED(timer);
+    k_work_submit(&latency_escalation_work);
+}
+
+static void latency_escalation_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
     if (!current_conn || latency_relaxed) {
         return;
     }
@@ -449,6 +462,8 @@ static void connected(struct bt_conn *conn, uint8_t err)
     set_pairing_mode(false);
     k_timer_stop(&adv_timeout_timer);
     radio_sleeping = false;
+    /* Start lever ADC polling — only needed while connected */
+    k_timer_start(&lever_poll_timer, K_MSEC(LEVER_POLL_MS), K_MSEC(LEVER_POLL_MS));
     /* Start latency escalation timer */
     latency_relaxed = false;
     k_timer_start(&latency_timer, K_MINUTES(LATENCY_ESCALATION_MIN), K_NO_WAIT);
@@ -461,6 +476,8 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
         bt_conn_unref(current_conn);
         current_conn = NULL;
     }
+    /* Stop lever ADC polling — no hub to send shifts to */
+    k_timer_stop(&lever_poll_timer);
     k_timer_stop(&latency_timer);
     latency_relaxed = false;
     /* Schedule advertising restart after BLE stack cleanup completes */
@@ -622,7 +639,7 @@ static void handle_command(uint8_t ch)
             NUS_LOG("Radio sleep (forced)");
         }
     } else if (ch == 'L') {
-        latency_escalation_handler(NULL);
+        latency_escalation_work_handler(NULL);
     } else if (ch == 'v') {
         battery_mv = read_battery_mv();
         NUS_LOG("Battery: %d mV%s", battery_mv, usb_active ? " (USB)" : "");
@@ -701,8 +718,6 @@ static void lever_poll_timer_handler(struct k_timer *timer)
     ARG_UNUSED(timer);
     k_work_submit(&lever_poll_work);
 }
-
-static K_TIMER_DEFINE(lever_poll_timer, lever_poll_timer_handler, NULL);
 
 static void lever_poll_work_handler(struct k_work *work)
 {
@@ -930,9 +945,8 @@ int main(void)
                  NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_S0S1, NRF_GPIO_PIN_NOSENSE);
     LOG_INF("Internal pull-ups enabled on P0.29 and P0.31");
 
-    /* Start lever ADC polling (10ms interval for Di2 lever buttons) */
-    k_timer_start(&lever_poll_timer, K_MSEC(LEVER_POLL_MS), K_MSEC(LEVER_POLL_MS));
-    LOG_INF("Lever ADC polling: P0.29=up P0.31=down (%dms, <%dmV)",
+    /* Lever ADC polling starts when hub connects (not at boot — saves power) */
+    LOG_INF("Lever ADC ready: P0.29=up P0.31=down (%dms, <%dmV)",
             LEVER_POLL_MS, LEVER_THRESHOLD_MV);
 
     /* Print idle ADC values at boot to help verify pull-ups */
