@@ -49,6 +49,9 @@ static volatile bool radio_sleeping;  /* true = advertising stopped to save powe
 /* Pending shift — btn_id to send once hub connects (0xFF = none) */
 static uint8_t pending_shift = 0xFF;
 
+static void adv_timeout_work_handler(struct k_work *work);
+static K_WORK_DEFINE(adv_timeout_work, adv_timeout_work_handler);
+
 static void adv_timeout_handler(struct k_timer *timer);
 static K_TIMER_DEFINE(adv_timeout_timer, adv_timeout_handler, NULL);
 
@@ -288,6 +291,12 @@ static void latency_tighten(void)
 static void adv_timeout_handler(struct k_timer *timer)
 {
     ARG_UNUSED(timer);
+    k_work_submit(&adv_timeout_work);
+}
+
+static void adv_timeout_work_handler(struct k_work *work)
+{
+    ARG_UNUSED(work);
     if (current_conn) {
         return;  /* Don't sleep while connected */
     }
