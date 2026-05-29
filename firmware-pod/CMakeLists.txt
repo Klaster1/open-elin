@@ -5,6 +5,11 @@ project(nxs-pod-firmware)
 
 target_sources(app PRIVATE
   src/main.c
+  src/led.c
+  src/battery.c
+  src/radio.c
+  src/buttons.c
+  src/commands.c
   src/protocol.c
   src/gatt.c
 )
