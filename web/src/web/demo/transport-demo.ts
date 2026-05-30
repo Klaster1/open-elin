@@ -170,11 +170,11 @@ export class DemoTransport implements ProtocolTransport {
         return;
       case 0x0010:
         this.queueResponse(device.address);
-        this.handleShift(device.address, "up");
+        this.handleShift(device.address, "down");
         return;
       case 0x0011:
         this.queueResponse(device.address);
-        this.handleShift(device.address, "down");
+        this.handleShift(device.address, "up");
         return;
       case 0x0017:
         this.queueResponse(device.address, this.buildMotorParamsPayload());

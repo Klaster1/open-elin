@@ -949,11 +949,11 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
   }
 
   private async onShiftUp() {
-    await appActions.shiftUp();
+    await appActions.shiftDown();
   }
 
   private async onShiftDown() {
-    await appActions.shiftDown();
+    await appActions.shiftUp();
   }
 
   private getCurrentAbsoluteOffset(
