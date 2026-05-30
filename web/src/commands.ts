@@ -808,6 +808,22 @@ export class ProtocolCommands {
     return parseBasicResponse(response);
   }
 
+  async incrementMove(increment: number): Promise<BasicResponse> {
+    const header = encodeCommandWithMac(
+      AppCommand.IncrementMove,
+      this.device.address,
+    );
+    const safeIncrement = Number.isFinite(increment) ? increment : 0;
+    const scaled = Math.round(safeIncrement * 10);
+    const byte = scaled & 0xff;
+    const params = new Uint8Array([byte]);
+    const payload = new Uint8Array(header.length + params.length);
+    payload.set(header, 0);
+    payload.set(params, header.length);
+    const response = await this.protocol.sendCommand(this.device, payload);
+    return parseBasicResponse(response);
+  }
+
   async getMotorParams(): Promise<MotorParamsResponse> {
     const payload = encodeCommandWithMac(
       AppCommand.GetMotorParams,

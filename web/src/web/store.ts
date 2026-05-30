@@ -330,6 +330,7 @@ export const appActions = {
   getMotorParams,
   getPosition,
   absoluteMove,
+  incrementMove,
   shiftUp,
   shiftDown,
   readButtonMap,
@@ -1021,6 +1022,23 @@ export async function absoluteMove(targetPosition: number) {
     return response;
   } catch (err) {
     appendLog("Absolute move error", err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+export async function incrementMove(increment: number) {
+  const deviceCommands = commands.get();
+  if (!deviceCommands) return;
+  appendLog("Increment move...", { increment });
+  try {
+    const response = await deviceCommands.incrementMove(increment);
+    appendLog("Increment move result", response ?? {});
+    if (response.status === "success") {
+      await getPosition();
+    }
+    return response;
+  } catch (err) {
+    appendLog("Increment move error", err instanceof Error ? err.message : err);
     return null;
   }
 }

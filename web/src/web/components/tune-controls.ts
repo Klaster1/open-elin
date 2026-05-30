@@ -15,7 +15,7 @@ export class TuneControls extends LitElement {
   declare testIdPrefix: string;
   declare label: string;
 
-  private readonly steps = [10, 5, 1, 0.1] as const;
+  private readonly steps = [10, 5, 1, 0.2] as const;
 
   static styles = css`
     :host {

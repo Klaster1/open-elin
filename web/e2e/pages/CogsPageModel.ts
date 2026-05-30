@@ -28,7 +28,7 @@ export class CogsPageModel {
   }
 
   tuneDecreaseSmallButton(): Locator {
-    return this.page.getByTestId("cogs-tune-decrease-0-1");
+    return this.page.getByTestId("cogs-tune-decrease-0-2");
   }
 
   tuneDecrease10Button(): Locator {
@@ -44,7 +44,7 @@ export class CogsPageModel {
   }
 
   tuneIncrease01Button(): Locator {
-    return this.page.getByTestId("cogs-tune-increase-0-1");
+    return this.page.getByTestId("cogs-tune-increase-0-2");
   }
 
   tuneIncrease1Button(): Locator {

@@ -646,14 +646,13 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
         }>
       | undefined,
   ) {
-    const currentOffset = this.getCurrentAbsoluteOffset(gearList);
-    const disabled = controlsDisabled || currentOffset === null;
+    const baseOffset = this.getCurrentAbsoluteOffset(gearList);
     return html`
       <tune-controls
         test-id-prefix="cogs-tune"
-        ?disabled=${disabled}
+        ?disabled=${controlsDisabled}
         @tune-delta=${(event: CustomEvent<{ delta: number }>) =>
-          this.onAbsoluteNudge(event.detail.delta, currentOffset)}
+          this.onAbsoluteNudge(event.detail.delta, baseOffset)}
       ></tune-controls>
     `;
   }
@@ -991,6 +990,11 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
     if (appState.cogsProfileWriteInProgress.get()) return;
     const target = Math.round((baseOffset + delta) * 10) / 10;
     await appActions.absoluteMove(target);
+  }
+
+  private async onIncrementNudge(delta: number) {
+    if (appState.cogsProfileWriteInProgress.get()) return;
+    await appActions.incrementMove(delta);
   }
 
   private openProfileDialog = () => {

@@ -199,7 +199,7 @@ Captured by subscribing to `Button action` + `Shift complete` + `Position` notif
 
 **Action byte:** the low byte of `rawHex` is `00` for press and `01` for release. Both are transmitted on every physical press; the hub acts on the press. Example: `rawHex: "0100"` = A-1 press, `"0101"` = A-1 release.
 
-**Tune-mode step size:** in one capture, `A-1` (held 124 ms) moved the raw `Shift complete` payload by +1 unit, while `-` (held 248 ms) moved it by −4 units. This suggests hold-to-repeat semantics in tune mode rather than a fixed step per tap, but the per-press step has not been isolated yet — one more capture with brief taps would confirm.
+**Tune-mode step size:** The hub's minimum tune step is **0.2 mm** (2 protocol units). Verified 2026-05-29 via the web app: sending `AbsoluteMove(current ± 0.1)` causes the hub to snap to the nearest 0.2 mm grid position (minus jumps by 0.2, plus produces no change). All observed settled positions in tune mode are multiples of 0.2 (e.g. 12.8, 13.0, 13.2). An earlier capture showed `A-1` (held 124 ms) moving +1 raw unit and `-` (held 248 ms) moving −4 units — consistent with hold-to-repeat at the 0.2 mm base step.
 
 **Implication for the default map:** of the 7 default-map rows, only 3 are exercised by this pod (the rows for `0x00 → Shift Up`, `0x01 → Shift Down`, `0x02 → Tune Mode`). The remaining 4 rows (`0x06 B → Shift Down`, `0x0C C → Tune Mode`, `0x0D C-1 → Shift Up`, `0x12 D → Shift Down`) are inert — the hub maps them dutifully but the pod never sends those codes. This is why the "Buttons" screen appears to list the same action twice: each duplicate row is a fallback for a button this pod doesn't have.
 

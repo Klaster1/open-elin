@@ -107,7 +107,7 @@ test.describe("Cogs in demo mode", () => {
     await cogs.tuneDecreaseSmallButton().click();
     await expect
       .poll(async () => cogs.currentGearOffsetValue())
-      .toBeCloseTo(13.9, 3);
+      .toBeCloseTo(13.8, 3);
 
     await cogs.tuneIncrease01Button().click();
     await expect
