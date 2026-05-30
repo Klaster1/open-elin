@@ -575,12 +575,12 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
     controlsDisabled: boolean,
     gearList:
       | Array<{
-          gearNumber: number;
-          offsetApproximate: number;
-          offsetPrecise: number | null;
-          current: boolean;
-          teeth: number | null;
-        }>
+        gearNumber: number;
+        offsetApproximate: number;
+        offsetPrecise: number | null;
+        current: boolean;
+        teeth: number | null;
+      }>
       | undefined,
   ) {
     return html`
@@ -605,8 +605,8 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
         </div>
 
         ${gearList?.length
-          ? this.renderGearStrip(gearList)
-          : html`
+        ? this.renderGearStrip(gearList)
+        : html`
               <div class="empty-state" role="status" aria-live="polite">
                 No gear data yet. Fetch rear cog info to get started.
               </div>
@@ -638,12 +638,12 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
     controlsDisabled: boolean,
     gearList:
       | Array<{
-          gearNumber: number;
-          offsetApproximate: number;
-          offsetPrecise: number | null;
-          current: boolean;
-          teeth: number | null;
-        }>
+        gearNumber: number;
+        offsetApproximate: number;
+        offsetPrecise: number | null;
+        current: boolean;
+        teeth: number | null;
+      }>
       | undefined,
   ) {
     const baseOffset = this.getCurrentAbsoluteOffset(gearList);
@@ -652,7 +652,7 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
         test-id-prefix="cogs-tune"
         ?disabled=${controlsDisabled}
         @tune-delta=${(event: CustomEvent<{ delta: number }>) =>
-          this.onAbsoluteNudge(event.detail.delta, baseOffset)}
+        this.onAbsoluteNudge(event.detail.delta, baseOffset)}
       ></tune-controls>
     `;
   }
@@ -661,12 +661,12 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
     controlsDisabled: boolean,
     gearList:
       | Array<{
-          gearNumber: number;
-          offsetApproximate: number;
-          offsetPrecise: number | null;
-          current: boolean;
-          teeth: number | null;
-        }>
+        gearNumber: number;
+        offsetApproximate: number;
+        offsetPrecise: number | null;
+        current: boolean;
+        teeth: number | null;
+      }>
       | undefined,
     profiles: Array<{
       name: string;
@@ -685,7 +685,7 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
         <div class="profiles-head">
           <h2>Profiles</h2>
           ${profiles.length
-            ? html`
+        ? html`
                 <sl-button
                   size="small"
                   data-test-id="cogs-profile-save-current"
@@ -695,17 +695,17 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
                   Save current as profile
                 </sl-button>
               `
-            : ""}
+        : ""}
         </div>
         ${profiles.length
-          ? html`
+        ? html`
               <div class="profiles-list" data-test-id="cogs-profiles-list">
                 ${profiles.map((profile) =>
-                  this.renderProfileRow(profile, disableProfileAction),
-                )}
+          this.renderProfileRow(profile, disableProfileAction),
+        )}
               </div>
             `
-          : html`
+        : html`
               <empty-state
                 data-test-id="cogs-profiles-empty"
                 title="No profiles yet"
@@ -844,12 +844,12 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
   private canSaveProfileFromGears(
     gearList:
       | Array<{
-          gearNumber: number;
-          offsetApproximate: number;
-          offsetPrecise: number | null;
-          current: boolean;
-          teeth: number | null;
-        }>
+        gearNumber: number;
+        offsetApproximate: number;
+        offsetPrecise: number | null;
+        current: boolean;
+        teeth: number | null;
+      }>
       | undefined,
   ) {
     if (!gearList?.length) return false;
@@ -928,13 +928,13 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
           aria-hidden=${!gear.current}
         >
           ${gear.current
-            ? html`
+        ? html`
                 <svg viewBox="0 0 10 18" aria-hidden="true">
                   <path d="M5 17V3"></path>
                   <path d="M2 6L5 3L8 6"></path>
                 </svg>
               `
-            : ""}
+        : ""}
         </div>
       </div>
     `;
@@ -959,12 +959,12 @@ export class PageDeviceCogs extends SignalWatcher(LitElement) {
   private getCurrentAbsoluteOffset(
     gearList:
       | Array<{
-          gearNumber: number;
-          offsetApproximate: number;
-          offsetPrecise: number | null;
-          current: boolean;
-          teeth: number | null;
-        }>
+        gearNumber: number;
+        offsetApproximate: number;
+        offsetPrecise: number | null;
+        current: boolean;
+        teeth: number | null;
+      }>
       | undefined,
   ) {
     const currentGear = gearList?.find((gear) => gear.current);
