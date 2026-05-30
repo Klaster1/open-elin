@@ -6,6 +6,7 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/settings/settings.h>
 #include <hal/nrf_gpio.h>
+#include <zephyr/drivers/watchdog.h>
 
 #include "app.h"
 #include "led.h"
@@ -76,11 +77,36 @@ int main(void)
     /* Silent battery check every 15min (updates cached battery_mv) */
     battery_periodic_start();
 
+    /* Watchdog: reboot if main loop stalls for >10s */
+    const struct device *wdt = DEVICE_DT_GET(DT_NODELABEL(wdt0));
+    int wdt_channel = -1;
+    if (device_is_ready(wdt)) {
+        struct wdt_timeout_cfg wdt_cfg = {
+            .window.min = 0,
+            .window.max = 10000,
+            .callback = NULL,
+            .flags = WDT_FLAG_RESET_SOC,
+        };
+        wdt_channel = wdt_install_timeout(wdt, &wdt_cfg);
+        if (wdt_channel >= 0) {
+            wdt_setup(wdt, WDT_OPT_PAUSE_HALTED_BY_DBG);
+            LOG_INF("Watchdog started (10s timeout)");
+        } else {
+            LOG_WRN("Watchdog timeout install failed: %d", wdt_channel);
+        }
+    } else {
+        LOG_WRN("Watchdog device not ready");
+    }
+
     /* Main loop: poll serial (USB CDC doesn't support interrupt-driven rx) */
     const struct device *console = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
     uint8_t ch;
 
     while (1) {
+        if (wdt_channel >= 0) {
+            wdt_feed(wdt, wdt_channel);
+        }
+
         if (app.usb_active && uart_poll_in(console, &ch) == 0) {
             handle_command(ch);
         }
