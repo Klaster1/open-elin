@@ -245,7 +245,7 @@ function buildRearCogParamsHex(cablePositions: number[], teeth?: number[]) {
   const chunks: string[] = [];
   for (let i = 0; i < cablePositions.length; i++) {
     const raw = cablePositions[i] ?? 0;
-    const cable = Math.trunc(raw * 10);
+    const cable = Math.round(raw * 10);
     const cableHex = cable.toString(16).padStart(4, "0");
     const cableLE = reverseCommand(cableHex);
     const toothValue = teeth?.[i] ?? 0;
