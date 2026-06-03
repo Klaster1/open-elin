@@ -19,7 +19,12 @@ $ErrorActionPreference = "Stop"
 
 $openocd = "c:\dev\nxs\tools\pod-firmware\openocd\bin\openocd.exe"
 $scripts = "c:\dev\nxs\tools\pod-firmware\openocd\share\openocd\scripts"
-$bootloader = "c:/dev/nxs/firmware-pod/nice_nano_bootloader.hex"
+$bootloader = "$PSScriptRoot\nice_nano_bootloader.hex"
+
+# Bootloader is not version-controlled. Download on demand.
+$bootloaderVersion = "0.11.0"
+$bootloaderUrl = "https://github.com/adafruit/Adafruit_nRF52_Bootloader/releases/download/$bootloaderVersion/nice_nano_bootloader-${bootloaderVersion}_s140_6.1.1.hex"
+$bootloaderSha256 = "1B72D4CD163239DEC96231B3549D541CBC96B7A64B3041B635482CA4D7441F7E"
 
 if (-not (Test-Path $openocd)) {
     Write-Host "ERROR: OpenOCD not found at $openocd" -ForegroundColor Red
@@ -27,11 +32,19 @@ if (-not (Test-Path $openocd)) {
 }
 
 if (-not (Test-Path $bootloader)) {
-    Write-Host "ERROR: Bootloader hex not found at $bootloader" -ForegroundColor Red
-    Write-Host "Download from: https://github.com/adafruit/Adafruit_nRF52_Bootloader/releases" -ForegroundColor Yellow
-    Write-Host "Get the nice_nano_bootloader-*_s140_*.hex file" -ForegroundColor Yellow
+    Write-Host "Bootloader not found locally. Downloading $bootloaderVersion from GitHub..." -ForegroundColor Yellow
+    Invoke-WebRequest $bootloaderUrl -OutFile $bootloader -UseBasicParsing
+}
+
+$actualHash = (Get-FileHash $bootloader -Algorithm SHA256).Hash
+if ($actualHash -ne $bootloaderSha256) {
+    Write-Host "ERROR: Bootloader checksum mismatch!" -ForegroundColor Red
+    Write-Host "  Expected: $bootloaderSha256" -ForegroundColor Red
+    Write-Host "  Got:      $actualHash" -ForegroundColor Red
+    Remove-Item $bootloader
     exit 1
 }
+Write-Host "Bootloader verified (SHA256 OK)" -ForegroundColor Green
 
 # Step 1: Verify SWD connection
 Write-Host "`n=== Step 1: Testing SWD connection ===" -ForegroundColor Cyan
