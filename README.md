@@ -4,22 +4,22 @@ Open-source tools and DIY pod firmware for the [NXS Wireless](https://shop.ogbik
 
 ## What's in here
 
-| Folder | What it is |
-|--------|------------|
-| `web/` | Browser app for configuring NXS hubs via Web Bluetooth |
-| `cli/` | Node.js CLI for controlling hubs over BLE |
-| `lib/` | Shared protocol library (Node.js + browser) |
-| `firmware-pod/` | Zephyr C pod firmware for DIY SuperMini nRF52840 pod |
-| `documents/` | Protocol specs, hardware maps, observed behavior notes |
-| `prints/` | 3D-printable parts (battery holders, mounts, pod cases) |
+| Folder          | What it is                                              |
+| --------------- | ------------------------------------------------------- |
+| `web/`          | Browser app for configuring NXS hubs via Web Bluetooth  |
+| `cli/`          | Node.js CLI for controlling hubs over BLE               |
+| `lib/`          | Shared protocol library (Node.js + browser)             |
+| `firmware-pod/` | Zephyr C pod firmware for DIY SuperMini nRF52840 pod    |
+| `documents/`    | Protocol specs, hardware maps, observed behavior notes  |
+| `prints/`       | 3D-printable parts (battery holders, mounts, pod cases) |
 
 ## Prerequisites
 
-| Tool | Version | Used for |
-|------|---------|----------|
-| [Node.js](https://nodejs.org) | ≥ 22 | Web app, CLI, shared lib |
-| [Docker](https://www.docker.com) | any | Building pod firmware (Zephyr SDK toolchain) |
-| PowerShell | ≥ 5.1 | Build/flash/test scripts in `firmware-pod/` |
+| Tool                             | Version | Used for                                     |
+| -------------------------------- | ------- | -------------------------------------------- |
+| [Node.js](https://nodejs.org)    | ≥ 22    | Web app, CLI, shared lib                     |
+| [Docker](https://www.docker.com) | any     | Building pod firmware (Zephyr SDK toolchain) |
+| PowerShell                       | ≥ 5.1   | Build/flash/test scripts in `firmware-pod/`  |
 
 Optional:
 
@@ -55,6 +55,14 @@ npm run cli -- read-button-map   # Read pod button mapping
 ```
 
 Use `--json` for machine-readable output.
+
+## Disclaimer
+
+This is a personal work-in-progress dump. Polishing was not a goal.
+
+Use at your own risk. Bad firmware can brick a SuperMini (recoverable via SWD — see `firmware-pod/unbrick.ps1`). Motor commands can overdrive a derailleur. Shifting commands will shift your actual gears.
+
+If you want to do real development with this, expect to find hardcoded MACs, paths, and other local assumptions that will need adapting to your setup.
 
 ## License
 
