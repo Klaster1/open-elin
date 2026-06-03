@@ -1193,7 +1193,7 @@ export async function writeDefaultButtonMap(podMac: string) {
 }
 
 export async function writeButtonMap(
-  entries: import("open-elin-lib/commands").ButtonMapEntry[],
+  entries: import("lib/commands").ButtonMapEntry[],
 ) {
   const deviceCommands = commands.get();
   if (!deviceCommands) {

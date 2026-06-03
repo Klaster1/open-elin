@@ -39,7 +39,7 @@ Using latency=50 for safety margin.
 ## File Structure
 
 ```
-open-elin-firmware-c/
+firmware-pod/
 └── src/
     └── main.c    # All changes in this file
 ```
@@ -49,7 +49,7 @@ open-elin-firmware-c/
 ## Task 1: Add latency state and escalation timer
 
 **Files:**
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Add defines and state**
 
@@ -110,13 +110,13 @@ static void latency_tighten(void)
 
 - [✅] **Step 4: Build to verify compile**
 
-Run: `.\open-elin-firmware-c\build.ps1`
+Run: `.\firmware-pod\build.ps1`
 Expected: Clean compile (functions unused for now)
 
 - [✅] **Step 5: Commit skeleton**
 
 ```powershell
-git add open-elin-firmware-c/src/main.c
+git add firmware-pod/src/main.c
 git commit -m "feat(firmware): connection param renegotiation skeleton"
 ```
 
@@ -125,7 +125,7 @@ git commit -m "feat(firmware): connection param renegotiation skeleton"
 ## Task 2: Wire escalation to connection and button events
 
 **Files:**
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Start escalation timer on connect**
 
@@ -157,13 +157,13 @@ In `send_press_release()`, at the top of the function:
 
 - [✅] **Step 4: Build**
 
-Run: `.\open-elin-firmware-c\build.ps1`
+Run: `.\firmware-pod\build.ps1`
 Expected: Clean compile
 
 - [✅] **Step 5: Commit**
 
 ```powershell
-git add open-elin-firmware-c/src/main.c
+git add firmware-pod/src/main.c
 git commit -m "feat(firmware): wire latency escalation to connect/shift events"
 ```
 
@@ -190,7 +190,7 @@ Check that shifts still work after escalation and de-escalation. If the hub reje
 - [✅] **Step 5: Final commit**
 
 ```powershell
-git add open-elin-firmware-c/src/main.c
+git add firmware-pod/src/main.c
 git commit -m "feat(firmware): latency escalation 20min idle, verified"
 ```
 

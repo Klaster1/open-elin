@@ -4,7 +4,7 @@
 
 A CircuitPython BLE peripheral on an nRF52840 SuperMini that impersonates an NXS BikeNet pod. Hub connects to it; physical button on the board sends shift-up. We log every byte the hub writes via USB serial.
 
-**Repo:** `c:\dev\nxs\open-elin-firmware-python`
+**Repo:** `c:\dev\nxs\firmware-pod`
 **Hardware:** SuperMini NRF52840 · CircuitPython 9.2.8
 **Board drive:** `E:\` (auto-mounted as USB mass storage)
 **Button pin:** `board.P0_17` (pull-up, active-low)
@@ -81,7 +81,7 @@ USB CDC console (`usb_cdc.enable(console=True)`). Every hub write, PIN exchange,
 ## Directory structure
 
 ```
-open-elin-firmware-python/
+firmware-pod/
   boot.py       ← USB config: disable HID, keep CDC serial
   code.py       ← main fake pod (copy both to E:\)
 ```
@@ -111,7 +111,7 @@ Copy-Item boot.py E:\boot.py -Force
   ✔ Verify: address logged to console
 - [ ] Run `hub add-device`:
   ```powershell
-  node open-elin-cli/src/cli.ts hub add-device --address d7:ba:ab:52:a0:e5 --timeout 15000 --wait-for-pod 30 <BOARD-MAC>
+  node cli/src/cli.ts hub add-device --address d7:ba:ab:52:a0:e5 --timeout 15000 --wait-for-pod 30 <BOARD-MAC>
   ```
   ✔ Verify: `0x8006` (POD_CONNECTED_NEW) received by CLI; `hub list` shows board MAC alongside real pod
 

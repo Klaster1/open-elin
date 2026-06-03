@@ -64,7 +64,7 @@ Plan is **shelved**. CircuitPython prototype remains the active pod firmware. Ru
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the CircuitPython pod emulator (`open-elin-firmware-python/code.py`) with Rust firmware on SuperMini nRF52840, achieving feature parity with good battery life.
+**Goal:** Replace the CircuitPython pod emulator (`firmware-pod/code.py`) with Rust firmware on SuperMini nRF52840, achieving feature parity with good battery life.
 
 **Architecture:** Embassy async runtime + `trouble` (pure Rust BLE host stack) for BLE. The BLE controller layer uses Nordic's SoftDevice Controller (`nrf-sdc`) — a static library that gets linked into the application binary (NOT the full SoftDevice that occupies a fixed flash region). This means the existing UF2 bootloader is preserved and flashing is via USB drag-and-drop, exactly like CircuitPython. Embassy's async model maps perfectly to "sleep until event" — the CPU automatically enters low-power mode between `await` points. Protocol frame encoding lives in a separate module with host-side unit tests (TDD). Everything else is verified by flashing and observing behaviour with `hub monitor`.
 
@@ -1120,7 +1120,7 @@ git commit -am "feat(firmware): GATT service with MSG + PIN characteristics"
 
 **Goal:** Expose 3 buttons matching the real MTB Pod's wired ports: `-` (shift up, 0x00), `A-1` (shift down, 0x01), `A-2` (tune, 0x02). Since no physical buttons are soldered yet, trigger them via USB serial commands. GPIO pins are reserved for future wiring.
 
-> **Real pod button IDs** (from `open-elin-lib/src/pod-models.ts`): The MTB Pod exposes `wiredButtons: ["02", "00", "01"]` — button 0x00 (shift up), 0x01 (shift down), 0x02 (tune mode). The default button map assigns: 0x00→ShiftUp, 0x01→ShiftDown, 0x02→TuneMode.
+> **Real pod button IDs** (from `lib/src/pod-models.ts`): The MTB Pod exposes `wiredButtons: ["02", "00", "01"]` — button 0x00 (shift up), 0x01 (shift down), 0x02 (tune mode). The default button map assigns: 0x00→ShiftUp, 0x01→ShiftDown, 0x02→TuneMode.
 
 **Serial commands:** `u` = shift up (0x00 press+release), `d` = shift down (0x01 press+release), `t` = tune (0x02 press+release). These are processed by the same serial input task that handles `b` (bootloader entry) from Task 1.
 

@@ -8,24 +8,24 @@
 
 **Testing:** Red/green TDD via Playwright e2e in demo mode. Demo transport (`transport-demo.ts`) needs handlers for `addDevice`, `removeDevice`, `setBikeNet`, `writeButtonMap`. Tests use `DeviceListPageModel` and demo state fixtures.
 
-**Run tests:** `npm run test:e2e --workspace=open-elin-web` (or `--headed` variant)
+**Run tests:** `npm run test:e2e --workspace=web` (or `--headed` variant)
 
 ---
 
 ### Task 1: Extract default button map builder to open-elin-lib
 
-The hardcoded `CAPTURED_ENTRIES` array in `open-elin-cli/src/commands/hub/write-button-map.ts` has pod/hub MACs baked in. Extract to a shared function `buildDefaultButtonMap(podMac, hubMac): ButtonMapEntry[]` that generates the 7 standard entries for any pod+hub pair.
+The hardcoded `CAPTURED_ENTRIES` array in `cli/src/commands/hub/write-button-map.ts` has pod/hub MACs baked in. Extract to a shared function `buildDefaultButtonMap(podMac, hubMac): ButtonMapEntry[]` that generates the 7 standard entries for any pod+hub pair.
 
 **Files:**
-- Create: `open-elin-lib/src/default-button-map.ts`
-- Create: `open-elin-cli/src/commands/hub/write-default-button-map.ts`
-- Modify: `open-elin-cli/src/cli.ts` (add `write-default-button-map` command)
-- Modify: `open-elin-cli/src/commands/hub/write-button-map.ts` (import from lib instead)
+- Create: `lib/src/default-button-map.ts`
+- Create: `cli/src/commands/hub/write-default-button-map.ts`
+- Modify: `cli/src/cli.ts` (add `write-default-button-map` command)
+- Modify: `cli/src/commands/hub/write-button-map.ts` (import from lib instead)
 - Modify: `.github/skills/connect-pod/SKILL.md` (update step 3 to use new command)
 
-- [ ] **Step 1:** Create `open-elin-lib/src/default-button-map.ts` exporting `buildDefaultButtonMap(podMac: string, hubMac: string): ButtonMapEntry[]` — takes colon-separated MACs, converts to LE hex, returns the 7 entries with the correct button→function mappings
-- [ ] **Step 2:** Update `open-elin-lib/package.json` exports to add `"./default-button-map"` entry
-- [ ] **Step 3:** Add `writeDefaultButtonMap(podMac: string)` method to `ProtocolCommands` in `open-elin-lib/src/commands.ts` — calls `buildDefaultButtonMap(podMac, this.device.address)` then `this.writeButtonMap(entries)`
+- [ ] **Step 1:** Create `lib/src/default-button-map.ts` exporting `buildDefaultButtonMap(podMac: string, hubMac: string): ButtonMapEntry[]` — takes colon-separated MACs, converts to LE hex, returns the 7 entries with the correct button→function mappings
+- [ ] **Step 2:** Update `lib/package.json` exports to add `"./default-button-map"` entry
+- [ ] **Step 3:** Add `writeDefaultButtonMap(podMac: string)` method to `ProtocolCommands` in `lib/src/commands.ts` — calls `buildDefaultButtonMap(podMac, this.device.address)` then `this.writeButtonMap(entries)`
 - [ ] **Step 4:** Update CLI `write-button-map.ts` to import `buildDefaultButtonMap` from lib instead of inlining the array
 - [ ] **Step 5:** Add new CLI command `write-default-button-map` — takes `--pod-mac <MAC>` (required), connects to hub, calls `commands.writeDefaultButtonMap(podMac)`. Register in `cli.ts`.
 - [ ] **Step 6:** Update `.github/skills/connect-pod/SKILL.md` step 3 to use `hub write-default-button-map --address <hub-mac> --pod-mac <pod-mac>` instead of `write-button-map --use-captured`
@@ -39,12 +39,12 @@ The hardcoded `CAPTURED_ENTRIES` array in `open-elin-cli/src/commands/hub/write-
 In demo mode the sidebar shows a pod mock GUI for simulating button presses. Add an analogous `hub-mock-gui` component showing the hub image with a reset button overlay. Clicking reset simulates a real hub factory reset: all hub state returns to defaults (12-speed setup, default name, empty device list, empty button map). After reset, the hub enters a 60-second **pairing window**. During that window, a 6-second long-press on the pod mock GUI's pair button bonds the pod to the hub — just like the real hardware setup flow.
 
 **Files:**
-- Create: `open-elin-web/src/web/demo/hub-mock-gui.ts`
-- Modify: `open-elin-web/src/web/demo/hub-mock.ts` (add `reset()` method, pairing window state)
-- Modify: `open-elin-web/src/web/demo/pod-mock.ts` (add button D)
-- Modify: `open-elin-web/src/web/demo/pod-mock-gui.ts` (add D button overlay with 6s long-press pairing behaviour)
-- Modify: `open-elin-web/src/web/demo/demo-state.ts` (clear device list on hub reset)
-- Modify: `open-elin-web/src/web/components/shell-device.ts` (render `hub-mock-gui` in demo sidebar)
+- Create: `web/src/web/demo/hub-mock-gui.ts`
+- Modify: `web/src/web/demo/hub-mock.ts` (add `reset()` method, pairing window state)
+- Modify: `web/src/web/demo/pod-mock.ts` (add button D)
+- Modify: `web/src/web/demo/pod-mock-gui.ts` (add D button overlay with 6s long-press pairing behaviour)
+- Modify: `web/src/web/demo/demo-state.ts` (clear device list on hub reset)
+- Modify: `web/src/web/components/shell-device.ts` (render `hub-mock-gui` in demo sidebar)
 
 - [ ] **Step 1:** Add `reset()` to `HubMock` — restores all state to defaults from `hub-mock-data.json`, sets `pairingWindow = true`, starts 60s timer that sets `pairingWindow = false`. Clears `demoState.list.entries`. Sets current position to gear 1 / smallest cog offset (cable maximally extended, lowest tension). This models the physical factory reset button behavior, not `setBikeNet`.
 - [ ] **Step 2:** Add `pair(podMac: string)` to `HubMock` — only succeeds if `pairingWindow` is true. Adds pod entry to `demoState.list.entries`, writes default button map via `buildDefaultButtonMap`, sets `pairingWindow = false`.
@@ -61,8 +61,8 @@ In demo mode the sidebar shows a pod mock GUI for simulating button presses. Add
 The demo transport currently shifts gears from pod button presses using a hardcoded `BUTTON_SHIFT_MAP` lookup, completely ignoring the button map. Real hardware only responds to presses that match a stored button map entry. Fix this so the mock only shifts when a matching entry exists in `hub.state.buttonTable`.
 
 **Files:**
-- Modify: `open-elin-web/src/web/demo/transport-demo.ts`
-- Modify: `open-elin-web/src/web/demo/demo-state.ts` (if state shape needs changes)
+- Modify: `web/src/web/demo/transport-demo.ts`
+- Modify: `web/src/web/demo/demo-state.ts` (if state shape needs changes)
 
 - [ ] **Step 1:** Add `setBikeNet` handler (opcode `0x0005`) — return success response (exact side-effects on real hardware unverified; demo handler is a stub)
 - [ ] **Step 2:** Add `addDevice` handler (opcode `0x0001`) — parse pod MAC from payload, add entry to `demoState.list.entries`, return success. If already present, return `INVALID_STATE` (`0x8003`)
@@ -76,8 +76,8 @@ The demo transport currently shifts gears from pod button presses using a hardco
 ### Task 4: RED — Write failing e2e test for full pod setup flow
 
 **Files:**
-- Create: `open-elin-web/e2e/fixtures/pod-connection.demo.spec.ts`
-- Modify: `open-elin-web/e2e/pages/DeviceListPageModel.ts` (add new locators)
+- Create: `web/e2e/fixtures/pod-connection.demo.spec.ts`
+- Modify: `web/e2e/pages/DeviceListPageModel.ts` (add new locators)
 
 - [ ] **Step 1:** Add locators to `DeviceListPageModel`: `createBikeNetButton()`, `addPodButton()`
 - [ ] **Step 2:** Write test: "Full setup: add pod, write button map, pod buttons shift gears"
@@ -94,9 +94,9 @@ The demo transport currently shifts gears from pod button presses using a hardco
 ### Task 5: GREEN — Implement Create BikeNet, Add Pod, and Write Default Button Map
 
 **Files:**
-- Modify: `open-elin-web/src/web/store.ts` — add `setBikenet()`, `addDevice()`, `writeDefaultButtonMap()` actions
-- Modify: `open-elin-web/src/web/components/page-device-list.ts` — add buttons + dialogs
-- Modify: `open-elin-web/src/web/components/page-device-buttons.ts` — add Write Default Button Map button
+- Modify: `web/src/web/store.ts` — add `setBikenet()`, `addDevice()`, `writeDefaultButtonMap()` actions
+- Modify: `web/src/web/components/page-device-list.ts` — add buttons + dialogs
+- Modify: `web/src/web/components/page-device-buttons.ts` — add Write Default Button Map button
 
 - [ ] **Step 1:** Add `setBikenet()` to store — calls `deviceCommands.setBikeNet()`, logs result. Register in `appActions`.
 - [ ] **Step 2:** Add "Create BikeNet" button to device list card header (warning style, destructive); on click show Shoelace confirm dialog "This configures BikeNet on the hub. Continue?"; on confirm call `appActions.setBikenet()`

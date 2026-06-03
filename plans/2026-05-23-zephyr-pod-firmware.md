@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the CircuitPython pod emulator (`open-elin-firmware-python/code.py`) with a Zephyr RTOS C firmware on SuperMini nRF52840, achieving feature parity with excellent battery life.
+**Goal:** Replace the CircuitPython pod emulator (`firmware-pod/code.py`) with a Zephyr RTOS C firmware on SuperMini nRF52840, achieving feature parity with excellent battery life.
 
 **Architecture:** Zephyr RTOS with its built-in BLE stack (no SoftDevice needed). Zephyr's BLE is proven on this exact chip via ZMK keyboards. The application is a BLE peripheral with a custom GATT service matching the NXS BikeNet protocol. The CPU automatically sleeps between BLE events. Protocol frame encoding lives in a standalone C module with host-side unit tests. UF2 flashing via the existing Adafruit bootloader — no debug probe needed.
 
@@ -24,7 +24,7 @@
 ## File Structure
 
 ```
-open-elin-firmware-c/
+firmware-pod/
 ├── CMakeLists.txt              # Zephyr application CMake
 ├── prj.conf                    # Kconfig: BLE, USB, logging, power
 ├── Dockerfile                  # Bakes Zephyr SDK + source into image
@@ -51,13 +51,13 @@ open-elin-firmware-c/
 **Goal:** Build a Docker image with the entire Zephyr SDK + source tree baked in. After that, building firmware is just `docker run` → `firmware.uf2` on the host. No volumes, no `west init` at build time.
 
 **Files:**
-- Create: `open-elin-firmware-c/Dockerfile`
-- Create: `open-elin-firmware-c/build.ps1`
+- Create: `firmware-pod/Dockerfile`
+- Create: `firmware-pod/build.ps1`
 
 - [✅] **Step 1: Create the Dockerfile**
 
 ```dockerfile
-# open-elin-firmware-c/Dockerfile
+# firmware-pod/Dockerfile
 # Zephyr build environment with SDK + source tree baked in.
 # Build once:  docker build -t nxs-zephyr .
 # Then build firmware:  docker run --rm -v ./:/app nxs-zephyr
@@ -94,7 +94,7 @@ ENTRYPOINT ["bash", "-c", "\
 One-time step (~10 min, downloads Zephyr + builds verification sample):
 
 ```powershell
-cd open-elin-firmware-c
+cd firmware-pod
 docker build -t nxs-zephyr .
 ```
 
@@ -103,7 +103,7 @@ Expected: image builds successfully, blinky sample compiles and is cleaned up.
 - [✅] **Step 3: Create `build.ps1` — one-liner wrapper**
 
 ```powershell
-# open-elin-firmware-c/build.ps1
+# firmware-pod/build.ps1
 # Build firmware via Docker. Produces firmware.uf2 in this directory.
 # Prerequisites: docker build -t nxs-zephyr .
 
@@ -127,7 +127,7 @@ if (Test-Path "$appDir\firmware.uf2") {
 - [✅] **Step 4: Create `flash.ps1` — Flash script**
 
 ```powershell
-# open-elin-firmware-c/flash.ps1
+# firmware-pod/flash.ps1
 # Flash firmware.uf2 to the SuperMini via UF2 bootloader.
 # Usage: .\flash.ps1
 #   Enter bootloader first: short RST to GND twice.
@@ -167,15 +167,15 @@ Write-Host "Done! Board will reboot into new firmware." -ForegroundColor Green
 **Goal:** Build and flash a minimal Zephyr app that blinks the SuperMini's LED (P0.15). Proves the full toolchain → UF2 → hardware pipeline works.
 
 **Files:**
-- Create: `open-elin-firmware-c/CMakeLists.txt`
-- Create: `open-elin-firmware-c/prj.conf`
-- Create: `open-elin-firmware-c/boards/adafruit_feather_nrf52840.overlay`
-- Create: `open-elin-firmware-c/src/main.c`
+- Create: `firmware-pod/CMakeLists.txt`
+- Create: `firmware-pod/prj.conf`
+- Create: `firmware-pod/boards/adafruit_feather_nrf52840.overlay`
+- Create: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Create `CMakeLists.txt`**
 
 ```cmake
-# open-elin-firmware-c/CMakeLists.txt
+# firmware-pod/CMakeLists.txt
 cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(nxs-pod-firmware)
@@ -188,7 +188,7 @@ target_sources(app PRIVATE
 - [✅] **Step 2: Create `prj.conf`**
 
 ```ini
-# open-elin-firmware-c/prj.conf
+# firmware-pod/prj.conf
 
 # Use internal RC oscillator (SuperMini's 32.768 kHz crystal is often faulty)
 CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC=y
@@ -210,7 +210,7 @@ CONFIG_GPIO=y
 The Feather has LED0 on P1.15. SuperMini has it on P0.15 (active HIGH).
 
 ```dts
-/* open-elin-firmware-c/boards/adafruit_feather_nrf52840.overlay */
+/* firmware-pod/boards/adafruit_feather_nrf52840.overlay */
 /* SuperMini nRF52840 pin overrides */
 
 / {
@@ -227,7 +227,7 @@ The Feather has LED0 on P1.15. SuperMini has it on P0.15 (active HIGH).
 - [✅] **Step 4: Create minimal `main.c` — blink LED**
 
 ```c
-/* open-elin-firmware-c/src/main.c */
+/* firmware-pod/src/main.c */
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 
@@ -251,7 +251,7 @@ int main(void)
 - [✅] **Step 5: Build**
 
 ```powershell
-cd open-elin-firmware-c
+cd firmware-pod
 .\build.ps1
 ```
 
@@ -270,7 +270,7 @@ Expected: LED on P0.15 blinks (200ms on, 800ms off). If LED doesn't blink, check
 - [ ] **Step 7: Commit**
 
 ```powershell
-git add open-elin-firmware-c/
+git add firmware-pod/
 git commit -m "feat(firmware-c): zephyr project skeleton + LED blink (UF2)"
 ```
 
@@ -281,8 +281,8 @@ git commit -m "feat(firmware-c): zephyr project skeleton + LED blink (UF2)"
 **Goal:** Add USB CDC serial output so `printk()` and `LOG_INF()` appear on the PC's serial terminal. This is the `console.log()` for the firmware.
 
 **Files:**
-- Modify: `open-elin-firmware-c/prj.conf`
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/prj.conf`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Add USB + console config to prj.conf**
 
@@ -309,7 +309,7 @@ CONFIG_USB_CDC_ACM_LOG_LEVEL_OFF=y
 Replace `main.c`:
 
 ```c
-/* open-elin-firmware-c/src/main.c */
+/* firmware-pod/src/main.c */
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/usb/usb_device.h>
@@ -379,16 +379,16 @@ git commit -am "feat(firmware-c): USB CDC serial logging"
 **Goal:** Implement button notification, battery notification, and ShiftComplete parsing as standalone C functions. Test on the host with `gcc` — no Zephyr or hardware needed.
 
 **Files:**
-- Create: `open-elin-firmware-c/src/protocol.h`
-- Create: `open-elin-firmware-c/src/protocol.c`
-- Create: `open-elin-firmware-c/tests/test_protocol.c`
-- Create: `open-elin-firmware-c/tests/Makefile`
-- Modify: `open-elin-firmware-c/CMakeLists.txt` (add protocol.c to sources)
+- Create: `firmware-pod/src/protocol.h`
+- Create: `firmware-pod/src/protocol.c`
+- Create: `firmware-pod/tests/test_protocol.c`
+- Create: `firmware-pod/tests/Makefile`
+- Modify: `firmware-pod/CMakeLists.txt` (add protocol.c to sources)
 
 - [✅] **Step 1: Write the test file**
 
 ```c
-/* open-elin-firmware-c/tests/test_protocol.c */
+/* firmware-pod/tests/test_protocol.c */
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -476,7 +476,7 @@ int main(void)
 - [✅] **Step 2: Write the header**
 
 ```c
-/* open-elin-firmware-c/src/protocol.h */
+/* firmware-pod/src/protocol.h */
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
@@ -542,7 +542,7 @@ int protocol_parse_shift_complete(const uint8_t *data, size_t len,
 - [✅] **Step 3: Write the Makefile for host tests**
 
 ```makefile
-# open-elin-firmware-c/tests/Makefile
+# firmware-pod/tests/Makefile
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11
 
@@ -561,7 +561,7 @@ clean:
 - [✅] **Step 4: Run tests — verify they fail (won't compile, protocol.c doesn't exist)**
 
 ```powershell
-cd open-elin-firmware-c/tests
+cd firmware-pod/tests
 make test
 ```
 
@@ -570,7 +570,7 @@ Expected: compilation fails — `protocol.c` doesn't exist yet.
 - [✅] **Step 5: Implement protocol.c**
 
 ```c
-/* open-elin-firmware-c/src/protocol.c */
+/* firmware-pod/src/protocol.c */
 #include "protocol.h"
 #include <string.h>
 
@@ -610,7 +610,7 @@ int protocol_parse_shift_complete(const uint8_t *data, size_t len,
 - [✅] **Step 6: Run tests — verify all pass**
 
 ```powershell
-cd open-elin-firmware-c/tests
+cd firmware-pod/tests
 make test
 ```
 
@@ -649,8 +649,8 @@ git commit -m "feat(firmware-c): protocol frame encoding with host tests"
 **Goal:** Advertise as "NXS MTB Pod" with manufacturer data matching the real pod. Verify with `nRF Connect` app or `npm run cli -- ble scan`.
 
 **Files:**
-- Modify: `open-elin-firmware-c/prj.conf`
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/prj.conf`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Add BLE config to prj.conf**
 
@@ -673,7 +673,7 @@ CONFIG_BT_MAX_CONN=1
 Replace `main.c`:
 
 ```c
-/* open-elin-firmware-c/src/main.c */
+/* firmware-pod/src/main.c */
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/usb/usb_device.h>
@@ -809,11 +809,11 @@ git commit -am "feat(firmware-c): BLE advertising as NXS MTB Pod"
 **Goal:** Register the BikeNet GATT service with MSG (a5c1cc01) and PIN (a5c1cc02) characteristics. Both support write + notify.
 
 **Files:**
-- Create: `open-elin-firmware-c/src/gatt.h`
-- Create: `open-elin-firmware-c/src/gatt.c`
-- Modify: `open-elin-firmware-c/CMakeLists.txt`
-- Modify: `open-elin-firmware-c/prj.conf`
-- Modify: `open-elin-firmware-c/src/main.c`
+- Create: `firmware-pod/src/gatt.h`
+- Create: `firmware-pod/src/gatt.c`
+- Modify: `firmware-pod/CMakeLists.txt`
+- Modify: `firmware-pod/prj.conf`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Add GATT config to prj.conf**
 
@@ -828,7 +828,7 @@ CONFIG_BT_ATT_TX_COUNT=4
 - [✅] **Step 2: Create gatt.h**
 
 ```c
-/* open-elin-firmware-c/src/gatt.h */
+/* firmware-pod/src/gatt.h */
 #ifndef GATT_H
 #define GATT_H
 
@@ -857,7 +857,7 @@ void gatt_set_pin_write_cb(gatt_write_cb_t cb);
 - [✅] **Step 3: Create gatt.c**
 
 ```c
-/* open-elin-firmware-c/src/gatt.c */
+/* firmware-pod/src/gatt.c */
 #include "gatt.h"
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/uuid.h>
@@ -1007,8 +1007,8 @@ git commit -am "feat(firmware-c): GATT service with MSG + PIN characteristics"
 **Goal:** Accept button commands via USB serial ('u' = shift up, 'd' = shift down) and send button press/release notifications to the hub via the MSG characteristic.
 
 **Files:**
-- Modify: `open-elin-firmware-c/src/main.c`
-- Modify: `open-elin-firmware-c/prj.conf`
+- Modify: `firmware-pod/src/main.c`
+- Modify: `firmware-pod/prj.conf`
 
 - [✅] **Step 1: Add UART polling config to prj.conf**
 
@@ -1110,7 +1110,7 @@ git commit -am "feat(firmware-c): serial button triggers + battery reporting"
 **Goal:** Parse incoming MSG writes from the hub. If a ShiftComplete (0x4003) is received, log the gear number.
 
 **Files:**
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Add MSG write callback**
 
@@ -1149,7 +1149,7 @@ git commit -am "feat(firmware-c): ShiftComplete parsing from hub MSG writes"
 **Goal:** Send 'B' over serial to reboot into the UF2 bootloader. Enables reflashing without physically touching the board.
 
 **Files:**
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Add bootloader entry to serial handler**
 
@@ -1229,8 +1229,8 @@ git commit -am "feat(firmware-c): bootloader entry via serial command"
 **Goal:** Reduce power consumption to maximize battery life. Zephyr handles most of this automatically, but there are a few explicit tweaks.
 
 **Files:**
-- Modify: `open-elin-firmware-c/prj.conf`
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/prj.conf`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Add power config to prj.conf**
 

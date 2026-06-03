@@ -19,7 +19,7 @@
 ## File Structure
 
 ```
-open-elin-firmware-c/
+firmware-pod/
 └── src/
     └── main.c    # All changes in this file (self-contained feature)
 ```
@@ -29,7 +29,7 @@ open-elin-firmware-c/
 ## Task 1: Add radio sleep state and inactivity timer
 
 **Files:**
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Add state variables and timer declaration**
 
@@ -100,13 +100,13 @@ static void radio_wake(void)
 
 - [✅] **Step 5: Build to check for compile errors**
 
-Run: `.\open-elin-firmware-c\build.ps1`
+Run: `.\firmware-pod\build.ps1`
 Expected: Compiles (functions defined but not yet called from anywhere useful)
 
 - [✅] **Step 6: Commit skeleton**
 
 ```powershell
-git add open-elin-firmware-c/src/main.c
+git add firmware-pod/src/main.c
 git commit -m "feat(firmware): advertising timeout skeleton (timer, queue, wake)"
 ```
 
@@ -115,7 +115,7 @@ git commit -m "feat(firmware): advertising timeout skeleton (timer, queue, wake)
 ## Task 2: Wire up the timer and queue to existing logic
 
 **Files:**
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Start inactivity timer when advertising begins**
 
@@ -184,13 +184,13 @@ Write-Host "  u = Shift Up    d = Shift Down    t = Tune    p = Pair    S = Slee
 
 - [✅] **Step 4: Build**
 
-Run: `.\open-elin-firmware-c\build.ps1`
+Run: `.\firmware-pod\build.ps1`
 Expected: Clean compile
 
 - [✅] **Step 5: Commit**
 
 ```powershell
-git add open-elin-firmware-c/src/main.c
+git add firmware-pod/src/main.c
 git commit -m "feat(firmware): wire advertising timeout to connect/button handlers"
 ```
 
@@ -225,6 +225,6 @@ Press `S` to sleep. Press a shift button to wake. Keep hub asleep. After 60 seco
 - [✅] **Step 6: Final commit**
 
 ```powershell
-git add open-elin-firmware-c/src/main.c open-elin-firmware-c/serial-buttons.ps1
+git add firmware-pod/src/main.c firmware-pod/serial-buttons.ps1
 git commit -m "feat(firmware): advertising timeout 15min, verified on hardware"
 ```

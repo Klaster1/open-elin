@@ -14,18 +14,18 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `open-elin-firmware-c/prj.conf` | Modify | Add `CONFIG_PWM=y` |
-| `open-elin-firmware-c/boards/adafruit_feather_nrf52840.overlay` | Modify | Add PWM0 node for LED pin P0.15 |
-| `open-elin-firmware-c/src/main.c` | Modify | Replace periodic handler, add PWM LED functions, modify wake handler, add sim battery commands |
-| `open-elin-firmware-c/serial-buttons.ps1` | Modify | Add digit keys 0-9 for simulated battery levels |
+| `firmware-pod/prj.conf` | Modify | Add `CONFIG_PWM=y` |
+| `firmware-pod/boards/adafruit_feather_nrf52840.overlay` | Modify | Add PWM0 node for LED pin P0.15 |
+| `firmware-pod/src/main.c` | Modify | Replace periodic handler, add PWM LED functions, modify wake handler, add sim battery commands |
+| `firmware-pod/serial-buttons.ps1` | Modify | Add digit keys 0-9 for simulated battery levels |
 
 ---
 
 ### Task 1: Add PWM to device tree and Kconfig
 
 **Files:**
-- Modify: `open-elin-firmware-c/prj.conf`
-- Modify: `open-elin-firmware-c/boards/adafruit_feather_nrf52840.overlay`
+- Modify: `firmware-pod/prj.conf`
+- Modify: `firmware-pod/boards/adafruit_feather_nrf52840.overlay`
 
 - [✅] **Step 1: Add PWM Kconfig**
 
@@ -83,13 +83,13 @@ And add the include at the top of the overlay (after the ADC include):
 
 - [✅] **Step 3: Build to verify PWM compiles**
 
-Run: `.\open-elin-firmware-c\build.ps1`
+Run: `.\firmware-pod\build.ps1`
 Expected: Build succeeds (258/258 or similar), firmware.uf2 written.
 
 - [✅] **Step 4: Commit**
 
 ```powershell
-git add open-elin-firmware-c/prj.conf open-elin-firmware-c/boards/adafruit_feather_nrf52840.overlay
+git add firmware-pod/prj.conf firmware-pod/boards/adafruit_feather_nrf52840.overlay
 git commit -m "feat(firmware): add PWM device tree for battery LED brightness"
 ```
 
@@ -98,7 +98,7 @@ git commit -m "feat(firmware): add PWM device tree for battery LED brightness"
 ### Task 2: Add PWM LED flash function
 
 **Files:**
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Add PWM include and device spec**
 
@@ -147,13 +147,13 @@ static void led_battery_flash(int32_t mv)
 
 - [✅] **Step 3: Build to verify it compiles**
 
-Run: `.\open-elin-firmware-c\build.ps1`
+Run: `.\firmware-pod\build.ps1`
 Expected: Build succeeds.
 
 - [✅] **Step 4: Commit**
 
 ```powershell
-git add open-elin-firmware-c/src/main.c
+git add firmware-pod/src/main.c
 git commit -m "feat(firmware): add PWM battery-brightness LED flash function"
 ```
 
@@ -162,7 +162,7 @@ git commit -m "feat(firmware): add PWM battery-brightness LED flash function"
 ### Task 3: Change periodic timer from 5s chatty to 15min silent
 
 **Files:**
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Make battery_work_handler silent**
 
@@ -222,13 +222,13 @@ With:
 
 - [✅] **Step 4: Build to verify**
 
-Run: `.\open-elin-firmware-c\build.ps1`
+Run: `.\firmware-pod\build.ps1`
 Expected: Build succeeds.
 
 - [✅] **Step 5: Commit**
 
 ```powershell
-git add open-elin-firmware-c/src/main.c
+git add firmware-pod/src/main.c
 git commit -m "feat(firmware): change battery poll from 5s chatty to 15min silent"
 ```
 
@@ -237,7 +237,7 @@ git commit -m "feat(firmware): change battery poll from 5s chatty to 15min silen
 ### Task 4: Wire wake button to battery flash + report
 
 **Files:**
-- Modify: `open-elin-firmware-c/src/main.c`
+- Modify: `firmware-pod/src/main.c`
 
 - [✅] **Step 1: Add PWM device ready check in main()**
 
@@ -335,13 +335,13 @@ And add to the switch block, after the `'B'` case:
 
 - [✅] **Step 6: Build to verify**
 
-Run: `.\open-elin-firmware-c\build.ps1`
+Run: `.\firmware-pod\build.ps1`
 Expected: Build succeeds.
 
 - [✅] **Step 7: Commit**
 
 ```powershell
-git add open-elin-firmware-c/src/main.c open-elin-firmware-c/serial-buttons.ps1
+git add firmware-pod/src/main.c firmware-pod/serial-buttons.ps1
 git commit -m "feat(firmware): add 0-9 simulated battery commands for testing"
 ```
 
@@ -351,7 +351,7 @@ git commit -m "feat(firmware): add 0-9 simulated battery commands for testing"
 
 - [✅] **Step 1: Flash firmware**
 
-Run: `.\open-elin-firmware-c\flash.ps1`
+Run: `.\firmware-pod\flash.ps1`
 Expected: firmware.uf2 copied to UF2 drive, device reboots.
 
 - [✅] **Step 2: Verify serial output**

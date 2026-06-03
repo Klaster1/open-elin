@@ -1,12 +1,12 @@
 # firmware-pod/build.ps1
 # Build firmware via Docker. Produces firmware.uf2 in this directory.
-# Prerequisites: docker build -t nxs-zephyr .
+# Prerequisites: docker build -t open-elin-pod-firmware-toolchain .
 
 $ErrorActionPreference = "Stop"
 $appDir = $PSScriptRoot
 
 Write-Host "Building firmware..." -ForegroundColor Cyan
-docker run --rm -v "${appDir}:/app" -v nxs-zephyr-build:/workdir/zephyr/build nxs-zephyr
+docker run --rm -v "${appDir}:/app" -v open-elin-pod-firmware-toolchain-build:/workdir/zephyr/build open-elin-pod-firmware-toolchain
 
 if ($LASTEXITCODE -ne 0) { exit 1 }
 

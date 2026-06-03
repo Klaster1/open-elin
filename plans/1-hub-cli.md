@@ -4,7 +4,7 @@
 
 A headless Node.js TypeScript CLI for driving the NXS BikeNet hub programmatically. Wraps the existing `demo-node` protocol/transport stack. Follows [Trevin Chow's 10 Principles for Agent-Native CLIs](https://x.com/trevin/status/2051316002730991795).
 
-**Repo:** `c:\dev\nxs\open-elin-cli`  
+**Repo:** `c:\dev\nxs\cli`  
 **Binary name:** `open-elin`  
 **Node version:** 26.2.0 (pinned via `.node-version`)
 
@@ -116,7 +116,7 @@ open-elin agent-context
 ## Directory structure
 
 ```
-open-elin-cli/
+cli/
   .node-version            ← "26.2.0"
   .gitignore
   package.json
@@ -158,12 +158,12 @@ open-elin-cli/
 ```ts
 import { parseGetListResponse, parseBatteryVoltageNotify } from "demo-node/src/commands.ts";
 import { Protocol } from "demo-node/src/protocol.ts";
-// NobleTransport now lives in open-elin-cli/src/ble/transport-noble.ts
+// NobleTransport now lives in cli/src/ble/transport-noble.ts
 ```
 
 `node` runs `.ts` files natively in Node 26 (type stripping, no flag). No build step — `bin` points directly to `src/cli.ts`. Type-check with `tsc --noEmit`.
 
-`NobleTransport` was moved from `demo-node/src/node/` into `open-elin-cli/src/ble/transport-noble.ts`; `@abandonware/noble` was removed from `demo-node`. `src/ble/transport.ts` (thin re-export shim) was deleted as unnecessary.
+`NobleTransport` was moved from `demo-node/src/node/` into `cli/src/ble/transport-noble.ts`; `@abandonware/noble` was removed from `demo-node`. `src/ble/transport.ts` (thin re-export shim) was deleted as unnecessary.
 
 ---
 

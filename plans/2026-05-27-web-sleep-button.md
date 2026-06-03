@@ -31,16 +31,16 @@ This plan adds a **synthetic hub card** at the top of the device list, consolida
 
 | File | Change |
 |------|--------|
-| `open-elin-web/src/commands.ts` | Add `PowerDown: "0x0027"`, add `powerDown()` and `motorHome()` methods |
-| `open-elin-web/src/web/store.ts` | Add `blinkLed()`, `powerDown()`, `motorHome()` actions, export in `appActions` |
-| `open-elin-web/src/web/components/page-device-list.ts` | Add hub card with actions; move rename dialog here; remove calibrate from header |
-| `open-elin-web/src/web/components/shell-device.ts` | Remove rename button + dialog + handlers from sidebar |
-| `open-elin-web/src/web/components/app.ts` | Listen for `sleep-requested` from device list, navigate to `/` |
-| `open-elin-web/e2e/pages/DevicePageModel.ts` | Remove `renameButton()` locator (moved) |
-| `open-elin-web/e2e/pages/DeviceListPageModel.ts` | Add hub card locators + rename locators + sleep locator |
-| `open-elin-web/e2e/fixtures/sleep.demo.spec.ts` | E2E: click sleep on hub card → returns to landing page |
-| `open-elin-web/e2e/fixtures/device-list.demo.spec.ts` | Assert hub card appears first with correct info |
-| `open-elin-web/e2e/fixtures/rename.demo.spec.ts` | Update to use hub card rename button instead of sidebar |
+| `web/src/commands.ts` | Add `PowerDown: "0x0027"`, add `powerDown()` and `motorHome()` methods |
+| `web/src/web/store.ts` | Add `blinkLed()`, `powerDown()`, `motorHome()` actions, export in `appActions` |
+| `web/src/web/components/page-device-list.ts` | Add hub card with actions; move rename dialog here; remove calibrate from header |
+| `web/src/web/components/shell-device.ts` | Remove rename button + dialog + handlers from sidebar |
+| `web/src/web/components/app.ts` | Listen for `sleep-requested` from device list, navigate to `/` |
+| `web/e2e/pages/DevicePageModel.ts` | Remove `renameButton()` locator (moved) |
+| `web/e2e/pages/DeviceListPageModel.ts` | Add hub card locators + rename locators + sleep locator |
+| `web/e2e/fixtures/sleep.demo.spec.ts` | E2E: click sleep on hub card → returns to landing page |
+| `web/e2e/fixtures/device-list.demo.spec.ts` | Assert hub card appears first with correct info |
+| `web/e2e/fixtures/rename.demo.spec.ts` | Update to use hub card rename button instead of sidebar |
 
 ## Tasks
 
@@ -62,7 +62,7 @@ This plan adds a **synthetic hub card** at the top of the device list, consolida
 
 ### 2. Green: implement hub card rendering
 
-- [✅] Add `PowerDown: "0x0027"` to `AppCommand` in `open-elin-web/src/commands.ts`
+- [✅] Add `PowerDown: "0x0027"` to `AppCommand` in `web/src/commands.ts`
 - [ ] Add `async powerDown(): Promise<BasicResponse>` method to `ProtocolCommands`
 - [ ] Add `async calibrate(): Promise<BasicResponse>` method if missing
 - [ ] Add `async motorHome(): Promise<BasicResponse>` method
@@ -102,7 +102,7 @@ This plan adds a **synthetic hub card** at the top of the device list, consolida
 
 ### 5. Red: sleep flow e2e test
 
-- [✅] Create `open-elin-web/e2e/fixtures/sleep.demo.spec.ts`
+- [✅] Create `web/e2e/fixtures/sleep.demo.spec.ts`
 - [ ] Test: "returns to landing page after sleep" — open app, start demo, go to device list, click hub sleep button, assert landing page visible
 - [ ] **Run test → expect RED** (sleep event not handled yet)
 

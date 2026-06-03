@@ -16,9 +16,9 @@ Editing a slot triggers an immediate `writeButtonMap` to the hub. Button labels 
 
 **TDD Approach:** Every task follows red/green TDD. Write the failing test first, run it to confirm it fails, then write the minimal implementation to make it pass, then run the test to confirm it passes. All tests are Playwright E2E — this project has no unit test infrastructure.
 
-**Test command:** `cd c:\dev\nxs\open-elin-web ; npx playwright test --reporter=line`
+**Test command:** `cd c:\dev\nxs\web ; npx playwright test --reporter=line`
 
-**Single test file:** All new tests go in `open-elin-web/e2e/fixtures/buttons.demo.spec.ts`. Tests are added incrementally — each task appends tests to this file, then implements to make them pass.
+**Single test file:** All new tests go in `web/e2e/fixtures/buttons.demo.spec.ts`. Tests are added incrementally — each task appends tests to this file, then implements to make them pass.
 
 **Test skill:** All test code in this plan follows `.github/skills/write-test/SKILL.md` — comment-structured specs, `getByTestId()` selectors, `updateDemoHubState` fixture mutators for seeding, branch-free deterministic flows, assertions in specs not page models.
 
@@ -27,15 +27,15 @@ Editing a slot triggers an immediate `writeButtonMap` to the hub. Button labels 
 ### Task 1: Rename button `0x00` from `"-"` to `"A"` + write first E2E test
 
 **Files:**
-- Create: `open-elin-web/e2e/fixtures/buttons.demo.spec.ts`
-- Modify: `open-elin-web/e2e/pages/ButtonsPageModel.ts` (add new locators for later tasks)
-- Modify: `open-elin-lib/src/commands.ts` (BUTTON_LABELS)
-- Modify: `open-elin-lib/src/default-button-map.ts` (comment)
-- Modify: `open-elin-web/src/web/demo/pod-mock.ts` (local BUTTON_LABELS)
+- Create: `web/e2e/fixtures/buttons.demo.spec.ts`
+- Modify: `web/e2e/pages/ButtonsPageModel.ts` (add new locators for later tasks)
+- Modify: `lib/src/commands.ts` (BUTTON_LABELS)
+- Modify: `lib/src/default-button-map.ts` (comment)
+- Modify: `web/src/web/demo/pod-mock.ts` (local BUTTON_LABELS)
 
 - [ ] **Add new locators to ButtonsPageModel**
 
-Add to `open-elin-web/e2e/pages/ButtonsPageModel.ts` — interaction/read helpers only, no assertions:
+Add to `web/e2e/pages/ButtonsPageModel.ts` — interaction/read helpers only, no assertions:
 
 ```typescript
 podGroups(): Locator {
@@ -77,7 +77,7 @@ addTriggerButtons(): Locator {
 
 - [ ] **Write the failing test**
 
-Create `open-elin-web/e2e/fixtures/buttons.demo.spec.ts` — one comprehensive test covering the full redesigned buttons screen:
+Create `web/e2e/fixtures/buttons.demo.spec.ts` — one comprehensive test covering the full redesigned buttons screen:
 
 ```typescript
 import { expect, test } from "../fixture";
@@ -186,31 +186,31 @@ This is the primary test for the entire redesigned feature. It covers: layout st
 
 - [ ] **Run the test — expect FAIL**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test buttons.demo --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test buttons.demo --reporter=line`
 Expected: FAIL — redesigned layout doesn't exist yet.
 
 - [ ] **Implement the label rename**
 
-In `open-elin-lib/src/commands.ts`, change `BUTTON_LABELS["00"]` from `"-"` to `"A"`.
+In `lib/src/commands.ts`, change `BUTTON_LABELS["00"]` from `"-"` to `"A"`.
 
-In `open-elin-lib/src/default-button-map.ts`, fix comment: `// button A   → Shift Up`.
+In `lib/src/default-button-map.ts`, fix comment: `// button A   → Shift Up`.
 
-In `open-elin-web/src/web/demo/pod-mock.ts`, change local `BUTTON_LABELS["00"]` from `"-"` to `"A"`.
+In `web/src/web/demo/pod-mock.ts`, change local `BUTTON_LABELS["00"]` from `"-"` to `"A"`.
 
 - [ ] **Run the test — still FAIL (expected)**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test buttons.demo --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test buttons.demo --reporter=line`
 Expected: still FAIL — label rename is done but the pod-group/action-row layout hasn't been built yet. The test turns green after Task 5.
 
 - [ ] **Run full E2E suite for regressions on the label rename**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test --reporter=line`
 Expected: existing tests pass. Fix any assertion that expects `"-"` for button 0x00.
 
 - [ ] **Commit**
 
 ```bash
-git add open-elin-lib/src/commands.ts open-elin-lib/src/default-button-map.ts open-elin-web/src/web/demo/pod-mock.ts open-elin-web/e2e/fixtures/buttons.demo.spec.ts open-elin-web/e2e/pages/ButtonsPageModel.ts
+git add lib/src/commands.ts lib/src/default-button-map.ts web/src/web/demo/pod-mock.ts web/e2e/fixtures/buttons.demo.spec.ts web/e2e/pages/ButtonsPageModel.ts
 git commit -m "Rename button 0x00 from '-' to 'A' for consistent port naming" -m "Port A base button was labeled '-' while B/C/D used their letter. Now consistent: A, A-1..A-5, B, B-1..B-5, etc."
 ```
 
@@ -219,13 +219,13 @@ git commit -m "Rename button 0x00 from '-' to 'A' for consistent port naming" -m
 ### Task 2: Add pod model profiles
 
 **Files:**
-- Create: `open-elin-lib/src/pod-models.ts`
+- Create: `lib/src/pod-models.ts`
 
 No test for this task — it's a pure data module with no behavior worth testing in isolation. It gets exercised by the E2E tests in Task 5 (inert badges, unbound ports).
 
 - [ ] **Create pod-models.ts**
 
-Create `open-elin-lib/src/pod-models.ts`:
+Create `lib/src/pod-models.ts`:
 
 ```typescript
 export interface ButtonPosition {
@@ -271,13 +271,13 @@ export function isButtonWired(
 
 - [ ] **Run full E2E suite to confirm no breakage**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test --reporter=line`
 Expected: all pass (new module isn't imported yet, no effect).
 
 - [ ] **Commit**
 
 ```bash
-git add open-elin-lib/src/pod-models.ts
+git add lib/src/pod-models.ts
 git commit -m "Add pod model profiles for wired-button detection" -m "PodModel maps BLE device name to physically wired button codes. NXS MTB Pod: A (0x00), A-1 (0x01), A-2 (0x02)."
 ```
 
@@ -286,15 +286,15 @@ git commit -m "Add pod model profiles for wired-button detection" -m "PodModel m
 ### Task 3: Extract `<pod-diagram>` from `PodMockGui`
 
 **Files:**
-- Create: `open-elin-web/src/web/components/pod-diagram.ts`
-- Modify: `open-elin-web/src/web/demo/pod-mock-gui.ts` (use `<pod-diagram>` internally)
-- Modify: `open-elin-web/e2e/fixtures/buttons.demo.spec.ts` (add test)
+- Create: `web/src/web/components/pod-diagram.ts`
+- Modify: `web/src/web/demo/pod-mock-gui.ts` (use `<pod-diagram>` internally)
+- Modify: `web/e2e/fixtures/buttons.demo.spec.ts` (add test)
 
 Extract the pod image + leader lines + positioned button containers into a reusable `<pod-diagram>` component. It uses named transclusion `<slot>` elements for each button position. Unfilled slots render nothing — this way the mock fills 4 positions (tune/up/down/pair) while the buttons screen can fill only the 3 wired ones.
 
 - [ ] **Write the failing E2E test**
 
-Append to `open-elin-web/e2e/fixtures/buttons.demo.spec.ts`:
+Append to `web/e2e/fixtures/buttons.demo.spec.ts`:
 
 ```typescript
 test("pod diagram renders image and leader lines in mock GUI", async ({
@@ -323,17 +323,17 @@ test("pod diagram renders image and leader lines in mock GUI", async ({
 
 - [ ] **Run the test — expect FAIL**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test buttons.demo --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test buttons.demo --reporter=line`
 Expected: FAIL — `<pod-diagram>` element doesn't exist yet.
 
 - [ ] **Implement pod-diagram component**
 
-Create `open-elin-web/src/web/components/pod-diagram.ts`:
+Create `web/src/web/components/pod-diagram.ts`:
 
 ```typescript
 import { LitElement, css, html, svg } from "lit";
 import { property } from "lit/decorators.js";
-import type { ButtonPosition } from "open-elin-lib/pod-models";
+import type { ButtonPosition } from "lib/pod-models";
 
 const defaultPodImageUrl = new URL("../images/pod.png", import.meta.url).href;
 
@@ -433,7 +433,7 @@ Key design: each position renders a `<div class="pod-slot">` wrapping a `<slot n
 
 - [ ] **Refactor PodMockGui to use pod-diagram**
 
-In `open-elin-web/src/web/demo/pod-mock-gui.ts`:
+In `web/src/web/demo/pod-mock-gui.ts`:
 - Import `./components/pod-diagram.ts`
 - Import `POD_MODELS` to get button positions for "NXS MTB Pod"
 - Replace the inline `<div class="pod-image-wrap">` + `<img>` + `<svg>` + positioned buttons with:
@@ -451,18 +451,18 @@ Move the button-specific CSS (`.pod-button` appearance, hover, active) to remain
 
 - [ ] **Run the test — expect PASS**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test buttons.demo --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test buttons.demo --reporter=line`
 Expected: PASS.
 
 - [ ] **Run full E2E suite (mock GUI behavior must be unchanged)**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test --reporter=line`
 Expected: all pass — the mock GUI looks and behaves identically, just using the extracted component internally.
 
 - [ ] **Commit**
 
 ```bash
-git add open-elin-web/src/web/components/pod-diagram.ts open-elin-web/src/web/demo/pod-mock-gui.ts open-elin-web/e2e/fixtures/buttons.demo.spec.ts
+git add web/src/web/components/pod-diagram.ts web/src/web/demo/pod-mock-gui.ts web/e2e/fixtures/buttons.demo.spec.ts
 git commit -m "Extract pod-diagram component from PodMockGui" -m "Reusable <pod-diagram> renders pod image, SVG leader lines, and named transclusion slots for each button position. Unfilled slots collapse to nothing. PodMockGui now uses pod-diagram internally with pressable buttons in slots."
 ```
 
@@ -471,14 +471,14 @@ git commit -m "Extract pod-diagram component from PodMockGui" -m "Reusable <pod-
 ### Task 4: Add `writeButtonMap` store action + demo transport support
 
 **Files:**
-- Modify: `open-elin-web/e2e/fixtures/buttons.demo.spec.ts` (add test)
-- Modify: `open-elin-web/src/web/store.ts`
-- Modify: `open-elin-web/src/web/demo/hub-mock.ts`
-- Modify: `open-elin-web/src/web/demo/transport-demo.ts`
+- Modify: `web/e2e/fixtures/buttons.demo.spec.ts` (add test)
+- Modify: `web/src/web/store.ts`
+- Modify: `web/src/web/demo/hub-mock.ts`
+- Modify: `web/src/web/demo/transport-demo.ts`
 
 - [ ] **Write the failing E2E test**
 
-Append to `open-elin-web/e2e/fixtures/buttons.demo.spec.ts`:
+Append to `web/e2e/fixtures/buttons.demo.spec.ts`:
 
 ```typescript
 test("writeButtonMap round-trip reduces visible entries", async ({
@@ -518,12 +518,12 @@ test("writeButtonMap round-trip reduces visible entries", async ({
 
 - [ ] **Run the test — expect FAIL**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test buttons.demo --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test buttons.demo --reporter=line`
 Expected: FAIL — `updateDemoHubState` may not propagate to the buttons screen correctly, or the refresh doesn't re-read. Diagnose and adjust.
 
 - [ ] **Implement writeButtonMap**
 
-Add `setButtonTable` to `open-elin-web/src/web/demo/hub-mock.ts`:
+Add `setButtonTable` to `web/src/web/demo/hub-mock.ts`:
 
 ```typescript
 setButtonTable(entries: HubStateShape["buttonTable"]) {
@@ -532,12 +532,12 @@ setButtonTable(entries: HubStateShape["buttonTable"]) {
 }
 ```
 
-Handle `WriteButtonMap` (`0x0014`) in `open-elin-web/src/web/demo/transport-demo.ts`. Check the existing handler for `writeDefaultButtonMap` and replicate for arbitrary entries:
+Handle `WriteButtonMap` (`0x0014`) in `web/src/web/demo/transport-demo.ts`. Check the existing handler for `writeDefaultButtonMap` and replicate for arbitrary entries:
 1. Accept the size header (subcommand `0x00`)
 2. Accept each entry (subcommand `0x01`) — accumulate entries
 3. After all entries received, call `demoHub.setButtonTable(accumulated)`
 
-Add `writeButtonMap` action to `open-elin-web/src/web/store.ts`:
+Add `writeButtonMap` action to `web/src/web/store.ts`:
 
 ```typescript
 export async function writeButtonMap(entries: ButtonMapEntry[]) {
@@ -561,18 +561,18 @@ export async function writeButtonMap(entries: ButtonMapEntry[]) {
 
 - [ ] **Run the test — expect PASS**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test buttons.demo --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test buttons.demo --reporter=line`
 Expected: PASS.
 
 - [ ] **Run full E2E suite**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test --reporter=line`
 Expected: all tests pass.
 
 - [ ] **Commit**
 
 ```bash
-git add open-elin-web/src/web/store.ts open-elin-web/src/web/demo/hub-mock.ts open-elin-web/src/web/demo/transport-demo.ts open-elin-web/e2e/fixtures/buttons.demo.spec.ts
+git add web/src/web/store.ts web/src/web/demo/hub-mock.ts web/src/web/demo/transport-demo.ts web/e2e/fixtures/buttons.demo.spec.ts
 git commit -m "Add writeButtonMap store action for arbitrary map entries" -m "Supports editing individual button assignments. Demo transport handles the write and updates hub mock state. E2E test verifies round-trip."
 ```
 
@@ -581,8 +581,8 @@ git commit -m "Add writeButtonMap store action for arbitrary map entries" -m "Su
 ### Task 5: Redesign Buttons page — action-centric layout with pod diagram
 
 **Files:**
-- Modify: `open-elin-web/e2e/fixtures/buttons.demo.spec.ts` (add test)
-- Modify: `open-elin-web/src/web/components/page-device-buttons.ts`
+- Modify: `web/e2e/fixtures/buttons.demo.spec.ts` (add test)
+- Modify: `web/src/web/components/page-device-buttons.ts`
 
 Target layout — the pod indicator shows wired bindings directly on the diagram; orphan bindings list below:
 
@@ -616,9 +616,9 @@ Wired bindings are shown as interactive elements in the `<pod-diagram>` slots �
 
 No new test — the comprehensive test from Task 1 (`"buttons screen shows trigger types, supports add/remove triggers and orphan removal"`) covers this. The goal of this task is to make that test's layout assertions go green.
 
-Rewrite `open-elin-web/src/web/components/page-device-buttons.ts`:
+Rewrite `web/src/web/components/page-device-buttons.ts`:
 
-**splitByWired helper** using `getPodModel` + `isButtonWired` from `open-elin-lib/pod-models`. Splits a pod's button table entries into `wired` (codes physically on the pod) and `orphan` (codes not wired).
+**splitByWired helper** using `getPodModel` + `isButtonWired` from `lib/pod-models`. Splits a pod's button table entries into `wired` (codes physically on the pod) and `orphan` (codes not wired).
 
 **render()** groups buttonTable entries by pod MAC, then renders `renderPodGroup` for each.
 
@@ -632,7 +632,7 @@ All `data-test-id` values must match `ButtonsPageModel` locators.
 
 - [ ] **Run the Task 1 test — expect PASS**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test buttons.demo --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test buttons.demo --reporter=line`
 Expected: `"buttons screen shows trigger types, supports add/remove triggers and orphan removal"` now PASSES (layout assertions only — trigger editing sections still fail until Task 6).
 
 - [ ] **Fix hub-reset spec (regression)**
@@ -641,18 +641,18 @@ Update `hub-reset.demo.spec.ts`: replace `mappingCards()` count = 7 with pod-gro
 - After pairing: 1 pod group, 3 wired button groups, 3 wired bindings
 - After reset + refresh: 0 pod groups, empty state visible
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test hub-reset --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test hub-reset --reporter=line`
 Expected: PASS.
 
 - [ ] **Run full E2E suite**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test --reporter=line`
 Expected: all pass.
 
 - [ ] **Commit**
 
 ```bash
-git add open-elin-web/src/web/components/page-device-buttons.ts open-elin-web/e2e/fixtures/buttons.demo.spec.ts open-elin-web/e2e/fixtures/hub-reset.demo.spec.ts
+git add web/src/web/components/page-device-buttons.ts web/e2e/fixtures/buttons.demo.spec.ts web/e2e/fixtures/hub-reset.demo.spec.ts
 git commit -m "Redesign Buttons page: button-grouped layout with trigger types" -m "Wired bindings shown as button groups on pod diagram with trigger→function rows and add-trigger controls. Orphan bindings use same grouped layout below. Grouped by pod MAC."
 ```
 
@@ -661,8 +661,8 @@ git commit -m "Redesign Buttons page: button-grouped layout with trigger types" 
 ### Task 6: Wire slot editing with live write-to-hub
 
 **Files:**
-- Modify: `open-elin-web/e2e/fixtures/buttons.demo.spec.ts` (add test)
-- Modify: `open-elin-web/src/web/components/page-device-buttons.ts`
+- Modify: `web/e2e/fixtures/buttons.demo.spec.ts` (add test)
+- Modify: `web/src/web/components/page-device-buttons.ts`
 
 - [ ] **Implement binding change/remove/add-trigger handlers (makes Task 1 test's editing sections pass)**
 
@@ -734,18 +734,18 @@ Four handlers: `onFunctionChange` updates the function dropdown, `onTriggerChang
 
 - [ ] **Run the test — expect PASS**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test buttons.demo --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test buttons.demo --reporter=line`
 Expected: PASS.
 
 - [ ] **Run full E2E suite**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test --reporter=line`
 Expected: all pass.
 
 - [ ] **Commit**
 
 ```bash
-git add open-elin-web/src/web/components/page-device-buttons.ts open-elin-web/e2e/fixtures/buttons.demo.spec.ts
+git add web/src/web/components/page-device-buttons.ts web/e2e/fixtures/buttons.demo.spec.ts
 git commit -m "Wire live write-on-change for binding editing" -m "Function change, trigger change, add trigger, and remove binding all immediately write the full map to the hub and refresh. Loading guard prevents double-writes."
 ```
 
@@ -754,17 +754,17 @@ git commit -m "Wire live write-on-change for binding editing" -m "Function chang
 ### Task 7: Mock pod trigger types + end-to-end verification
 
 **Files:**
-- Modify: `open-elin-web/src/web/demo/pod-mock.ts` (add doubleClickButton, add ACTION_LABELS["02"])
-- Modify: `open-elin-web/src/web/demo/pod-mock-gui.ts` (dynamic trigger buttons with labels from button table)
-- Modify: `open-elin-web/src/web/demo/transport-demo.ts` (match action codes from button table)
-- Modify: `open-elin-web/e2e/pages/MacPageModel.ts` (update pod button locator for new structure)
-- Modify: `open-elin-web/e2e/fixtures/buttons.demo.spec.ts` (add e2e verification test)
+- Modify: `web/src/web/demo/pod-mock.ts` (add doubleClickButton, add ACTION_LABELS["02"])
+- Modify: `web/src/web/demo/pod-mock-gui.ts` (dynamic trigger buttons with labels from button table)
+- Modify: `web/src/web/demo/transport-demo.ts` (match action codes from button table)
+- Modify: `web/e2e/pages/MacPageModel.ts` (update pod button locator for new structure)
+- Modify: `web/e2e/fixtures/buttons.demo.spec.ts` (add e2e verification test)
 
 **Goal:** Close the loop: configure a binding with a trigger type → fire it on the mock pod → verify the result on the cogs screen. The mock pod GUI shows per-trigger sub-buttons labeled with the actual mapped function from the button table. The transport matches action codes from button table entries instead of using hardcoded shift-on-release / tune-on-press logic.
 
 - [ ] **Write the failing E2E test**
 
-Append to `open-elin-web/e2e/fixtures/buttons.demo.spec.ts`:
+Append to `web/e2e/fixtures/buttons.demo.spec.ts`:
 
 ```typescript
 import { CogsPageModel } from "../pages/CogsPageModel";
@@ -823,7 +823,7 @@ This test proves:
 
 - [ ] **Run the test — expect FAIL**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test buttons.demo --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test buttons.demo --reporter=line`
 Expected: FAIL — mock pod doesn't have trigger sub-buttons or dynamic labels yet.
 
 - [ ] **Update pod-mock.ts**
@@ -903,23 +903,23 @@ podShiftUpButton(): Locator {
 }
 ```
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test mac-acquisition --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test mac-acquisition --reporter=line`
 Expected: PASS.
 
 - [ ] **Run the test — expect PASS**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test buttons.demo --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test buttons.demo --reporter=line`
 Expected: PASS.
 
 - [ ] **Run full E2E suite**
 
-Run: `cd c:\dev\nxs\open-elin-web ; npx playwright test --reporter=line`
+Run: `cd c:\dev\nxs\web ; npx playwright test --reporter=line`
 Expected: all pass.
 
 - [ ] **Commit**
 
 ```bash
-git add open-elin-web/src/web/demo/pod-mock.ts open-elin-web/src/web/demo/pod-mock-gui.ts open-elin-web/src/web/demo/transport-demo.ts open-elin-web/e2e/pages/MacPageModel.ts open-elin-web/e2e/fixtures/buttons.demo.spec.ts
+git add web/src/web/demo/pod-mock.ts web/src/web/demo/pod-mock-gui.ts web/src/web/demo/transport-demo.ts web/e2e/pages/MacPageModel.ts web/e2e/fixtures/buttons.demo.spec.ts
 git commit -m "Mock pod: trigger sub-buttons with dynamic labels from button table" -m "Each physical button shows per-trigger-type sub-buttons labeled with the mapped function. Transport matches action codes from button table instead of hardcoded shift-on-release logic. E2E test verifies: configure trigger → fire on mock pod → verify on cogs screen."
 ```
 
@@ -935,7 +935,7 @@ git commit -m "Mock pod: trigger sub-buttons with dynamic labels from button tab
 
 4. **Button code `0x00` was renamed from `"-"` to `"A"`** — grep spec files for `"-"` assertions before running tests.
 
-5. **All E2E tests live in a single file**: `open-elin-web/e2e/fixtures/buttons.demo.spec.ts`. No separate spec files per task.
+5. **All E2E tests live in a single file**: `web/e2e/fixtures/buttons.demo.spec.ts`. No separate spec files per task.
 
 6. **Test seeding**: Use `updateDemoHubState` fixture mutator to seed deterministic state. Call after `landing.open()` but before `landing.startDemo()` for pre-boot seeding, or after demo start for mid-test mutations. Do not use `window.__appActions` or `window.__appState` hacks.
 

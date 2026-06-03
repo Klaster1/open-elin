@@ -1,6 +1,6 @@
 # Slim Zephyr build image — ARM toolchain only (~2 GB vs ~29 GB).
-# Build once:  docker build -t nxs-zephyr .
-# Then build firmware:  docker run --rm -v ./:/app nxs-zephyr
+# Build once:  docker build -t open-elin-pod-firmware-toolchain .
+# Then build firmware:  docker run --rm -v ./:/app open-elin-pod-firmware-toolchain
 
 FROM ubuntu:24.04
 

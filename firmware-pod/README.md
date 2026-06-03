@@ -79,7 +79,7 @@ The pairing button does different things depending on how long you hold it:
 ## Prerequisites
 
 - Docker (the Zephyr SDK is baked into a ~29 GB image)
-- One-time image build: `docker build -t nxs-zephyr .`
+- One-time image build: `docker build -t open-elin-pod-firmware-toolchain .`
 
 ## Build
 
