@@ -6,18 +6,18 @@ Open-source replacement firmware and tools for the NXS BikeNet wireless electron
 
 ## Workspace structure
 
-| Folder | Purpose |
-|--------|---------|
-| `lib/` | Shared protocol library (commands, protocol) — cross-platform (Node.js + browser) |
-| `cli/` | Node.js CLI for controlling NXS hubs over BLE (TypeScript, ESM) |
-| `web/` | Lit-based web app for hub configuration via Web Bluetooth |
-| `firmware-pod/` | Zephyr C pod firmware for SuperMini nRF52840 |
-| `documents/` | Protocol specs, hardware maps, observed behavior notes |
-| `plans/` | Implementation plans |
-| `decompilation/` | APK decompilation sources (reference only, do not modify) |
-| `data/` | BLE sniff captures and raw data |
-| `prints/` | 3D print files (FreeCAD, 3MF) |
-| `tools/` | Serial probing scripts, JADX, OpenOCD |
+| Folder           | Purpose                                                                           |
+| ---------------- | --------------------------------------------------------------------------------- |
+| `lib/`           | Shared protocol library (commands, protocol) — cross-platform (Node.js + browser) |
+| `cli/`           | Node.js CLI for controlling NXS hubs over BLE (TypeScript, ESM)                   |
+| `web/`           | Lit-based web app for hub configuration via Web Bluetooth                         |
+| `firmware-pod/`  | Zephyr C pod firmware for SuperMini nRF52840                                      |
+| `documents/`     | Protocol specs, hardware maps, observed behavior notes                            |
+| `plans/`         | Implementation plans                                                              |
+| `decompilation/` | APK decompilation sources (reference only, do not modify)                         |
+| `data/`          | BLE sniff captures and raw data                                                   |
+| `prints/`        | 3D print files (FreeCAD, 3MF)                                                     |
+| `tools/`         | Serial probing scripts, JADX, OpenOCD                                             |
 
 ## Tech stack
 
@@ -27,12 +27,12 @@ Open-source replacement firmware and tools for the NXS BikeNet wireless electron
 
 ## Hardware MACs
 
-| Device | MAC | Name |
-|--------|-----|------|
-| Hub | `D7:BA:AB:52:A0:E5` | NXS eLink hub |
-| Pod (real) | `D5:89:B2:13:FA:04` | NXS MTB Pod |
-| Pod (fake, CircuitPython) | `C2:4F:23:0B:B5:43` | CircuitPython fake pod |
-| Pod (fake, Zephyr) | `F7:3A:3D:75:99:A0` | Zephyr C firmware on SuperMini |
+| Device                    | MAC                 | Name                           |
+| ------------------------- | ------------------- | ------------------------------ |
+| Hub                       | `D7:BA:AB:52:A0:E5` | NXS eLink hub                  |
+| Pod (real)                | `D5:89:B2:13:FA:04` | NXS MTB Pod                    |
+| Pod (fake, CircuitPython) | `C2:4F:23:0B:B5:43` | CircuitPython fake pod         |
+| Pod (fake, Zephyr)        | `F7:3A:3D:75:99:A0` | Zephyr C firmware on SuperMini |
 
 ## Conventions
 
