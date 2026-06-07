@@ -117,12 +117,15 @@ static int64_t last_btn_tune_ms;
 static void btn_pair_work_handler(struct k_work *work)
 {
     ARG_UNUSED(work);
-    int64_t now = k_uptime_get();
-    if (now - last_btn_pair_ms < DEBOUNCE_MS) { return; }
-    last_btn_pair_ms = now;
 
     if (gpio_pin_get_dt(&btn_pair)) {
-        /* Button pressed — wake radio, flash battery level, start 6s hold timer */
+        /* Button pressed — debounce only the press edge so a quick tap's
+         * release is never swallowed (else the 6s hold timer would fire). */
+        int64_t now = k_uptime_get();
+        if (now - last_btn_pair_ms < DEBOUNCE_MS) { return; }
+        last_btn_pair_ms = now;
+
+        /* Wake radio, flash battery level, start 6s hold timer */
         if (app.radio_sleeping) {
             radio_wake();
         }
@@ -136,7 +139,7 @@ static void btn_pair_work_handler(struct k_work *work)
         }
         k_work_schedule(&btn_pair_hold_work, K_SECONDS(6));
     } else {
-        /* Button released — cancel if held less than 6s */
+        /* Button released — always cancel the pending hold (no debounce gate) */
         k_work_cancel_delayable(&btn_pair_hold_work);
     }
 }
