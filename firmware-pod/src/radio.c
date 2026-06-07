@@ -4,6 +4,8 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gap.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/poweroff.h>
+#include <hal/nrf_gpio.h>
 
 #include "app.h"
 #include "radio.h"
@@ -43,8 +45,12 @@ static const struct bt_data sd[] = {
 #define LATENCY_RELAXED         50    /* Wider latency for idle saving */
 #define CONN_INTERVAL           48    /* 60ms — keep hub's interval unchanged */
 
+/*── Deep sleep ──*/
+#define WAKE_PIN_PAIR  20    /* P0.20 — pair button (active low) wakes from System OFF */
+
 /*── Forward declarations ──*/
 static void send_press_release(uint8_t btn_id);
+static void enter_system_off(void);
 
 /*── Timer/work objects ──*/
 static void adv_timeout_work_handler(struct k_work *work);
@@ -133,9 +139,8 @@ static void adv_timeout_work_handler(struct k_work *work)
     if (app.current_conn) {
         return;  /* Don't sleep while connected */
     }
-    bt_le_adv_stop();
-    app.radio_sleeping = true;
-    NUS_LOG("Radio sleep (no hub for %d min)", ADV_TIMEOUT_MIN);
+    NUS_LOG("Idle %d min — sleeping", ADV_TIMEOUT_MIN);
+    enter_system_off();
 }
 
 /*── Pending shift ──*/
@@ -151,6 +156,31 @@ static void pending_shift_flush(void)
         app.pending_shift = 0xFF;
         send_press_release(btn_id);
     }
+}
+
+/*── Deep sleep (System OFF) ──*/
+static void enter_system_off(void)
+{
+    /* On USB (dev/charging) don't power off — just stop advertising so the
+     * board stays alive for the serial console. radio_wake() resumes it. */
+    if (NRF_POWER->USBREGSTATUS & POWER_USBREGSTATUS_VBUSDETECT_Msk) {
+        bt_le_adv_stop();
+        app.radio_sleeping = true;
+        NUS_LOG("Radio sleep (USB present — no System OFF)");
+        return;
+    }
+
+    NUS_LOG("System OFF (wake: pair button)");
+    bt_le_adv_stop();
+    k_msleep(50);  /* let the NUS/serial message flush before powering down */
+
+    /* Arm pair button (P0.20, active low) as the System OFF wake source.
+     * SENSE_LOW fires DETECT when the button is pressed, triggering a reset.
+     * Pull-up is retained through System OFF. */
+    nrf_gpio_cfg_input(WAKE_PIN_PAIR, NRF_GPIO_PIN_PULLUP);
+    nrf_gpio_cfg_sense_set(WAKE_PIN_PAIR, NRF_GPIO_PIN_SENSE_LOW);
+
+    sys_poweroff();  /* does not return — wake is a cold boot */
 }
 
 /*── Radio sleep/wake ──*/
@@ -169,9 +199,7 @@ void radio_wake(void)
 void radio_force_sleep(void)
 {
     k_timer_stop(&adv_timeout_timer);
-    bt_le_adv_stop();
-    app.radio_sleeping = true;
-    NUS_LOG("Radio sleep (forced)");
+    enter_system_off();
 }
 
 /*── Latency management ──*/
