@@ -1,7 +1,19 @@
 # serial-buttons.ps1 — Interactive serial button trigger for the Zephyr pod
 # Keys: u = shift up, d = shift down, B = enter bootloader, q = quit
 
-param([string]$Port = "COM8", [int]$Baud = 115200)
+param([string]$Port = "", [int]$Baud = 115200)
+
+function Find-PodPort {
+    # Auto-detect the pod COM port by USB VID/PID (CONFIG_USB_DEVICE_VID/PID).
+    # The COM number drifts across flashes; VID/PID is stable.
+    $dev = Get-PnpDevice -Class Ports -PresentOnly -ErrorAction SilentlyContinue |
+        Where-Object { $_.InstanceId -match "VID_1209.PID_0001" } |
+        Select-Object -First 1
+    if ($dev -and $dev.FriendlyName -match '\((COM\d+)\)') {
+        return $Matches[1]
+    }
+    return $null
+}
 
 function Connect-Serial {
     param([string]$Port, [int]$Baud)
@@ -16,6 +28,15 @@ function Show-Banner {
     Write-Host "  0-9 = Sim Battery (0=dead 5=mid 9=full)    v = Read Battery" -ForegroundColor Cyan
     Write-Host "  F = Flash       B = Bootloader    q = Quit" -ForegroundColor Cyan
     Write-Host ""
+}
+
+if (-not $Port) {
+    $Port = Find-PodPort
+    if (-not $Port) {
+        Write-Host "Pod not found (VID_1209/PID_0001). Plug it in, or pass -Port COMx." -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "Auto-detected pod on $Port" -ForegroundColor DarkGreen
 }
 
 $serial = Connect-Serial $Port $Baud
@@ -68,12 +89,15 @@ try {
                         Copy-Item $uf2 $drive
                         Write-Host "Flashed! Waiting for reboot..." -ForegroundColor Green
                     }
-                    # 4. Wait for serial port to reappear
+                    # 4. Wait for serial port to reappear (COM number may change after flash)
                     $reconnected = $false
                     for ($i = 0; $i -lt 30; $i++) {
                         Start-Sleep -Milliseconds 500
+                        $newPort = Find-PodPort
+                        if (-not $newPort) { continue }
                         try {
-                            $serial = Connect-Serial $Port $Baud
+                            $serial = Connect-Serial $newPort $Baud
+                            $Port = $newPort
                             $reconnected = $true
                             break
                         } catch {
