@@ -38,7 +38,7 @@ Same as old protocol. Write PIN to the PIN characteristic; wait for `0x01` notif
 ### Pod-button command renames (opcodes unchanged)
 
 | Opcode | Old name                        | New name                      |
-| ------ | ------------------------------- | ----------------------------- |
+|--------|---------------------------------|-------------------------------|
 | 0x0022 | BLE_CMD_SET_TUNING_BUTTON_LEVEL | BLE_CMD_SET_POD_BUTTON_V_LIST |
 | 0x0023 | BLE_CMD_READ_TUNING_BUTTON      | BLE_CMD_GET_POD_BUTTON_V_LIST |
 | 0x0024 | BLE_CMD_GET_LAST_V              | BLE_CMD_GET_POD_BUTTON_LAST_V |
@@ -70,7 +70,7 @@ SDK helpers (Dart, from `codec.dart`):
 ## Complete command table
 
 | Opcode | Name                          | Changed?            |
-| ------ | ----------------------------- | ------------------- |
+|--------|-------------------------------|---------------------|
 | 0x0000 | BLE_CMD_GET_LIST              |                     |
 | 0x0001 | BLE_CMD_ADD_DEVICE            |                     |
 | 0x0002 | BLE_CMD_REMOVE_DEVICE         |                     |
@@ -108,9 +108,9 @@ SDK helpers (Dart, from `codec.dart`):
 | 0x0023 | BLE_CMD_GET_POD_BUTTON_V_LIST | renamed             |
 | 0x0024 | BLE_CMD_GET_POD_BUTTON_LAST_V | renamed             |
 | 0x0025 | BLE_CMD_GET_FW_VER            | **NEW**             |
-| 0x0026 | BLE_CMD_GET_SEATPOST_COUNT    | **NEW** (not impl.) |
-| 0x0027 | BLE_CMD_PWR_DWN               | **NEW** (not impl.) |
-| 0x0028 | BLE_CMD_TUNE_MODE             | **NEW** (not impl.) |
+| 0x0026 | BLE_CMD_GET_SEATPOST_COUNT    | **NEW**             |
+| 0x0027 | BLE_CMD_PWR_DWN               | **NEW**             |
+| 0x0028 | BLE_CMD_TUNE_MODE             | **NEW**             |
 
 ---
 
@@ -131,7 +131,7 @@ Map payload: up to **64 entries**, each exactly **16 bytes**. Total max payload 
 **Entry layout** (from `encodeDashboardButtonMap` / `decodeDashboardButtonMap` in `dashboard_button_mapping.dart`):
 
 | Offset | Size | Field          | Notes                                                                      |
-| ------ | ---- | -------------- | -------------------------------------------------------------------------- |
+|--------|------|----------------|----------------------------------------------------------------------------|
 | 0      | 6    | `targetMac`    | Target device MAC, bytes reversed (LE)                                     |
 | 6      | 6    | `sourceMac`    | Source pod MAC, bytes reversed (LE)                                        |
 | 12     | 1    | `buttonId[0]`  | First button in chord; `DashboardRemoteButtonId`                           |
@@ -144,7 +144,7 @@ Map payload: up to **64 entries**, each exactly **16 bytes**. Total max payload 
 **DashboardRemoteButtonId** — physical button on a pod:
 
 | Value | Name     | UI label   |
-| ----- | -------- | ---------- |
+|-------|----------|------------|
 | 0x00  | `top`    | "Down"     |
 | 0x01  | `middle` | "Up"       |
 | 0x02  | `bottom` | "Function" |
@@ -152,7 +152,7 @@ Map payload: up to **64 entries**, each exactly **16 bytes**. Total max payload 
 **DashboardButtonFunction** — assignable functions (`off_14` = wire value):
 
 | Value | Name             | UI label          |
-| ----- | ---------------- | ----------------- |
+|-------|------------------|-------------------|
 | 0x0A  | `shiftUp`        | "Shift Up"        |
 | 0x0B  | `shiftDown`      | "Shift Down"      |
 | 0x0C  | `toggle`         | "Toggle"          |
@@ -165,7 +165,7 @@ Map payload: up to **64 entries**, each exactly **16 bytes**. Total max payload 
 **DashboardButtonTargetKind** — what type of device receives the action:
 
 | Value | Name              | UI label           |
-| ----- | ----------------- | ------------------ |
+|-------|-------------------|--------------------|
 | 0x00  | `rearDerailleur`  | "Rear derailleur"  |
 | 0x01  | `frontDerailleur` | "Front derailleur" |
 | 0x02  | `seatpost`        | "Seatpost"         |
@@ -205,7 +205,7 @@ Map payload is a flat byte array of N × 16-byte entries. Divide payload length 
 **Response entry layout** (from `decodeDashboardButtonMap` in `dashboard_button_mapping.dart`):
 
 | Offset | Size | Field          | Decode                                                                |
-| ------ | ---- | -------------- | --------------------------------------------------------------------- |
+|--------|------|----------------|-----------------------------------------------------------------------|
 | 0      | 6    | `targetMac`    | Call `bytesLeToMacBe(buf, offset)` → MAC string `"AA:BB:CC:DD:EE:FF"` |
 | 6      | 6    | `sourceMac`    | Call `bytesLeToMacBe(buf, offset+6)` → MAC string                     |
 | 12     | 1    | `buttonId[0]`  | u8 — first button; see `DashboardRemoteButtonId` table                |
@@ -233,7 +233,7 @@ for i in range(0, payload.length, 16):
 **DashboardRemoteButtonId** — physical button on a pod:
 
 | Value | Name     | UI label   |
-| ----- | -------- | ---------- |
+|-------|----------|------------|
 | 0x00  | `top`    | "Down"     |
 | 0x01  | `middle` | "Up"       |
 | 0x02  | `bottom` | "Function" |
@@ -241,7 +241,7 @@ for i in range(0, payload.length, 16):
 **DashboardButtonFunction** — function code values:
 
 | Value | Name             | UI label          |
-| ----- | ---------------- | ----------------- |
+|-------|------------------|-------------------|
 | 0x0A  | `shiftUp`        | "Shift Up"        |
 | 0x0B  | `shiftDown`      | "Shift Down"      |
 | 0x0C  | `toggle`         | "Toggle"          |
@@ -254,7 +254,7 @@ for i in range(0, payload.length, 16):
 **DashboardButtonTargetKind** — classification of the `targetMac` device:
 
 | Value | Name              | UI label           |
-| ----- | ----------------- | ------------------ |
+|-------|-------------------|--------------------|
 | 0x00  | `rearDerailleur`  | "Rear derailleur"  |
 | 0x01  | `frontDerailleur` | "Front derailleur" |
 | 0x02  | `seatpost`        | "Seatpost"         |
@@ -274,10 +274,10 @@ FF EE DD CC BB AA  66 55 44 33 22 11  01 FF 00 0B   <- entry 1
 
 Decoded:
 
-| #   | targetMac         | sourceMac         | btn0               | btn1          | action       | function         |
-| --- | ----------------- | ----------------- | ------------------ | ------------- | ------------ | ---------------- |
-| 0   | AA:BB:CC:DD:EE:FF | 11:22:33:44:55:66 | 0x00 (top/"Down")  | 0xFF (single) | 0x00 (press) | 0x0A (shiftUp)   |
-| 1   | AA:BB:CC:DD:EE:FF | 11:22:33:44:55:66 | 0x01 (middle/"Up") | 0xFF (single) | 0x00 (press) | 0x0B (shiftDown) |
+| # | targetMac         | sourceMac         | btn0               | btn1          | action       | function         |
+|---|-------------------|-------------------|--------------------|---------------|--------------|------------------|
+| 0 | AA:BB:CC:DD:EE:FF | 11:22:33:44:55:66 | 0x00 (top/"Down")  | 0xFF (single) | 0x00 (press) | 0x0A (shiftUp)   |
+| 1 | AA:BB:CC:DD:EE:FF | 11:22:33:44:55:66 | 0x01 (middle/"Up") | 0xFF (single) | 0x00 (press) | 0x0B (shiftDown) |
 
 **Differences from old protocol**:
 
@@ -314,38 +314,43 @@ Parameters: repeating 3-byte chunks per gear.
 
 ---
 
-### BLE_CMD_SET_POD_BUTTON_V_LIST (0x0022) — renamed
+### BLE_CMD_SET_POD_BUTTON_V_LIST (0x0022) — renamed; byte layout corrected (2026-08-13)
 
-**Renamed** from `BLE_CMD_SET_TUNING_BUTTON_LEVEL`. Opcode **unchanged** at 0x0022. Encoding identical.
+**Renamed** from `BLE_CMD_SET_TUNING_BUTTON_LEVEL`. Opcode **unchanged** at 0x0022.
 
-**Request format**: `reverseCommand(0x0022)` + reversed pod MAC + parameters.
+**Correction — this is not a flat "one level per button" list.** The payload is a **4-channel × 6-level array of little-endian int16 millivolt thresholds** (4 × 6 × 2 = 48 bytes exactly) — genuine multi-position lever/paddle calibration data, not a binary press/release level. The old Android app's calibration UI corroborates this layout exactly (see below).
 
-Parameters: repeating 2-byte LE levels, one per tuning button.
+**Confirmed exercised in a real product, not over-provisioned dead capacity**: the old Android app (`apk-extracted-project-old`, pre-Flutter-rewrite) ships a full user-facing calibration screen for exactly this table — `ButtonTuningFragment`/`fragment_button_tuning.xml`, backed by `Constants.blackBulletTuningButtons` (`Constants.java`), a hardcoded list of **24 entries** labeled `A, A-1..A-5, B, B-1..B-5, C, C-1..C-5, D, D-1..D-5` — i.e. exactly 4 channels (ports A–D) × 6 named levels (base + 5 sub-positions) each, in the same channel-major storage order. The screen lets a user read the current 24 values, edit each as a decimal string (client-side validated `<= 5000`), and write them all back with one `SET_POD_BUTTON_V_LIST`/`GET_POD_BUTTON_V_LIST` round trip (`BikeNetSystem.setLevels`/`readTuningButtons`, opcodes `TUNING_LEVEL_TABLE`/`"2200"` and `TUNING_TABLE`/`"2300"`). This is on the "Black Bullet" pod product variant (`Constants.BLACK_BULLET`); the simpler `MINI_POD` variant only exposes 2 ports. The 4×6 generality is real, shipped, user-calibrated infrastructure for a genuine multi-position pod, not dead capacity inherited from a shared codebase.
 
-**Example**:
+**Request format**: `reverseCommand(0x0022)` + reversed pod MAC + the full 48-byte payload, laid out as 4 channels × 6 levels, each level a 2-byte LE int16 mV threshold (`payload[channel*12 + level*2 .. +2]`, channel-major, matching the old app's flat 24-entry list order above). Always send exactly 48 payload bytes.
 
-- Levels `[300, 450]` → `2C 01 C2 01`.
-- Payload: `2200` + `665544332211` + `2C01C201`.
+**App-side status (new Flutter app, confirmed 2026-08-13)**: the *current* app (`decompiled-dart`/`decompiled-dart-1.1.2`) has **no encode/decode function for this opcode at all** — `BLE_CMD_SET_POD_BUTTON_V_LIST` exists only as a display-name string in `catalog.dart`'s generic `commandNames()` map (used to pretty-print raw opcodes in logs), with zero callers anywhere in the app beyond that map, and no UI screen references it. The entire button-tuning feature described above was real in the old Android app and appears to have been **dropped, not carried forward**, in the Flutter rewrite — a stronger version of the already-documented `START_DFU` pattern (there, the opcode is unused by the app but at least still encodable in the SDK; here, nothing in the new app's SDK even knows the payload shape). The `[300, 450] → 2C 01 C2 01` example previously shown here was speculative/illustrative, not derived from an actual app-side encoder — see the corrected 48-byte layout above instead.
 
 ---
 
-### BLE_CMD_GET_POD_BUTTON_V_LIST (0x0023) — renamed
+### BLE_CMD_GET_POD_BUTTON_V_LIST (0x0023) — renamed; byte layout corrected (2026-08-13)
 
-**Renamed** from `BLE_CMD_READ_TUNING_BUTTON`. Opcode **unchanged** at 0x0023. Encoding identical.
+**Renamed** from `BLE_CMD_READ_TUNING_BUTTON`. Opcode **unchanged** at 0x0023.
 
 **Request format**: `reverseCommand(0x0023)` + reversed pod MAC. No additional parameters.
 
-**Response**: repeating 2-byte LE values, one per tuning button.
+**Response**: standard header + fixed **48-byte** payload — the pod's current threshold table verbatim, same 4-channel × 6-level × int16 LE mV layout as `SET_POD_BUTTON_V_LIST` above.
+
+**App-side status**: same as `SET_POD_BUTTON_V_LIST` above — no app-side decoder or UI caller found in the current Flutter app; the old Android app's `ButtonTuningFragment` read this response into its 24-entry `blackBulletTuningButtons` list (see above).
 
 ---
 
-### BLE_CMD_GET_POD_BUTTON_LAST_V (0x0024) — renamed
+### BLE_CMD_GET_POD_BUTTON_LAST_V (0x0024) — renamed; semantics corrected (2026-08-13)
 
-**Renamed** from `BLE_CMD_GET_LAST_V`. Opcode **unchanged** at 0x0024. Encoding identical.
+**Renamed** from `BLE_CMD_GET_LAST_V`. Opcode **unchanged** at 0x0024.
 
-**Request format**: `reverseCommand(0x0024)` + reversed hub MAC. No parameters.
+**Request format**: `reverseCommand(0x0024)` + reversed pod MAC. No parameters.
 
-Response: same format as old `BLE_CMD_GET_LAST_V`.
+**Response**: standard header + 2-byte payload.
+
+**Correction — this is not a classified level index.** Despite the "LAST_V" name suggesting a level (0–5) from the threshold table above, the response carries the **raw last-measured millivolt reading** instead. Treat it as a raw mV value, not a level index.
+
+**App-side status**: old Android app confirmed to call this (`BikeNetSystem.getLastVButton`) right after a `BLE_MSG_BUTTON_ACTION` notification whose button-index byte matched a specific condition, looking up the pressed position's label in `Constants.blackBulletTuningButtons` — i.e. "show/log the raw voltage that was just read for whichever of the 24 calibrated positions was pressed," consistent with a calibration/debug workflow. **No equivalent caller was found in the current Flutter app** — same "dropped in the rewrite" pattern as `SET`/`GET_POD_BUTTON_V_LIST` above. This means the note further down this document claiming `BLE_MSG_BUTTON_ACTION` "still triggers `GET_POD_BUTTON_LAST_V` after a press event" is **only true of the old Android app, not the current one** — see the correction in "Notes for implementers" below.
 
 ---
 
@@ -358,7 +363,7 @@ Response: same format as old `BLE_CMD_GET_LAST_V`.
 **Payload byte layout** (from `encodeDashboardFrontConfig` in `dashboard_front_config.dart`):
 
 | Offset | Size | Type   | Field              | Unit               |
-| ------ | ---- | ------ | ------------------ | ------------------ |
+|--------|------|--------|--------------------|--------------------|
 | 0      | 2    | u16 LE | `lowPositionMm`    | mm × 10            |
 | 2      | 2    | u16 LE | `highPositionMm`   | mm × 10            |
 | 4      | 1    | u8     | `followCompMm`     | mm × 10            |
@@ -449,13 +454,13 @@ The number of chunks matches `chainringCount` from the front config (typically 2
 
 ---
 
-### BLE_CMD_START_DFU (0x0021) — NEW (not implemented in current app)
+### BLE_CMD_START_DFU (0x0021) — NEW (no caller in the app)
 
-**Purpose**: Initiate Device Firmware Update (DFU) on the connected hub. The opcode is defined in the protocol (`commandNames` map in `catalog.dart`) but **no `startDfu()` function exists** in the current app's Dart code (`bikenet_client.dart` / `bikenet_sdk_facade.dart`). The app also has no firmware download logic — no Firebase Storage fetch, no Nordic DFU library, no HTTP download. The feature appears planned but not yet shipped.
+**Purpose**: Initiate Device Firmware Update (DFU) on the target device. The opcode is defined in the protocol (`commandNames` map in `catalog.dart`) but no `startDfu()` function exists in the current app's Dart code, and the app has no firmware download logic (no Firebase Storage fetch, no Nordic DFU library, no HTTP download) — the app-side feature is not shipped.
 
-**Request format** (based on protocol definition): `reverseCommand(0x0021)` + reversed hub MAC. No parameters.
+**Request format**: `reverseCommand(0x0021)` + reversed target MAC. No parameters.
 
-**Response**: standard status only. After success, the device would disconnect and re-advertise in DFU mode.
+**Response**: standard status only.
 
 ---
 
@@ -475,7 +480,7 @@ The number of chunks matches `chainringCount` from the front config (typically 2
 
 **Request format**: `reverseCommand(0x0026)` + reversed hub MAC. No parameters.
 
-**Response**: standard header + likely 1-byte count. Exact format TBD.
+**Response**: standard header + fixed **4-byte** payload (u32 LE count) — corrected from the previously-guessed 1 byte.
 
 ---
 
@@ -501,10 +506,10 @@ The number of chunks matches `chainringCount` from the front config (typically 2
 
 ### Existing messages — codes unchanged
 
-| Code   | Name                   | Notes                                       |
-| ------ | ---------------------- | ------------------------------------------- |
-| 0x4000 | BLE_MSG_BAT_V          | Battery voltage; unchanged                  |
-| 0x4001 | BLE_MSG_BUTTON_ACTION  | Button press/release; unchanged             |
+| Code   | Name                  | Notes                           |
+|--------|-----------------------|---------------------------------|
+| 0x4000 | BLE_MSG_BAT_V         | Battery voltage; unchanged      |
+| 0x4001 | BLE_MSG_BUTTON_ACTION | Button press/release; unchanged |
 
 ### BLE_MSG_BAT_V (0x4000) — payload format
 
@@ -512,24 +517,26 @@ Source: `parseBatteryVoltageNotify` in open-elin `demo-node/src/commands.ts`.
 
 Full notification frame:
 
-| Offset | Size | Type    | Field       | Notes                            |
-| ------ | ---- | ------- | ----------- | -------------------------------- |
-| 0      | 2    | —       | pad         | always `00 00`                   |
-| 2      | 2    | u16 LE  | opcode      | `00 40` (= 0x4000)               |
-| 2      | 6    | bytes   | sender MAC  | 6 bytes (bytes 2–7 of frame)     |
-| 8      | 2    | u16 LE  | batteryMv   | **Pod sender**: 2-byte LE mV value |
+| Offset | Size | Type   | Field      | Notes                              |
+|--------|------|--------|------------|------------------------------------|
+| 0      | 2    | —      | pad        | always `00 00`                     |
+| 2      | 2    | u16 LE | opcode     | `00 40` (= 0x4000)                 |
+| 2      | 6    | bytes  | sender MAC | 6 bytes (bytes 2–7 of frame)       |
+| 8      | 2    | u16 LE | batteryMv  | **Pod sender**: 2-byte LE mV value |
 
 Note: hub sender uses a different parse path (reversed bytes → big-endian int). Pod firmware must use the 2-byte LE encoding.
 | 0x4002 | BLE_MSG_BUTTON_TABLE   | Button map dump; unchanged                  |
 | 0x4003 | BLE_MSG_SHIFT_COMPLETE | Shift complete — **payload format changed** |
 | 0x4004 | BLE_MSG_FRONT_COG      | Front derailleur position; unchanged        |
+| 0x4005 | *(unnamed — not in app SDK)* | Pairing/power button **long press**; zero-payload. **Not documented anywhere in the app** — see note below. |
+| 0x4006 | *(unnamed — not in app SDK)* | Pairing/power button **short press**; zero-payload. **Not documented anywhere in the app** — see note below. |
 
 ### BLE_MSG_SHIFT_COMPLETE (0x4003) — payload changed
 
 Old protocol payload was a raw variable-length hex blob. The new SDK defines a structured 3-byte payload (source: `_decodeShiftComplete` in `catalog.dart`):
 
 | Offset | Size | Type   | Field          | Notes                                        |
-| ------ | ---- | ------ | -------------- | -------------------------------------------- |
+|--------|------|--------|----------------|----------------------------------------------|
 | 0      | 2    | u16 LE | `positionMm10` | absolute position × 10 (divide by 10 for mm) |
 | 2      | 1    | u8     | `gear`         | gear index (0-based)                         |
 
@@ -572,12 +579,27 @@ The payload byte(s) likely encode the specific function ID or state. Exact decod
 
 ---
 
+### 0x4005 / 0x4006 — pairing/power button gesture notifications (undocumented in the app SDK, 2026-08-13)
+
+**Purpose**: unsolicited, **zero-payload** notifications the pod sends from its dedicated pairing/power button, distinct from ordinary `BLE_MSG_BUTTON_ACTION` (0x4001) press/release events for the other buttons.
+
+- **0x4005** — long press (held past the long-press threshold).
+- **0x4006** — short press.
+
+**Structure**: standard notification header (`opcode` + sender MAC) only — no payload bytes. Sibling of the ordinary `0x4001` button notification, which carries a 2-byte `{button_index, press_or_release}` payload.
+
+**App-side status (confirmed 2026-08-13)**: neither code appears anywhere in either decompiled Flutter app build (`decompiled-dart`/`decompiled-dart-1.1.2`) — a full-tree search for the literal values `0x4005`/`0x4006`/`16389`/`16390` returned zero hits, and `catalog.dart`'s `messageNames()`/`_messageDecoders()` maps (the app's complete list of recognized peripheral-notification codes) have no entries for them. A pod sending one of these today would reach the app as an **unrecognized/unmapped notification** — `catalog.dart::decodeEventFromFrame` falls through its decoder-map lookup to `decodeUnmappedFrame()`, which in turn produces a generic `UnknownFrameEvent(code, payload)` (see `models.dart`) rather than any pairing-gesture-specific handling. In short: a pod may emit these, but the current app has no idea what they mean.
+
+**Hub-side status**: not characterized — what the hub does with 0x4005/0x4006 specifically is unknown.
+
+---
+
 ## Response / status codes
 
 **Unchanged from old protocol**:
 
 | Code           | Name                     |
-| -------------- | ------------------------ |
+|----------------|--------------------------|
 | 0x8000 (32768) | BLE_STATUS_SUCCESS       |
 | 0x8001 (32769) | BLE_STATUS_INVALID_MSG   |
 | 0x8002 (32770) | BLE_STATUS_INVALID_PARAM |
@@ -606,9 +628,10 @@ Last 6 bytes reversed → MAC: D7:BA:AB:52:A0:E5
 - **Opcodes 0x0000–0x001A and 0x001D/0x001F are unchanged** from the old protocol. Pod-button command opcodes 0x0022–0x0024 are also unchanged (just renamed). Any third-party client only needs to update if it used the now-incorrect opcode assignments published in earlier drafts of this document.
 - **Protocol MAC concept**: the new SDK may send a different "protocol MAC" in the frame than the BLE MAC used for connection. If commands fail with `FORBIDDEN` or `NOT_FOUND`, ensure you are using the hub's BLE MAC (obtainable from advertisement manufacturer data) and not a derived protocol MAC. This is still under investigation.
 - **Front derailleur**: `SET_FRONT_COG_INFO` (0x001E) + `SET_FRONT_CONFIG` (0x001B) together configure the front derailleur. Send `SET_FRONT_CONFIG` first to set positions and chain-ring count, then `SET_FRONT_COG_INFO` to write the per-chainring cable table.
-- **DFU**: `START_DFU` (0x0021) is defined in the protocol but **not yet implemented** in the app. No firmware download or DFU library is present. If triggered manually, it would disconnect the device; reconnect logic should handle re-advertisement in DFU mode.
+- **DFU**: `START_DFU` (0x0021) has no caller in the current app and no firmware download or DFU library — an app-side gap. A raw trigger should assume the device will drop the connection and re-advertise in DFU mode.
 - **Seatpost / eLink**: seatpost commands appear via `BLE_MSG_ELINK_FUNCTION` events (code 0x2000). No dedicated write commands for seatpost were found; control may work through `TUNE_MODE` or custom eLink payloads.
-- **`BLE_MSG_BUTTON_ACTION` flow**: unchanged — still triggers `GET_POD_BUTTON_LAST_V` (0x0024) after a press event.
+- **`BLE_MSG_BUTTON_ACTION` flow**: **correction (2026-08-13)** — this was only ever true of the old (pre-Flutter) Android app: `BikeNetSystem.getLastVButton` confirmed calling `BLE_CMD_GET_LAST_V`/`GET_POD_BUTTON_LAST_V` (0x0024) right after a matching `BLE_MSG_BUTTON_ACTION`, to look up the raw voltage for whichever of the 24 calibrated `blackBulletTuningButtons` positions was pressed. **No equivalent caller exists in the current Flutter app** (see the `GET_POD_BUTTON_LAST_V` entry above) — this whole flow, along with the button-tuning feature it supports, was dropped in the rewrite, not carried forward unchanged as previously stated here.
+- **`SET`/`GET_POD_BUTTON_V_LIST` and `GET_POD_BUTTON_LAST_V` (0x0022–0x0024)**: see the corrected entries above — these encode a 4-channel × 6-level, 48-byte int16-mV threshold table, not a flat per-button level list, and the current app has no encoder/decoder or UI for any of the three opcodes at all (dead on the app side, distinct from — and more thorough than — the already-noted `START_DFU` dead-opcode pattern).
 
 ---
 

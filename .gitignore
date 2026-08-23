@@ -32,3 +32,4 @@ Thumbs.db
 *.FCBak
 *.step
 *.stl
+.claude/settings.json
