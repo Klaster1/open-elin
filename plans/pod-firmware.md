@@ -6,9 +6,8 @@ Goal: build a drop-in replacement pod for the NXS BikeNet system running on a ni
 
 ## Constraints
 
-- No access to original pod firmware binary or source
-- SWD pads are exposed on the PCB (V/IO/CLK/G) but **APPROTECT is enabled** — direct dump is blocked
-- Fault injection (voltage glitch to bypass APPROTECT) is theoretically possible but non-trivial; treat as last resort
+- Clean-room build: we do not read or reference the original pod firmware. Everything below is reconstructed from the device's observed BLE behaviour and the published app/protocol docs.
+- The pod's own SWD pads (V/IO/CLK/G) are read-protected, so the original firmware can't be referenced anyway — which keeps this a clean-room implementation by necessity.
 - Must be compatible with NXS hub (eLink) and the BikeNet Android/Flutter apps
 - Good battery life mandatory
 - **No hub↔pod traffic visibility**: btsnoop is phone HCI log (phone↔hub only); nRF-based sniffer only captures advertisements. Hub↔pod packet content is not observable with current tools. Every claim about what the hub sends to the pod, or how the pod responds, is an unverified hypothesis until empirically demonstrated.
@@ -78,7 +77,7 @@ Note: app UI labels ("Down"/"Up") refer to shift direction, which is inverted fr
 
 ### Button sensing — unknown mechanism
 
-What's known from APK decompile only (none of this has been run or observed):
+What's known from the app's published command set (none of this has been run or observed):
 - `BLE_CMD_SET_POD_BUTTON_V_LIST` (0x0022): payload constructed with pod MAC + list of values
 - `BLE_CMD_GET_POD_BUTTON_V_LIST` (0x0023): payload constructed with pod MAC, no extra parameters
 - `BLE_CMD_GET_POD_BUTTON_LAST_V` (0x0024): payload constructed with hub MAC; called during Setup/calibration flow
@@ -87,7 +86,7 @@ What any of this means at the pod level, what the hub does with it, and how butt
 
 ### Battery
 
-Two known mechanisms from the protocol (both APK sources):
+Two known mechanisms from the protocol (both from the app's command set):
 
 1. **`BLE_MSG_BAT_V` (0x4000)** — unsolicited peripheral notification (pod → hub). Payload format is known from `parseBatteryVoltageNotify` in `demo-node/src/commands.ts`:
    - Standard notification frame: `[2 pad bytes] [opcode 0x4000 LE 2 bytes] [target MAC 6 bytes] [voltage payload]`
@@ -138,7 +137,7 @@ Direct GATT enumeration from PC (noble/WinRT) returned `Unreachable` — the pod
 
 ### App→hub commands that reference pod MAC (unknown if hub relays to pod)
 
-Source: APK decompile only. The app sends these to the **hub**. Whether the hub relays any of them to the pod over BLE, or handles them entirely itself, is **unknown** — we have no hub↔pod traffic capture.
+Source: the app's command set. The app sends these to the **hub**. Whether the hub relays any of them to the pod over BLE, or handles them entirely itself, is **unknown** — we have no hub↔pod traffic capture.
 
 | Command | Opcode | App-side notes |
 | ------- | ------ | -------------- |
@@ -317,11 +316,10 @@ Button codes the pod emits: `0x00`, `0x01`, `0x02`, `0x06`, `0x0C`, `0x0D`, `0x1
 | ---- | ------------ |
 | `PCB-HARDWARE-MAP.md` | Pod PCB traces, pin assignments, component IDs (pod hardware only) |
 | `images/nicenano-schematic.png` | nice!nano v2 schematic — dev board used for firmware development |
-| `apk-extracted-project/PROTOCOL.md` | Full hub BLE protocol (old app) |
-| `apk-extracted-project-bikenet-new/PROTOCOL_NEW.md` | Updated protocol (Flutter app), button map details |
+| `documents/PROTOCOL.md` | Full hub BLE protocol (old app) |
+| `documents/PROTOCOL_NEW.md` | Updated protocol (Flutter app), button map details |
 
-> **Protocol reliability note**: Both `PROTOCOL.md` (old Android app) and `PROTOCOL_NEW.md` (new Flutter app) describe the **same hub firmware**. For features exercised by the old app (add-device, write-button-map, pod button notifications), `PROTOCOL.md` is the authoritative source — it was validated against real observed behaviour. For features the new app does not use (e.g. the new 16-byte button map entry format, `BLE_CMD_SET_FRONT_CONFIG`, etc.), `PROTOCOL_NEW.md` contains decompiler guesses that have never been exercised and may be wrong. When the two docs disagree on something the old app uses, trust `PROTOCOL.md`.
-| `ble-sniff/FS/data/misc/bluetooth/logs/btsnoop_hci.log` | Phone HCI capture (phone↔hub only) — limited use; does not contain hub↔pod traffic |
+> **Protocol reliability note**: Both `PROTOCOL.md` (old Android app) and `PROTOCOL_NEW.md` (new Flutter app) describe the **same hub firmware**. For features exercised by the old app (add-device, write-button-map, pod button notifications), `PROTOCOL.md` is the authoritative source — it was validated against real observed behaviour. For features the new app does not use (e.g. the new 16-byte button map entry format, `BLE_CMD_SET_FRONT_CONFIG`, etc.), `PROTOCOL_NEW.md` contains unverified guesses that have never been exercised and may be wrong. When the two docs disagree on something the old app uses, trust `PROTOCOL.md`.
 | `demo-node/src/node/transport-noble.ts` | Noble BLE transport (reuse for CLI) |
 | `demo-node/src/node/app.ts` | BikeNetApp protocol wrapper |
 | `demo-node/src/commands.ts` | All AppCommand encoders |

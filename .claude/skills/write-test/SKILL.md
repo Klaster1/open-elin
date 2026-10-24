@@ -33,12 +33,12 @@ Creates and updates end-to-end tests for the web app with strict, repeatable pat
 - Use `page.getByTestId()` (configured for `data-test-id` attribute) as first choice. Never use `page.locator('[data-test-id="..."]')` — always use `getByTestId()`.
 - If selector needs internals and there is no `data-test-id`, add `data-test-id` in UI first; avoid brittle structure/style selectors.
 - Keep scope tight to the requested behavior; no unrelated assertions.
-- After editing tests or tested behavior, run full e2e suite with `npm run test:e2e` from `demo-node` and report results.
+- After editing tests or tested behavior, run full e2e suite with `npm run test:e2e` from `web` and report results.
 - Never ask user whether to run full tests; run automatically unless already run in the same task.
 
 ## Setup and Execution
 
-- Project root: `demo-node`
+- Project root: `web`
 - Dev server command: `npm run dev` (only)
 - Full e2e: `npm run test:e2e`
 - Single spec: `npx playwright test e2e/<spec>.ts`

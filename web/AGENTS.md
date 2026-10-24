@@ -14,9 +14,9 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 
 ## Working Directory
 
-- The main project root is `demo-node`.
-- Run all development and test commands from the `demo-node` directory.
-- If your terminal is elsewhere, change directory first: `cd demo-node`.
+- The main project root is `web`.
+- Run all development and test commands from the `web` directory.
+- If your terminal is elsewhere, change directory first: `cd web`.
 
 ## App Architecture (High Level)
 
@@ -53,14 +53,14 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 
 ### E2E Testing Principles
 
-- Use the `write-test` skill for all e2e test authoring/refactors: [.github/skills/write-test/SKILL.md](.github/skills/write-test/SKILL.md).
+- Use the `write-test` skill for all e2e test authoring/refactors: [../.claude/skills/write-test/SKILL.md](../.claude/skills/write-test/SKILL.md).
 - Keep test code and comments aligned with that skill (deterministic setup, branch-free flows, explicit assertion contracts, `data-test-id` first selectors).
 
 ### Running Tests
 
-- Run headless e2e (from `demo-node`): `npm run test:e2e`
-- Run headed e2e (from `demo-node`): `npm run test:e2e:headed`
-- Run one spec (from `demo-node`): `npx playwright test e2e/cogs.demo.spec.ts`
+- Run headless e2e (from `web`): `npm run test:e2e`
+- Run headed e2e (from `web`): `npm run test:e2e:headed`
+- Run one spec (from `web`): `npx playwright test e2e/cogs.demo.spec.ts`
 - Always run full tests (`npm run test:e2e`) at task completion unless already run in the same task.
 - Never ask the user whether to run full tests; run and report results.
 
@@ -69,7 +69,7 @@ This is a web-based configuration app for the NXS rear derailleur electronic shi
 - If user asks to verify something visually, provide verification from fresh screenshots first, then adjust UI based on what is actually seen.
 - Use the existing page when possible.
 - Start Vite to access the app at https://localhost:5173/. When you go to this page, you almost always need to click on "Demo".
-- ONLY EVER use `npm run dev` to start the dev server (from `demo-node`).
+- ONLY EVER use `npm run dev` to start the dev server (from `web`).
 - Never deviate from `npm run dev` for dev server startup.
 - Always re-use the same terminal session for `npm run dev`; do not start another terminal for the dev server.
 - NEVER run `npm run build` to check for compile errors. Use the active `npm run dev` Vite process and its diagnostics/output for compilation validation.

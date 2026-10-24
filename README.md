@@ -58,7 +58,7 @@ Use `--json` for machine-readable output.
 
 ## Disclaimer
 
-This is a personal work-in-progress dump. Polishing was not a goal.
+This is a personal work in progress. Polishing was not a goal.
 
 Use at your own risk. Bad firmware can brick a SuperMini (recoverable via SWD — see `firmware-pod/unbrick.ps1`). Motor commands can overdrive a derailleur. Shifting commands will shift your actual gears.
 

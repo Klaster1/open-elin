@@ -32,4 +32,11 @@ Thumbs.db
 *.FCBak
 *.step
 *.stl
-.claude/settings.json
+# Claude: track project skills + shared settings; ignore personal/local state
+.claude/*
+!.claude/skills/
+!.claude/settings.json
+
+# ZCode: local-only wiring. .zcode/skills is a symlink into the tracked
+# .claude/skills/ — ignore it (and any other local .zcode state)
+.zcode/

@@ -73,7 +73,7 @@ This workflow is not optional. Do not skip phases.
 
 ## Required Test Planning Behavior
 
-- Use `.github/skills/write-test/SKILL.md` for e2e specifics.
+- Use `.claude/skills/write-test/SKILL.md` for e2e specifics.
 - If user requests comment-mode checkpoint, create comment-only skeleton with empty test body and STOP for review.
 - Default to one high-value fast-path spec unless user explicitly requests matrix/split or a concrete risk gap requires expansion.
 
